@@ -11,31 +11,13 @@ import { createLocalStrapiSourceProvider } from '..';
 describe('Local Strapi Source Provider', () => {
   describe('Bootstrap', () => {
     test('Should not have a defined Strapi instance if bootstrap has not been called', () => {
-      const provider = createLocalStrapiSourceProvider({
-        getStrapi: getStrapiFactory({
-          db: {
-            lifecycles: {
-              enable: jest.fn(),
-              disable: jest.fn(),
-            },
-          },
-        }),
-      });
+      const provider = createLocalStrapiSourceProvider({ getStrapi: getStrapiFactory() });
 
       expect(provider.strapi).not.toBeDefined();
     });
 
     test('Should have a defined Strapi instance if bootstrap has been called', async () => {
-      const provider = createLocalStrapiSourceProvider({
-        getStrapi: getStrapiFactory({
-          db: {
-            lifecycles: {
-              enable: jest.fn(),
-              disable: jest.fn(),
-            },
-          },
-        }),
-      });
+      const provider = createLocalStrapiSourceProvider({ getStrapi: getStrapiFactory() });
       await provider.bootstrap();
 
       expect(provider.strapi).toBeDefined();
@@ -47,15 +29,7 @@ describe('Local Strapi Source Provider', () => {
       const destroy = jest.fn();
 
       const provider = createLocalStrapiSourceProvider({
-        getStrapi: getStrapiFactory({
-          destroy,
-          db: {
-            lifecycles: {
-              enable: jest.fn(),
-              disable: jest.fn(),
-            },
-          },
-        }),
+        getStrapi: getStrapiFactory({ destroy }),
       });
 
       await provider.bootstrap();
@@ -68,15 +42,7 @@ describe('Local Strapi Source Provider', () => {
       const destroy = jest.fn();
 
       const provider = createLocalStrapiSourceProvider({
-        getStrapi: getStrapiFactory({
-          destroy,
-          db: {
-            lifecycles: {
-              enable: jest.fn(),
-              disable: jest.fn(),
-            },
-          },
-        }),
+        getStrapi: getStrapiFactory({ destroy }),
         autoDestroy: true,
       });
 
@@ -90,15 +56,7 @@ describe('Local Strapi Source Provider', () => {
       const destroy = jest.fn();
 
       const provider = createLocalStrapiSourceProvider({
-        getStrapi: getStrapiFactory({
-          destroy,
-          db: {
-            lifecycles: {
-              enable: jest.fn(),
-              disable: jest.fn(),
-            },
-          },
-        }),
+        getStrapi: getStrapiFactory({ destroy }),
         autoDestroy: false,
       });
 
@@ -140,10 +98,6 @@ describe('Local Strapi Source Provider', () => {
           contentTypes,
           db: {
             queryBuilder,
-            lifecycles: {
-              enable: jest.fn(),
-              disable: jest.fn(),
-            },
           },
           getModel: jest.fn((uid) => {
             return contentTypes[uid];
@@ -209,12 +163,6 @@ describe('Local Strapi Source Provider', () => {
 
       const provider = createLocalStrapiSourceProvider({
         getStrapi: getStrapiFactory({
-          db: {
-            lifecycles: {
-              enable: jest.fn(),
-              disable: jest.fn(),
-            },
-          },
           contentTypes,
           components,
         }),

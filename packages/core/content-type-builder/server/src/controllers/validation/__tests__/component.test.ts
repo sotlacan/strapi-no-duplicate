@@ -1,4 +1,3 @@
-import * as builder from '../../../services/builder';
 import { validateComponentInput, validateUpdateComponentInput } from '../component';
 
 const componentValidation = {
@@ -12,7 +11,14 @@ describe('Component validator', () => {
     plugins: {
       'content-type-builder': {
         services: {
-          builder,
+          builder: {
+            getReservedNames() {
+              return {
+                models: [],
+                attributes: ['thisIsReserved'],
+              };
+            },
+          },
         },
       },
     },

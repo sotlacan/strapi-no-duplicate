@@ -1,20 +1,21 @@
 import { assign } from 'lodash/fp';
-import type { Core } from '@strapi/types';
+import type { Strapi } from '@strapi/types';
+import EE from '@strapi/strapi/dist/utils/ee';
 import { getService } from '../utils';
 
 const getSSOProvidersList = async () => {
-  const { providerRegistry } = strapi.service('admin::passport');
+  const { providerRegistry } = strapi.admin.services.passport;
 
   return providerRegistry.getAll().map(({ uid }: { uid: string }) => uid);
 };
 
-const sendUpdateProjectInformation = async (strapi: Core.Strapi) => {
+const sendUpdateProjectInformation = async () => {
   let groupProperties = {};
 
   const numberOfActiveAdminUsers = await getService('user').count({ isActive: true });
   const numberOfAdminUsers = await getService('user').count();
 
-  if (strapi.ee.features.isEnabled('sso')) {
+  if (EE.features.isEnabled('sso')) {
     const SSOProviders = await getSSOProvidersList();
 
     groupProperties = assign(groupProperties, {
@@ -23,13 +24,13 @@ const sendUpdateProjectInformation = async (strapi: Core.Strapi) => {
     });
   }
 
-  if (strapi.ee.features.isEnabled('cms-content-releases')) {
-    const numberOfContentReleases = await strapi
-      .db!.query('plugin::content-releases.release')
+  if (EE.features.isEnabled('cms-content-releases')) {
+    const numberOfContentReleases = await strapi.db
+      .query('plugin::content-releases.release')
       .count();
 
-    const numberOfPublishedContentReleases = await strapi
-      .db!.query('plugin::content-releases.release')
+    const numberOfPublishedContentReleases = await strapi.db
+      .query('plugin::content-releases.release')
       .count({
         filters: { releasedAt: { $notNull: true } },
       });
@@ -47,12 +48,9 @@ const sendUpdateProjectInformation = async (strapi: Core.Strapi) => {
   });
 };
 
-const startCron = (strapi: Core.Strapi) => {
+const startCron = (strapi: Strapi) => {
   strapi.cron.add({
-    sendProjectInformation: {
-      task: () => sendUpdateProjectInformation(strapi),
-      options: '0 0 0 * * *',
-    },
+    '0 0 0 * * *': () => sendUpdateProjectInformation(),
   });
 };
 

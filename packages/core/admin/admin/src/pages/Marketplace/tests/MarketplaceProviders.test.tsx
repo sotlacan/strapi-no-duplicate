@@ -1,7 +1,8 @@
 /* eslint-disable testing-library/no-node-access */
 import { screen, within } from '@testing-library/react';
 import { render as renderRTL, waitFor } from '@tests/utils';
-import { useLocation } from 'react-router-dom';
+import { Location } from 'history';
+import { Route } from 'react-router-dom';
 
 import { MarketplacePage } from '../MarketplacePage';
 
@@ -12,12 +13,22 @@ jest.mock('../../../hooks/useDebounce', () => ({
   useDebounce: jest.fn((value) => value),
 }));
 jest.mock('../hooks/useNavigatorOnline');
+/**
+ * TODO: remove this mock.
+ */
+jest.mock('@strapi/helper-plugin', () => ({
+  ...jest.requireActual('@strapi/helper-plugin'),
+  useAppInfo: jest.fn(() => ({
+    autoReload: true,
+    dependencies: {
+      '@strapi/plugin-documentation': '4.2.0',
+      '@strapi/provider-upload-cloudinary': '4.2.0',
+    },
+    useYarn: true,
+  })),
+}));
 
-const LocationDisplay = () => {
-  const location = useLocation();
-
-  return <span data-testId="location">{location.search}</span>;
-};
+let testLocation: Location = null!;
 
 const render = () =>
   renderRTL(<MarketplacePage />, {
@@ -26,7 +37,14 @@ const render = () =>
         return (
           <>
             {children}
-            <LocationDisplay />
+            <Route
+              path="*"
+              render={({ location }) => {
+                testLocation = location;
+
+                return null;
+              }}
+            />
           </>
         );
       },
@@ -35,7 +53,7 @@ const render = () =>
   });
 
 const waitForReload = async () => {
-  await waitFor(() => expect(screen.queryByText('Loading content.')).not.toBeInTheDocument());
+  await waitFor(() => expect(screen.queryByText('Loading content...')).not.toBeInTheDocument());
 };
 
 describe('Marketplace page - providers tab', () => {
@@ -101,6 +119,13 @@ describe('Marketplace page - providers tab', () => {
       .find((div) => div.innerHTML.includes('Cloudinary'))!;
     const alreadyInstalledText = within(alreadyInstalledCard).queryByText(/installed/i);
     expect(alreadyInstalledText).toBeVisible();
+
+    // Provider that's not installed
+    const notInstalledCard = screen
+      .getAllByTestId('npm-package-card')
+      .find((div) => div.innerHTML.includes('Rackspace'))!;
+    const notInstalledText = within(notInstalledCard).queryByText(/copy install command/i);
+    expect(notInstalledText).toBeVisible();
   });
 
   it('shows providers filters popover', async () => {
@@ -154,7 +179,7 @@ describe('Marketplace page - providers tab', () => {
 
     await waitForReload();
 
-    expect(getByText('Made by Strapi')).toBeVisible();
+    expect(getByRole('button', { name: 'Made by Strapi' })).toBeVisible();
 
     const collectionCards = getAllByTestId('npm-package-card');
     expect(collectionCards.length).toEqual(2);
@@ -189,8 +214,10 @@ describe('Marketplace page - providers tab', () => {
     await user.keyboard('[Escape]');
     await waitForReload();
 
-    expect(getByText('Made by Strapi')).toBeVisible();
-    expect(getByText('Verified')).toBeVisible();
+    const madeByStrapiTag = getByRole('button', { name: 'Made by Strapi' });
+    const verifiedTag = getByRole('button', { name: 'Verified' });
+    expect(madeByStrapiTag).toBeVisible();
+    expect(verifiedTag).toBeVisible();
     expect(getAllByTestId('npm-package-card').length).toEqual(3);
     expect(getByText('Amazon SES')).toBeVisible();
     expect(getByText('Nodemailer')).toBeVisible();
@@ -198,7 +225,7 @@ describe('Marketplace page - providers tab', () => {
   });
 
   it('removes a filter option tag', async () => {
-    const { getByRole, getByText, user } = render();
+    const { getByRole, user } = render();
 
     await waitForReload();
 
@@ -214,15 +241,10 @@ describe('Marketplace page - providers tab', () => {
 
     await waitForReload();
 
-    const removeButton = getByText('Made by Strapi').nextElementSibling;
+    await user.click(getByRole('button', { name: 'Made by Strapi' }));
 
-    if (removeButton && removeButton.tagName === 'BUTTON') {
-      await user.click(removeButton);
-      await waitForReload();
-      expect(screen.getByTestId('location').textContent).toMatchInlineSnapshot(
-        `"?npmPackageType=provider&sort=name:asc&page=1"`
-      );
-    }
+    await waitForReload();
+    expect(testLocation.search).toBe('?npmPackageType=provider&sort=name:asc&page=1');
   });
 
   it('only filters in the providers tab', async () => {
@@ -278,9 +300,7 @@ describe('Marketplace page - providers tab', () => {
 
     await waitForReload();
 
-    expect(screen.getByTestId('location').textContent).toMatchInlineSnapshot(
-      `"?npmPackageType=provider&sort=submissionDate:desc&page=1"`
-    );
+    expect(testLocation.search).toEqual('?npmPackageType=provider&sort=submissionDate:desc&page=1');
   });
 
   it('shows github stars and weekly downloads count for each provider', async () => {
@@ -322,22 +342,16 @@ describe('Marketplace page - providers tab', () => {
     // Can go to next page
     await user.click(getByText(/go to next page/i).closest('a')!);
     await waitForReload();
-    expect(screen.getByTestId('location').textContent).toMatchInlineSnapshot(
-      `"?pageSize=24&page=2&npmPackageType=provider&sort=name%3Aasc"`
-    );
+    expect(testLocation.search).toBe('?npmPackageType=provider&sort=name:asc&page=2');
 
     // Can go to previous page
     await user.click(getByText(/go to previous page/i).closest('a')!);
     await waitForReload();
-    expect(screen.getByTestId('location').textContent).toMatchInlineSnapshot(
-      `"?pageSize=24&page=1&npmPackageType=provider&sort=name%3Aasc"`
-    );
+    expect(testLocation.search).toBe('?npmPackageType=provider&sort=name:asc&page=1');
 
     // Can go to specific page
     await user.click(getByText(/go to page 3/i).closest('a')!);
     await waitForReload();
-    expect(screen.getByTestId('location').textContent).toMatchInlineSnapshot(
-      `"?pageSize=24&page=3&npmPackageType=provider&sort=name%3Aasc"`
-    );
+    expect(testLocation.search).toBe('?npmPackageType=provider&sort=name:asc&page=3');
   });
 });

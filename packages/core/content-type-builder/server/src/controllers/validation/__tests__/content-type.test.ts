@@ -1,5 +1,4 @@
 /* eslint-disable @typescript-eslint/ban-ts-comment */
-import * as builder from '../../../services/builder';
 import {
   validateKind,
   validateUpdateContentTypeInput,
@@ -13,7 +12,14 @@ describe('Content type validator', () => {
     plugins: {
       'content-type-builder': {
         services: {
-          builder,
+          builder: {
+            getReservedNames() {
+              return {
+                models: ['reserved-name'],
+                attributes: ['thisIsReserved'],
+              };
+            },
+          },
         },
       },
     },
@@ -43,7 +49,7 @@ describe('Content type validator', () => {
           pluralName: 'tests',
           displayName: 'Test',
           attributes: {
-            entryId: {
+            thisIsReserved: {
               type: 'string',
               default: '',
             },
@@ -56,14 +62,13 @@ describe('Content type validator', () => {
       await validateUpdateContentTypeInput(data).catch((err) => {
         expect(err).toMatchObject({
           name: 'ValidationError',
-          message:
-            'Attribute keys cannot be one of id, document_id, created_at, updated_at, published_at, created_by_id, updated_by_id, created_by, updated_by, entry_id, status, localizations, meta, locale, __component, __contentType, strapi*, _strapi*, __strapi*',
+          message: 'Attribute keys cannot be one of __component, __contentType, thisIsReserved',
           details: {
             errors: [
               {
-                path: ['contentType', 'attributes', 'entryId'],
+                path: ['contentType', 'attributes', 'thisIsReserved'],
                 message:
-                  'Attribute keys cannot be one of id, document_id, created_at, updated_at, published_at, created_by_id, updated_by_id, created_by, updated_by, entry_id, status, localizations, meta, locale, __component, __contentType, strapi*, _strapi*, __strapi*',
+                  'Attribute keys cannot be one of __component, __contentType, thisIsReserved',
                 name: 'ValidationError',
               },
             ],
@@ -79,7 +84,7 @@ describe('Content type validator', () => {
           pluralName: 'tests',
           displayName: 'Test',
           attributes: {
-            ENTRY_ID: {
+            THIS_IS_RESERVED: {
               type: 'string',
               default: '',
             },
@@ -92,14 +97,13 @@ describe('Content type validator', () => {
       await validateUpdateContentTypeInput(data).catch((err) => {
         expect(err).toMatchObject({
           name: 'ValidationError',
-          message:
-            'Attribute keys cannot be one of id, document_id, created_at, updated_at, published_at, created_by_id, updated_by_id, created_by, updated_by, entry_id, status, localizations, meta, locale, __component, __contentType, strapi*, _strapi*, __strapi*',
+          message: 'Attribute keys cannot be one of __component, __contentType, thisIsReserved',
           details: {
             errors: [
               {
-                path: ['contentType', 'attributes', 'ENTRY_ID'],
+                path: ['contentType', 'attributes', 'THIS_IS_RESERVED'],
                 message:
-                  'Attribute keys cannot be one of id, document_id, created_at, updated_at, published_at, created_by_id, updated_by_id, created_by, updated_by, entry_id, status, localizations, meta, locale, __component, __contentType, strapi*, _strapi*, __strapi*',
+                  'Attribute keys cannot be one of __component, __contentType, thisIsReserved',
                 name: 'ValidationError',
               },
             ],
@@ -115,8 +119,8 @@ describe('Content type validator', () => {
     test.each(reservedNames)('Throws when reserved model names are used in %s', async (name) => {
       const data = {
         contentType: {
-          singularName: name === 'singularName' ? 'date-time' : 'not-reserved-single',
-          pluralName: name === 'pluralName' ? 'date-time' : 'not-reserved-plural',
+          singularName: name === 'singularName' ? 'reserved-name' : 'not-reserved-single',
+          pluralName: name === 'pluralName' ? 'reserved-name' : 'not-reserved-plural',
           displayName: 'Test',
           attributes: {
             notReserved: {
@@ -132,12 +136,12 @@ describe('Content type validator', () => {
       await validateUpdateContentTypeInput(data).catch((err) => {
         expect(err).toMatchObject({
           name: 'ValidationError',
-          message: `Content Type name cannot be one of boolean, date, date_time, time, upload, document, then, strapi*, _strapi*, __strapi*`,
+          message: `Content Type name cannot be one of reserved-name`,
           details: {
             errors: [
               {
                 path: ['contentType', name],
-                message: `Content Type name cannot be one of boolean, date, date_time, time, upload, document, then, strapi*, _strapi*, __strapi*`,
+                message: `Content Type name cannot be one of reserved-name`,
                 name: 'ValidationError',
               },
             ],

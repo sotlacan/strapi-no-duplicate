@@ -1,6 +1,6 @@
 import * as React from 'react';
 
-import { Checkbox, Box, Flex, Typography } from '@strapi/design-system';
+import { BaseCheckbox, Box, Flex, Typography } from '@strapi/design-system';
 import get from 'lodash/get';
 import { useIntl } from 'react-intl';
 
@@ -86,10 +86,10 @@ const GlobalActions = ({ actions = [], isFormDisabled, kind }: GlobalActionsProp
                   defaultMessage: label,
                 })}
               </Typography>
-              <Checkbox
+              <BaseCheckbox
                 disabled={isFormDisabled}
-                onCheckedChange={(value) => {
-                  onChangeCollectionTypeGlobalActionCheckbox(kind, actionId, !!value);
+                onValueChange={(value) => {
+                  onChangeCollectionTypeGlobalActionCheckbox(kind, actionId, value);
                 }}
                 name={actionId}
                 aria-label={formatMessage(
@@ -104,11 +104,8 @@ const GlobalActions = ({ actions = [], isFormDisabled, kind }: GlobalActionsProp
                     }),
                   }
                 )}
-                checked={
-                  get(checkboxesState, [actionId, 'hasSomeActionsSelected'], false)
-                    ? 'indeterminate'
-                    : get(checkboxesState, [actionId, 'hasAllActionsSelected'], false)
-                }
+                value={get(checkboxesState, [actionId, 'hasAllActionsSelected'], false)}
+                indeterminate={get(checkboxesState, [actionId, 'hasSomeActionsSelected'], false)}
               />
             </Flex>
           );

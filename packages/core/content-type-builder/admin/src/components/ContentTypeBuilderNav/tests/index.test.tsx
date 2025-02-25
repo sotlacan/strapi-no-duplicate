@@ -1,9 +1,9 @@
 /* eslint-disable check-file/filename-naming-convention */
-import { Layouts } from '@strapi/admin/strapi-admin';
-import { DesignSystemProvider } from '@strapi/design-system';
+import { Layout, lightTheme, ThemeProvider } from '@strapi/design-system';
 import { render } from '@testing-library/react';
+import { createMemoryHistory } from 'history';
 import { IntlProvider } from 'react-intl';
-import { MemoryRouter } from 'react-router-dom';
+import { Router } from 'react-router-dom';
 
 import { ContentTypeBuilderNav } from '../ContentTypeBuilderNav';
 
@@ -13,24 +13,24 @@ jest.mock('../useContentTypeBuilderMenu.ts', () => {
   return {
     useContentTypeBuilderMenu: jest.fn(() => ({
       menu: mockData,
-      search: {
-        value: '',
-        onChange() {},
-      },
+      searchValue: '',
+      onSearchChange() {},
     })),
   };
 });
 
 const makeApp = () => {
+  const history = createMemoryHistory();
+
   return (
     <IntlProvider messages={{}} defaultLocale="en" textComponent="span" locale="en">
-      <DesignSystemProvider>
-        <MemoryRouter>
-          <Layouts.Root sideNav={<ContentTypeBuilderNav />}>
+      <ThemeProvider theme={lightTheme}>
+        <Router history={history}>
+          <Layout sideNav={<ContentTypeBuilderNav />}>
             <div />
-          </Layouts.Root>
-        </MemoryRouter>
-      </DesignSystemProvider>
+          </Layout>
+        </Router>
+      </ThemeProvider>
     </IntlProvider>
   );
 };

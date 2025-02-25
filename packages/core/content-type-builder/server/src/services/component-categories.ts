@@ -1,13 +1,13 @@
 import { join } from 'path';
-import { strings, errors } from '@strapi/utils';
-import type { Struct } from '@strapi/types';
+import { nameToSlug, errors } from '@strapi/utils';
+import type { Schema } from '@strapi/types';
 import createBuilder from './schema-builder';
 
 type Infos = {
   name: string;
 };
 
-interface WorkingComponent extends Struct.ComponentSchema {
+interface WorkingComponent extends Schema.Component {
   setUID: (uid: string) => WorkingComponent;
   setDir: (dir: string) => WorkingComponent;
   updateComponent: (oldUID: string, newUID: string) => void;
@@ -17,7 +17,7 @@ interface WorkingComponent extends Struct.ComponentSchema {
  * Edit a category name and move components to the write folder
  */
 export const editCategory = async (name: string, infos: Infos) => {
-  const newName = strings.nameToSlug(infos.name);
+  const newName = nameToSlug(infos.name);
 
   // don't do anything the name doesn't change
   if (name === newName) return;

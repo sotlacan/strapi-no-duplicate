@@ -27,14 +27,18 @@ module.exports = {
   modulePathIgnorePatterns: ['.*__mocks__.*'],
   testPathIgnorePatterns: ['node_modules/', 'dist/'],
   globalSetup: '@strapi/admin-test-utils/global-setup',
-  setupFiles: ['@strapi/admin-test-utils/setup'],
+  setupFiles: ['@strapi/admin-test-utils/environment'],
   setupFilesAfterEnv: ['@strapi/admin-test-utils/after-env'],
-  testEnvironment: '@strapi/admin-test-utils/environment',
-  prettierPath: require.resolve('prettier-2'),
+  testEnvironment: 'jsdom',
   transform: {
     '^.+\\.js(x)?$': [
       '@swc/jest',
       {
+        env: {
+          coreJs: '3.33.0',
+          mode: 'usage',
+        },
+
         jsc: {
           parser: {
             jsx: true,

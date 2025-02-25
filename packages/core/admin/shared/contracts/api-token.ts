@@ -1,12 +1,12 @@
 import { errors } from '@strapi/utils';
-import type { Data } from '@strapi/types';
+import { Entity } from '@strapi/types';
 
 export type ApiToken = {
   accessKey: string;
   createdAt: string;
   description: string;
   expiresAt: string;
-  id: Data.ID;
+  id: Entity.ID;
   lastUsedAt: string | null;
   lifespan: string | number | null;
   name: string;
@@ -61,7 +61,7 @@ export declare namespace Revoke {
   }
 
   export interface Params {
-    id: Data.ID;
+    id: Entity.ID;
   }
 
   export interface Response {
@@ -80,7 +80,7 @@ export declare namespace Get {
   }
 
   export interface Params {
-    id: Data.ID;
+    id: Entity.ID;
   }
 
   export interface Response {
@@ -99,7 +99,7 @@ export declare namespace Update {
   }
 
   export interface Params {
-    id: Data.ID;
+    id: Entity.ID;
   }
 
   export interface Response {

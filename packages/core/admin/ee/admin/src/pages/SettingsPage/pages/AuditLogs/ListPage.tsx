@@ -1,21 +1,30 @@
-import { Flex, IconButton, Typography } from '@strapi/design-system';
-import { Eye } from '@strapi/icons';
+import {
+  ActionLayout,
+  Box,
+  ContentLayout,
+  HeaderLayout,
+  Layout,
+  Main,
+} from '@strapi/design-system';
+import {
+  AnErrorOccurred,
+  DynamicTable,
+  SettingsPageTitle,
+  useFocusWhenNavigate,
+  useQueryParams,
+  useRBAC,
+  CheckPagePermissions,
+} from '@strapi/helper-plugin';
 import { useIntl } from 'react-intl';
 
-import { Filters } from '../../../../../../../admin/src/components/Filters';
-import { Layouts } from '../../../../../../../admin/src/components/Layouts/Layout';
-import { Page } from '../../../../../../../admin/src/components/PageHelpers';
-import { Pagination } from '../../../../../../../admin/src/components/Pagination';
-import { Table } from '../../../../../../../admin/src/components/Table';
 import { useTypedSelector } from '../../../../../../../admin/src/core/store/hooks';
-import { useQueryParams } from '../../../../../../../admin/src/hooks/useQueryParams';
-import { useRBAC } from '../../../../../../../admin/src/hooks/useRBAC';
-import { AuditLog } from '../../../../../../../shared/contracts/audit-logs';
+import { Filters } from '../../../../../../../admin/src/pages/Settings/components/Filters';
+import { SanitizedAdminUserForAuditLogs } from '../../../../../../../shared/contracts/audit-logs';
 
 import { Modal } from './components/Modal';
+import { PaginationFooter } from './components/PaginationFooter';
+import { TableHeader, TableRows } from './components/TableRows';
 import { useAuditLogsData } from './hooks/useAuditLogsData';
-import { useFormatTimeStamp } from './hooks/useFormatTimeStamp';
-import { getDefaultMessage } from './utils/getActionTypesDefaultMessages';
 import { getDisplayedFilters } from './utils/getDisplayedFilters';
 
 const ListPage = () => {
@@ -30,7 +39,7 @@ const ListPage = () => {
     readUsers: permissions?.users.read || [],
   });
 
-  const [{ query }, setQuery] = useQueryParams<{ id?: AuditLog['id'] }>();
+  const [{ query }, setQuery] = useQueryParams<{ id?: string | null }>();
   const {
     auditLogs,
     users,
@@ -41,61 +50,71 @@ const ListPage = () => {
     canReadUsers,
   });
 
-  const formatTimeStamp = useFormatTimeStamp();
+  useFocusWhenNavigate();
 
   const displayedFilters = getDisplayedFilters({ formatMessage, users, canReadUsers });
 
-  const headers: Table.Header<AuditLog, object>[] = [
+  const headers = [
     {
       name: 'action',
-      label: formatMessage({
-        id: 'Settings.permissions.auditLogs.action',
-        defaultMessage: 'Action',
-      }),
-      sortable: true,
+      key: 'action',
+      metadatas: {
+        label: formatMessage({
+          id: 'Settings.permissions.auditLogs.action',
+          defaultMessage: 'Action',
+        }),
+        sortable: true,
+      },
     },
     {
       name: 'date',
-      label: formatMessage({
-        id: 'Settings.permissions.auditLogs.date',
-        defaultMessage: 'Date',
-      }),
-      sortable: true,
+      key: 'date',
+      metadatas: {
+        label: formatMessage({
+          id: 'Settings.permissions.auditLogs.date',
+          defaultMessage: 'Date',
+        }),
+        sortable: true,
+      },
     },
     {
+      key: 'user',
       name: 'user',
-      label: formatMessage({
-        id: 'Settings.permissions.auditLogs.user',
-        defaultMessage: 'User',
-      }),
-      sortable: false,
+      metadatas: {
+        label: formatMessage({
+          id: 'Settings.permissions.auditLogs.user',
+          defaultMessage: 'User',
+        }),
+        sortable: false,
+      },
       // In this case, the passed parameter cannot and shouldn't be something else than User
-      cellFormatter: ({ user }) => (user ? user.displayName : ''),
+      cellFormatter: (user) => (user ? (user as SanitizedAdminUserForAuditLogs).displayName : ''),
     },
-  ];
+  ] satisfies TableHeader[];
 
   if (hasError) {
-    return <Page.Error />;
+    return (
+      <Layout>
+        <ContentLayout>
+          <Box paddingTop={8}>
+            <AnErrorOccurred />
+          </Box>
+        </ContentLayout>
+      </Layout>
+    );
   }
 
   const isLoading = isLoadingData || isLoadingRBAC;
 
-  const { results = [] } = auditLogs ?? {};
-
   return (
-    <Page.Main aria-busy={isLoading}>
-      <Page.Title>
-        {formatMessage(
-          { id: 'Settings.PageTitle', defaultMessage: 'Settings - {name}' },
-          {
-            name: formatMessage({
-              id: 'global.auditLogs',
-              defaultMessage: 'Audit Logs',
-            }),
-          }
-        )}
-      </Page.Title>
-      <Layouts.Header
+    <Main aria-busy={isLoading}>
+      <SettingsPageTitle
+        name={formatMessage({
+          id: 'global.auditLogs',
+          defaultMessage: 'Audit Logs',
+        })}
+      />
+      <HeaderLayout
         title={formatMessage({
           id: 'global.auditLogs',
           defaultMessage: 'Audit Logs',
@@ -105,103 +124,25 @@ const ListPage = () => {
           defaultMessage: 'Logs of all the activities that happened in your environment',
         })}
       />
-      <Layouts.Action
-        startActions={
-          <Filters.Root options={displayedFilters}>
-            <Filters.Trigger />
-            <Filters.Popover />
-            <Filters.List />
-          </Filters.Root>
-        }
-      />
-      <Layouts.Content>
-        <Table.Root rows={results} headers={headers} isLoading={isLoading}>
-          <Table.Content>
-            <Table.Head>
-              {headers.map((header) => (
-                <Table.HeaderCell key={header.name} {...header} />
-              ))}
-            </Table.Head>
-            <Table.Empty />
-            <Table.Loading />
-            <Table.Body>
-              {results.map((log) => (
-                <Table.Row key={log.id} onClick={() => setQuery({ id: log.id })}>
-                  {headers.map((header) => {
-                    const { name, cellFormatter } = header;
-
-                    switch (name) {
-                      case 'action':
-                        return (
-                          <Table.Cell key={name}>
-                            <Typography textColor="neutral800">
-                              {formatMessage(
-                                {
-                                  id: `Settings.permissions.auditLogs.${log.action}`,
-                                  // @ts-expect-error – getDefaultMessage probably doesn't benefit from being so strongly typed unless we just add string at the end.
-                                  defaultMessage: getDefaultMessage(log.action),
-                                },
-                                { model: (log.payload?.model as string) ?? '' }
-                              )}
-                            </Typography>
-                          </Table.Cell>
-                        );
-                      case 'date':
-                        return (
-                          <Table.Cell key={name}>
-                            <Typography textColor="neutral800">
-                              {formatTimeStamp(log.date)}
-                            </Typography>
-                          </Table.Cell>
-                        );
-                      case 'user':
-                        return (
-                          <Table.Cell key={name}>
-                            <Typography textColor="neutral800">
-                              {cellFormatter ? cellFormatter(log, header) : '-'}
-                            </Typography>
-                          </Table.Cell>
-                        );
-                      default:
-                        return (
-                          <Table.Cell key={name}>
-                            <Typography textColor="neutral800">
-                              {(log[name as keyof AuditLog] as string) || '-'}
-                            </Typography>
-                          </Table.Cell>
-                        );
-                    }
-                  })}
-                  <Table.Cell onClick={(e) => e.stopPropagation()}>
-                    <Flex justifyContent="end">
-                      <IconButton
-                        onClick={() => setQuery({ id: log.id })}
-                        withTooltip={false}
-                        label={formatMessage(
-                          { id: 'app.component.table.view', defaultMessage: '{target} details' },
-                          { target: `${log.action} action` }
-                        )}
-                        variant="ghost"
-                      >
-                        <Eye />
-                      </IconButton>
-                    </Flex>
-                  </Table.Cell>
-                </Table.Row>
-              ))}
-            </Table.Body>
-          </Table.Content>
-        </Table.Root>
-
-        <Pagination.Root {...auditLogs?.pagination}>
-          <Pagination.PageSize />
-          <Pagination.Links />
-        </Pagination.Root>
-      </Layouts.Content>
-      {query?.id && (
-        <Modal handleClose={() => setQuery({ id: '' }, 'remove')} logId={query.id.toString()} />
-      )}
-    </Page.Main>
+      <ActionLayout startActions={<Filters displayedFilters={displayedFilters} />} />
+      <ContentLayout>
+        <DynamicTable
+          contentType="Audit logs"
+          headers={headers}
+          rows={auditLogs?.results || []}
+          withBulkActions
+          isLoading={isLoading}
+        >
+          <TableRows
+            headers={headers}
+            rows={auditLogs?.results || []}
+            onOpenModal={(id) => setQuery({ id: `${id}` })}
+          />
+        </DynamicTable>
+        {auditLogs?.pagination && <PaginationFooter pagination={auditLogs.pagination} />}
+      </ContentLayout>
+      {query?.id && <Modal handleClose={() => setQuery({ id: null }, 'remove')} logId={query.id} />}
+    </Main>
   );
 };
 
@@ -211,9 +152,9 @@ const ProtectedListPage = () => {
   );
 
   return (
-    <Page.Protect permissions={permissions}>
+    <CheckPagePermissions permissions={permissions}>
       <ListPage />
-    </Page.Protect>
+    </CheckPagePermissions>
   );
 };
 

@@ -1,7 +1,6 @@
-import * as React from 'react';
-
 import {
   Flex,
+  IconButton,
   Table,
   Tbody,
   Td,
@@ -11,36 +10,29 @@ import {
   Typography,
   VisuallyHidden,
 } from '@strapi/design-system';
+import { onRowClick } from '@strapi/helper-plugin';
+import { Pencil, Trash } from '@strapi/icons';
 import { useIntl } from 'react-intl';
 
+import { Locale } from '../store/reducers';
 import { getTranslation } from '../utils/getTranslation';
-
-import { DeleteLocale } from './DeleteLocale';
-import { EditLocale, EditModal } from './EditLocale';
-
-import type { Locale } from '../../../shared/contracts/locales';
-
-/* -------------------------------------------------------------------------------------------------
- * LocaleTable
- * -----------------------------------------------------------------------------------------------*/
 
 type LocaleTableProps = {
   locales?: Locale[];
   canDelete?: boolean;
-  canUpdate?: boolean;
-  onDeleteLocale?: (locale: Locale) => void;
-  onEditLocale?: (locale: Locale) => void;
+  canEdit?: boolean;
+  onDeleteLocale: (locale: Locale) => void;
+  onEditLocale: (locale: Locale) => void;
 };
 
-const LocaleTable = ({ locales = [], canDelete, canUpdate }: LocaleTableProps) => {
-  const [editLocaleId, setEditLocaleId] = React.useState<Locale['id']>();
+const LocaleTable = ({
+  locales = [],
+  onDeleteLocale,
+  onEditLocale,
+  canDelete = true,
+  canEdit = true,
+}: LocaleTableProps) => {
   const { formatMessage } = useIntl();
-
-  const handleClick = (localeId: Locale['id']) => () => {
-    if (canUpdate) {
-      setEditLocaleId(localeId);
-    }
-  };
 
   return (
     <Table colCount={4} rowCount={locales.length + 1}>
@@ -77,40 +69,56 @@ const LocaleTable = ({ locales = [], canDelete, canUpdate }: LocaleTableProps) =
       </Thead>
       <Tbody>
         {locales.map((locale) => (
-          <React.Fragment key={locale.id}>
-            <Tr
-              onClick={handleClick(locale.id)}
-              style={{ cursor: canUpdate ? 'pointer' : 'default' }}
-            >
-              <Td>
-                <Typography textColor="neutral800">{locale.id}</Typography>
-              </Td>
-              <Td>
-                <Typography textColor="neutral800">{locale.name}</Typography>
-              </Td>
-              <Td>
-                <Typography textColor="neutral800">
-                  {locale.isDefault
-                    ? formatMessage({
-                        id: getTranslation('Settings.locales.default'),
-                        defaultMessage: 'Default',
-                      })
-                    : null}
-                </Typography>
-              </Td>
-              <Td>
-                <Flex gap={1} justifyContent="flex-end" onClick={(e) => e.stopPropagation()}>
-                  {canUpdate && <EditLocale {...locale} />}
-                  {canDelete && !locale.isDefault && <DeleteLocale {...locale} />}
-                </Flex>
-              </Td>
-            </Tr>
-            <EditModal
-              {...locale}
-              onOpenChange={() => setEditLocaleId(undefined)}
-              open={editLocaleId === locale.id}
-            />
-          </React.Fragment>
+          <Tr
+            key={locale.id}
+            {...onRowClick({
+              fn: () => onEditLocale(locale),
+              condition: Boolean(onEditLocale),
+            })}
+          >
+            <Td>
+              <Typography textColor="neutral800">{locale.id}</Typography>
+            </Td>
+            <Td>
+              <Typography textColor="neutral800">{locale.name}</Typography>
+            </Td>
+            <Td>
+              <Typography textColor="neutral800">
+                {locale.isDefault
+                  ? formatMessage({
+                      id: getTranslation('Settings.locales.default'),
+                      defaultMessage: 'Default',
+                    })
+                  : null}
+              </Typography>
+            </Td>
+            <Td>
+              <Flex gap={1} justifyContent="flex-end" onClick={(e) => e.stopPropagation()}>
+                {canEdit && (
+                  <IconButton
+                    onClick={() => onEditLocale(locale)}
+                    label={formatMessage({
+                      id: getTranslation('Settings.list.actions.edit'),
+                      defaultMessage: 'Edit',
+                    })}
+                    icon={<Pencil />}
+                    borderWidth={0}
+                  />
+                )}
+                {canDelete && !locale.isDefault && (
+                  <IconButton
+                    onClick={() => onDeleteLocale(locale)}
+                    label={formatMessage({
+                      id: getTranslation('Settings.list.actions.delete'),
+                      defaultMessage: 'Delete',
+                    })}
+                    icon={<Trash />}
+                    borderWidth={0}
+                  />
+                )}
+              </Flex>
+            </Td>
+          </Tr>
         ))}
       </Tbody>
     </Table>

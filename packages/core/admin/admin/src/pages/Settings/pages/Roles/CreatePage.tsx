@@ -3,29 +3,37 @@ import * as React from 'react';
 import {
   Box,
   Button,
-  Field,
+  ContentLayout,
   Flex,
   Grid,
+  GridItem,
+  HeaderLayout,
   Main,
   Textarea,
   TextInput,
   Typography,
 } from '@strapi/design-system';
-import { Check } from '@strapi/icons';
+import { Link } from '@strapi/design-system/v2';
+import {
+  CheckPagePermissions,
+  Form,
+  LoadingIndicatorPage,
+  SettingsPageTitle,
+  useNotification,
+  useOverlayBlocker,
+  useTracking,
+  translatedErrors,
+  useAPIErrorHandler,
+} from '@strapi/helper-plugin';
+import { ArrowLeft } from '@strapi/icons';
 import { format } from 'date-fns';
-import { Formik, Form, FormikHelpers } from 'formik';
+import { Formik, FormikHelpers } from 'formik';
 import { useIntl } from 'react-intl';
-import { useNavigate, useParams } from 'react-router-dom';
-import { styled } from 'styled-components';
+import { NavLink, useHistory, useRouteMatch } from 'react-router-dom';
+import styled from 'styled-components';
 import * as yup from 'yup';
 
-import { Layouts } from '../../../../components/Layouts/Layout';
-import { Page } from '../../../../components/PageHelpers';
 import { useTypedSelector } from '../../../../core/store/hooks';
-import { BackButton } from '../../../../features/BackButton';
-import { useNotification } from '../../../../features/Notifications';
-import { useTracking } from '../../../../features/Tracking';
-import { useAPIErrorHandler } from '../../../../hooks/useAPIErrorHandler';
 import {
   useCreateRoleMutation,
   useGetRolePermissionLayoutQuery,
@@ -33,7 +41,6 @@ import {
   useUpdateRolePermissionsMutation,
 } from '../../../../services/users';
 import { isBaseQueryError } from '../../../../utils/baseQuery';
-import { translatedErrors } from '../../../../utils/translatedErrors';
 
 import { Permissions, PermissionsAPI } from './components/Permissions';
 
@@ -42,8 +49,8 @@ import { Permissions, PermissionsAPI } from './components/Permissions';
  * -----------------------------------------------------------------------------------------------*/
 
 const CREATE_SCHEMA = yup.object().shape({
-  name: yup.string().required(translatedErrors.required.id),
-  description: yup.string().required(translatedErrors.required.id),
+  name: yup.string().required(translatedErrors.required),
+  description: yup.string().required(translatedErrors.required),
 });
 
 /**
@@ -59,10 +66,11 @@ interface CreateRoleFormValues {
  * manage the state of the child is nonsensical.
  */
 const CreatePage = () => {
-  const { id } = useParams();
-  const { toggleNotification } = useNotification();
+  const match = useRouteMatch<{ id: string }>('/settings/roles/duplicate/:id');
+  const toggleNotification = useNotification();
+  const { lockApp, unlockApp } = useOverlayBlocker();
   const { formatMessage } = useIntl();
-  const navigate = useNavigate();
+  const { replace } = useHistory();
   const permissionsRef = React.useRef<PermissionsAPI>(null);
   const { trackUsage } = useTracking();
   const {
@@ -70,7 +78,9 @@ const CreatePage = () => {
     _unstableFormatValidationErrors: formatValidationErrors,
   } = useAPIErrorHandler();
 
-  const { isLoading: isLoadingPermissionsLayout, currentData: permissionsLayout } =
+  const id = match?.params.id ?? null;
+
+  const { isLoading: isLoadingPermissionsLayout, data: permissionsLayout } =
     useGetRolePermissionLayoutQuery({
       /**
        * Role here is a query param so if there's no role we pass an empty string
@@ -83,7 +93,7 @@ const CreatePage = () => {
    * We need this so if we're cloning a role, we can fetch
    * the current permissions that role has.
    */
-  const { currentData: rolePermissions, isLoading: isLoadingRole } = useGetRolePermissionsQuery(
+  const { data: rolePermissions, isLoading: isLoadingRole } = useGetRolePermissionsQuery(
     {
       id: id!,
     },
@@ -101,6 +111,9 @@ const CreatePage = () => {
     formik: FormikHelpers<CreateRoleFormValues>
   ) => {
     try {
+      // @ts-expect-error – fixed in V5
+      lockApp();
+
       if (id) {
         trackUsage('willDuplicateRole');
       } else {
@@ -114,7 +127,7 @@ const CreatePage = () => {
           formik.setErrors(formatValidationErrors(res.error));
         } else {
           toggleNotification({
-            type: 'danger',
+            type: 'warning',
             message: formatAPIError(res.error),
           });
         }
@@ -135,7 +148,7 @@ const CreatePage = () => {
             formik.setErrors(formatValidationErrors(updateRes.error));
           } else {
             toggleNotification({
-              type: 'danger',
+              type: 'warning',
               message: formatAPIError(updateRes.error),
             });
           }
@@ -146,32 +159,24 @@ const CreatePage = () => {
 
       toggleNotification({
         type: 'success',
-        message: formatMessage({ id: 'Settings.roles.created', defaultMessage: 'created' }),
+        message: { id: 'Settings.roles.created', defaultMessage: 'created' },
       });
 
-      navigate(`../roles/${res.data.id.toString()}`, { replace: true });
+      replace(`/settings/roles/${res.data.id}`);
     } catch (err) {
       toggleNotification({
-        type: 'danger',
-        message: formatMessage({ id: 'notification.error', defaultMessage: 'An error occurred' }),
+        type: 'warning',
+        message: { id: 'notification.error' },
       });
+    } finally {
+      // @ts-expect-error – fixed in V5
+      unlockApp();
     }
   };
 
-  if ((isLoadingPermissionsLayout && isLoadingRole) || !permissionsLayout) {
-    return <Page.Loading />;
-  }
-
   return (
     <Main>
-      <Page.Title>
-        {formatMessage(
-          { id: 'Settings.PageTitle', defaultMessage: 'Settings - {name}' },
-          {
-            name: 'Roles',
-          }
-        )}
-      </Page.Title>
+      <SettingsPageTitle name="Roles" />
       <Formik
         initialValues={
           {
@@ -189,7 +194,7 @@ const CreatePage = () => {
         {({ values, errors, handleReset, handleChange, isSubmitting }) => (
           <Form>
             <>
-              <Layouts.Header
+              <HeaderLayout
                 primaryAction={
                   <Flex gap={2}>
                     <Button
@@ -198,13 +203,14 @@ const CreatePage = () => {
                         handleReset();
                         permissionsRef.current?.resetForm();
                       }}
+                      size="L"
                     >
                       {formatMessage({
                         id: 'app.components.Button.reset',
                         defaultMessage: 'Reset',
                       })}
                     </Button>
-                    <Button type="submit" loading={isSubmitting} startIcon={<Check />}>
+                    <Button type="submit" loading={isSubmitting} size="L">
                       {formatMessage({
                         id: 'global.save',
                         defaultMessage: 'Save',
@@ -220,9 +226,17 @@ const CreatePage = () => {
                   id: 'Settings.roles.create.description',
                   defaultMessage: 'Define the rights given to the role',
                 })}
-                navigationAction={<BackButton fallback="../roles" />}
+                navigationAction={
+                  // @ts-expect-error – the props from the component passed as `as` are not correctly inferred.
+                  <Link as={NavLink} startIcon={<ArrowLeft />} to="/settings/roles">
+                    {formatMessage({
+                      id: 'global.back',
+                      defaultMessage: 'Back',
+                    })}
+                  </Link>
+                }
               />
-              <Layouts.Content>
+              <ContentLayout>
                 <Flex direction="column" alignItems="stretch" gap={6}>
                   <Box background="neutral0" padding={6} shadow="filterShadow" hasRadius>
                     <Flex direction="column" alignItems="stretch" gap={4}>
@@ -256,50 +270,52 @@ const CreatePage = () => {
                           )}
                         </UsersRoleNumber>
                       </Flex>
-                      <Grid.Root gap={4}>
-                        <Grid.Item col={6} direction="column" alignItems="stretch">
-                          <Field.Root
+                      <Grid gap={4}>
+                        <GridItem col={6}>
+                          <TextInput
                             name="name"
                             error={errors.name && formatMessage({ id: errors.name })}
+                            label={formatMessage({
+                              id: 'global.name',
+                              defaultMessage: 'Name',
+                            })}
+                            onChange={handleChange}
                             required
-                          >
-                            <Field.Label>
-                              {formatMessage({
-                                id: 'global.name',
-                                defaultMessage: 'Name',
-                              })}
-                            </Field.Label>
-                            <TextInput onChange={handleChange} value={values.name} />
-                            <Field.Error />
-                          </Field.Root>
-                        </Grid.Item>
-                        <Grid.Item col={6} direction="column" alignItems="stretch">
-                          <Field.Root
-                            name="description"
+                            value={values.name}
+                          />
+                        </GridItem>
+                        <GridItem col={6}>
+                          <Textarea
+                            label={formatMessage({
+                              id: 'global.description',
+                              defaultMessage: 'Description',
+                            })}
+                            id="description"
                             error={errors.description && formatMessage({ id: errors.description })}
+                            onChange={handleChange}
                           >
-                            <Field.Label>
-                              {formatMessage({
-                                id: 'global.description',
-                                defaultMessage: 'Description',
-                              })}
-                            </Field.Label>
-                            <Textarea onChange={handleChange} value={values.description} />
-                          </Field.Root>
-                        </Grid.Item>
-                      </Grid.Root>
+                            {values.description}
+                          </Textarea>
+                        </GridItem>
+                      </Grid>
                     </Flex>
                   </Box>
-                  <Box shadow="filterShadow" hasRadius>
-                    <Permissions
-                      isFormDisabled={false}
-                      ref={permissionsRef}
-                      permissions={rolePermissions}
-                      layout={permissionsLayout}
-                    />
-                  </Box>
+                  {!isLoadingPermissionsLayout && !isLoadingRole && permissionsLayout ? (
+                    <Box shadow="filterShadow" hasRadius>
+                      <Permissions
+                        isFormDisabled={false}
+                        ref={permissionsRef}
+                        permissions={rolePermissions}
+                        layout={permissionsLayout}
+                      />
+                    </Box>
+                  ) : (
+                    <Box background="neutral0" padding={6} shadow="filterShadow" hasRadius>
+                      <LoadingIndicatorPage />
+                    </Box>
+                  )}
                 </Flex>
-              </Layouts.Content>
+              </ContentLayout>
             </>
           </Form>
         )}
@@ -314,7 +330,7 @@ const UsersRoleNumber = styled.div`
   padding: ${({ theme }) => `${theme.spaces[2]} ${theme.spaces[4]}`};
   color: ${({ theme }) => theme.colors.primary600};
   border-radius: ${({ theme }) => theme.borderRadius};
-  font-size: 1.2rem;
+  font-size: ${12 / 16}rem;
   font-weight: bold;
 `;
 
@@ -328,9 +344,9 @@ const ProtectedCreatePage = () => {
   );
 
   return (
-    <Page.Protect permissions={permissions}>
+    <CheckPagePermissions permissions={permissions}>
       <CreatePage />
-    </Page.Protect>
+    </CheckPagePermissions>
   );
 };
 

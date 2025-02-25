@@ -1,32 +1,48 @@
 import pMap from 'p-map';
 import { curry } from 'lodash/fp';
 
-type AnyFunc<TA extends any[] = any[], TR = any> = (...args: TA) => TR;
+type AnyFunc = (...args: any) => any;
 
-type MakeProm<T> = Promise<T extends PromiseLike<infer I> ? I : T>;
+/*
+ NOTE: This type is here to enforce piped functions have the right input/output types
+ For a list of functions it will return a new list of function but will answer the return type of the previous is the arg type of the next function
+*/
+type PipeArgs<F extends AnyFunc[], PrevReturn = Parameters<F[0]>[0]> = F extends [
+  (arg: any) => infer B
+]
+  ? [(arg: PrevReturn) => B]
+  : F extends [(arg: any) => infer B, ...infer Tail]
+  ? Tail extends AnyFunc[]
+    ? [(arg: PrevReturn) => B, ...PipeArgs<Tail, B>]
+    : []
+  : [];
 
-type PipedFunc<T extends AnyFunc[]> =
-  PipeReturn<T> extends never ? never : (...args: Parameters<T[0]>) => PipeReturn<T>;
+export function pipeAsync<F extends AnyFunc[], FirstFn extends F[0]>(
+  ...fns: PipeArgs<F> extends F ? F : PipeArgs<F>
+) {
+  type Args = Parameters<FirstFn>;
+  type ReturnT = F extends [...AnyFunc[], (...arg: any) => infer R]
+    ? R extends Promise<infer InnerType>
+      ? InnerType
+      : R
+    : never;
 
-type PipeReturn<F extends AnyFunc[]> = MakeProm<ReturnType<F[0]>>;
-
-export function pipe<T extends AnyFunc[]>(...fns: PipeReturn<T> extends never ? never : T) {
   const [firstFn, ...fnRest] = fns;
 
-  return (async (...args: any[]) => {
-    let res = await firstFn.apply(firstFn, args);
+  return async (...args: Args): Promise<ReturnT> => {
+    let res: ReturnT = await firstFn.apply(firstFn, args);
 
     for (let i = 0; i < fnRest.length; i += 1) {
       res = await fnRest[i](res);
     }
 
     return res;
-  }) as PipedFunc<T>;
+  };
 }
 
-export const map = curry(pMap);
+export const mapAsync = curry(pMap);
 
-export const reduce =
+export const reduceAsync =
   (mixedArray: any[]) =>
   async <T>(iteratee: AnyFunc, initialValue?: T) => {
     let acc = initialValue;
@@ -35,3 +51,11 @@ export const reduce =
     }
     return acc;
   };
+
+export const forEachAsync = async <T, R>(
+  array: T[],
+  func: pMap.Mapper<T, R>,
+  options: pMap.Options
+) => {
+  await pMap(array, func, options);
+};

@@ -3,9 +3,8 @@
   "compilerOptions": {
     "rootDir": "../",
     "baseUrl": ".",
-    "outDir": "../dist",
-    "noEmit": false
+    "outDir": "./dist"
   },
   "include": ["./src", "../shared"],
-  "exclude": ["node_modules", "**/*.test.*"]
+  "exclude": ["*.test.*"]
 }

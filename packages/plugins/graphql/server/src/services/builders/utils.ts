@@ -1,23 +1,22 @@
 import { entries, mapValues, omit } from 'lodash/fp';
-import { idArg, nonNull } from 'nexus';
-import { pagination } from '@strapi/utils';
-import type { Core, Struct } from '@strapi/types';
+import { pagination, contentTypes } from '@strapi/utils';
+import type { Strapi, Schema } from '@strapi/types';
 
 const { withDefaultPagination } = pagination;
+const { hasDraftAndPublish } = contentTypes;
 
-type ContentTypeArgsOptions = {
-  multiple?: boolean;
-  isNested?: boolean;
-};
-
-export default ({ strapi }: { strapi: Core.Strapi }) => {
+export default ({ strapi }: { strapi: Strapi }) => {
   const { service: getService } = strapi.plugin('graphql');
 
   return {
-    getContentTypeArgs(
-      contentType: Struct.Schema,
-      { multiple = true, isNested = false }: ContentTypeArgsOptions = {}
-    ) {
+    /**
+     * Get every args for a given content type
+     * @param {object} contentType
+     * @param {object} options
+     * @param {boolean} options.multiple
+     * @return {object}
+     */
+    getContentTypeArgs(contentType: Schema.Any, { multiple = true } = {}) {
       const { naming } = getService('utils');
       const { args } = getService('internals');
 
@@ -39,10 +38,7 @@ export default ({ strapi }: { strapi: Core.Strapi }) => {
       // Collection Types
       if (kind === 'collectionType') {
         if (!multiple) {
-          return {
-            documentId: nonNull(idArg()),
-            status: args.PublicationStatusArg,
-          };
+          return { id: 'ID' };
         }
 
         const params = {
@@ -51,8 +47,8 @@ export default ({ strapi }: { strapi: Core.Strapi }) => {
           sort: args.SortArg,
         };
 
-        if (!isNested) {
-          Object.assign(params, { status: args.PublicationStatusArg });
+        if (hasDraftAndPublish(contentType)) {
+          Object.assign(params, { publicationState: args.PublicationStateArg });
         }
 
         return params;
@@ -62,8 +58,8 @@ export default ({ strapi }: { strapi: Core.Strapi }) => {
       if (kind === 'singleType') {
         const params = {};
 
-        if (!isNested) {
-          Object.assign(params, { status: args.PublicationStatusArg });
+        if (hasDraftAndPublish(contentType)) {
+          Object.assign(params, { publicationState: args.PublicationStateArg });
         }
 
         return params;
@@ -73,7 +69,7 @@ export default ({ strapi }: { strapi: Core.Strapi }) => {
     /**
      * Filter an object entries and keep only those whose value is a unique scalar attribute
      */
-    getUniqueScalarAttributes(attributes: Struct.SchemaAttributes) {
+    getUniqueScalarAttributes(attributes: Schema.Attributes) {
       const { isStrapiScalar } = getService('utils').attributes;
 
       const uniqueAttributes = entries(attributes).filter(
@@ -88,7 +84,7 @@ export default ({ strapi }: { strapi: Core.Strapi }) => {
      * @param {object} attributes - The attributes object to transform
      * @return {Object<string, string>}
      */
-    scalarAttributesToFiltersMap(attributes: Struct.SchemaAttributes) {
+    scalarAttributesToFiltersMap(attributes: Schema.Attributes) {
       return mapValues((attribute) => {
         const { mappers, naming } = getService('utils');
 
@@ -106,7 +102,7 @@ export default ({ strapi }: { strapi: Core.Strapi }) => {
       {
         contentType,
         usePagination = false,
-      }: { contentType: Struct.ContentTypeSchema; usePagination?: boolean }
+      }: { contentType: Schema.ContentType; usePagination?: boolean }
     ) {
       const { mappers } = getService('utils');
       const { config } = strapi.plugin('graphql');

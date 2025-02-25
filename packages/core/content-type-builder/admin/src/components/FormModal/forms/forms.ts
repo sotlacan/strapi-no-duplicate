@@ -1,4 +1,4 @@
-import { getTrad } from '../../../utils';
+import { getTrad } from '../../../utils/getTrad';
 import { commonBaseForm } from '../attributes/commonBaseForm';
 import { attributesForm } from '../attributes/form';
 import { nameField } from '../attributes/nameField';
@@ -15,7 +15,7 @@ import { addItemsToFormSection, FormTypeOptions } from './utils/addItemsToFormSe
 import { createComponentCollectionName } from './utils/createCollectionName';
 import { Attribute, getUsedAttributeNames, SchemaData } from './utils/getUsedAttributeNames';
 
-import type { Internal } from '@strapi/types';
+import type { Common } from '@strapi/types';
 
 type ContentType = {
   schema: {
@@ -42,7 +42,6 @@ type Base<TAttributesFormType extends 'base' | 'advanced'> = {
   step: string;
   attributes: any;
   extensions: any;
-  forTarget: string;
 };
 
 export const forms = {
@@ -56,7 +55,7 @@ export const forms = {
       ctbFormsAPI,
     }: SchemaParams) {
       const usedAttributeNames = getUsedAttributeNames(schemaAttributes, schemaData);
-
+      const x = attributeTypes[attributeType];
       let attributeShape;
       if (attributeType === 'relation') {
         attributeShape = attributeTypes[attributeType](
@@ -209,7 +208,7 @@ export const forms = {
     schema(
       alreadyTakenNames: Array<string>,
       isEditing: boolean,
-      ctUid: Internal.UID.ContentType,
+      ctUid: Common.UID.ContentType,
       reservedNames: {
         models: any;
       },
@@ -303,7 +302,7 @@ export const forms = {
   },
   component: {
     schema(
-      alreadyTakenAttributes: Array<Internal.UID.Component>,
+      alreadyTakenAttributes: Array<Common.UID.Component>,
       componentCategory: string,
       reservedNames: {
         models: any;
@@ -311,10 +310,10 @@ export const forms = {
       isEditing = false,
       components: Record<string, any>,
       componentDisplayName: string,
-      compoUid: Internal.UID.Component | null = null
+      compoUid: Common.UID.Component | null = null
     ) {
       const takenNames = isEditing
-        ? alreadyTakenAttributes.filter((uid: Internal.UID.Component) => uid !== compoUid)
+        ? alreadyTakenAttributes.filter((uid: Common.UID.Component) => uid !== compoUid)
         : alreadyTakenAttributes;
       const collectionNames = Object.values(components).map((component: any) => {
         return component?.schema?.collectionName;

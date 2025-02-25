@@ -1,7 +1,8 @@
 import * as React from 'react';
 
-import { Tabs } from '@strapi/design-system';
-import { produce } from 'immer';
+import { Tab, TabGroup, TabPanel, TabPanels, Tabs } from '@strapi/design-system';
+import { difference } from '@strapi/helper-plugin';
+import produce from 'immer';
 import cloneDeep from 'lodash/cloneDeep';
 import get from 'lodash/get';
 import has from 'lodash/has';
@@ -16,7 +17,6 @@ import {
   PermissionsDataManagerContextValue,
   PermissionsDataManagerProvider,
 } from '../hooks/usePermissionsDataManager';
-import { difference } from '../utils/difference';
 import { ConditionForm, Form, createDefaultCTForm, createDefaultForm } from '../utils/forms';
 import { GenericLayout, formatLayout } from '../utils/layouts';
 import { formatPermissionsForAPI } from '../utils/permissions';
@@ -173,48 +173,51 @@ const Permissions = React.forwardRef<PermissionsAPI, PermissionsProps>(
         }
         onChangeCollectionTypeGlobalActionCheckbox={handleChangeCollectionTypeGlobalActionCheckbox}
       >
-        <Tabs.Root defaultValue={TAB_LABELS[0].id}>
-          <Tabs.List
-            aria-label={formatMessage({
-              id: 'Settings.permissions.users.tabs.label',
-              defaultMessage: 'Tabs Permissions',
-            })}
-          >
+        <TabGroup
+          id="tabs"
+          label={formatMessage({
+            id: 'Settings.permissions.users.tabs.label',
+            defaultMessage: 'Tabs Permissions',
+          })}
+        >
+          <Tabs>
             {TAB_LABELS.map((tabLabel) => (
-              <Tabs.Trigger key={tabLabel.id} value={tabLabel.id}>
+              <Tab key={tabLabel.id}>
                 {formatMessage({ id: tabLabel.labelId, defaultMessage: tabLabel.defaultMessage })}
-              </Tabs.Trigger>
+              </Tab>
             ))}
-          </Tabs.List>
-          <Tabs.Content value={TAB_LABELS[0].id}>
-            <ContentTypes
-              layout={layouts.collectionTypes}
-              kind="collectionTypes"
-              isFormDisabled={isFormDisabled}
-            />
-          </Tabs.Content>
-          <Tabs.Content value={TAB_LABELS[1].id}>
-            <ContentTypes
-              layout={layouts.singleTypes}
-              kind="singleTypes"
-              isFormDisabled={isFormDisabled}
-            />
-          </Tabs.Content>
-          <Tabs.Content value={TAB_LABELS[2].id}>
-            <PluginsAndSettingsPermissions
-              layout={layouts.plugins}
-              kind="plugins"
-              isFormDisabled={isFormDisabled}
-            />
-          </Tabs.Content>
-          <Tabs.Content value={TAB_LABELS[3].id}>
-            <PluginsAndSettingsPermissions
-              layout={layouts.settings}
-              kind="settings"
-              isFormDisabled={isFormDisabled}
-            />
-          </Tabs.Content>
-        </Tabs.Root>
+          </Tabs>
+          <TabPanels style={{ position: 'relative' }}>
+            <TabPanel>
+              <ContentTypes
+                layout={layouts.collectionTypes}
+                kind="collectionTypes"
+                isFormDisabled={isFormDisabled}
+              />
+            </TabPanel>
+            <TabPanel>
+              <ContentTypes
+                layout={layouts.singleTypes}
+                kind="singleTypes"
+                isFormDisabled={isFormDisabled}
+              />
+            </TabPanel>
+            <TabPanel>
+              <PluginsAndSettingsPermissions
+                layout={layouts.plugins}
+                kind="plugins"
+                isFormDisabled={isFormDisabled}
+              />
+            </TabPanel>
+            <TabPanel>
+              <PluginsAndSettingsPermissions
+                layout={layouts.settings}
+                kind="settings"
+                isFormDisabled={isFormDisabled}
+              />
+            </TabPanel>
+          </TabPanels>
+        </TabGroup>
       </PermissionsDataManagerProvider>
     );
   }

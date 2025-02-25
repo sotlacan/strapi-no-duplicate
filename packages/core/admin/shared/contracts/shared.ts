@@ -1,7 +1,7 @@
-import type { Data } from '@strapi/types';
+import type { Entity as TEntity } from '@strapi/types';
 
 export interface Entity {
-  id: Data.ID;
+  id: TEntity.ID;
   createdAt: string;
   updatedAt: string;
 }
@@ -36,11 +36,11 @@ export type AdminUserCreationPayload = Omit<
   AdminUser,
   keyof Entity | 'roles' | 'isActive' | 'blocked'
 > & {
-  roles: Data.ID[];
+  roles: TEntity.ID[];
 };
 
 export type AdminUserUpdatePayload = Omit<AdminUser, keyof Entity | 'roles'> & {
-  roles: Data.ID[];
+  roles: TEntity.ID[];
 };
 
 export type SanitizedAdminUser = Omit<AdminUser, 'password' | 'resetPasswordToken' | 'roles'> & {

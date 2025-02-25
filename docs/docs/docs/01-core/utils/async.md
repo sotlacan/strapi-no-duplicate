@@ -12,35 +12,32 @@ Async utils are grouping all function that interact with async stuff like Promis
 
 ## Detailed design
 
-### map
+### mapAsync
 
-The `map` function is an asynchronous version of the `Array.prototype.map` method.
+The `mapAsync` function is an asynchronous version of the `Array.prototype.map` method.
 
 Example usage:
 
 ```js
-import { async } from '@strapi/utils';
-
 const input = [1, 2, 3];
 
-const output = await async.map(input, async (item) => {
+const output = await mapAsync(input, async (item) => {
   return item * 2;
 });
 
 console.log(output); // [2, 4, 6]
 ```
 
-### reduce
+### reduceAsync
 
-The `reduce` function is an asynchronous version of the `Array.prototype.reduce` method.
+The `reduceAsync` function is an asynchronous version of the `Array.prototype.reduce` method.
 
 Example usage:
 
 ```js
-import { async } from '@strapi/utils';
 const input = [1, 2, 3];
 
-const reducer = async.reduce(input);
+const reducer = reduceAsync(input);
 const output = await reducer(async (accumulator, item) => {
   return accumulator + item;
 }, 0);
@@ -48,15 +45,13 @@ const output = await reducer(async (accumulator, item) => {
 console.log(output); // 6
 ```
 
-### pipe
+### pipeAsync
 
-The `pipe` function is a utility function for composing asynchronous functions. It takes a list of functions as input, and returns a new function that applies each function in turn to the input.
+The `pipeAsync` function is a utility function for composing asynchronous functions. It takes a list of functions as input, and returns a new function that applies each function in turn to the input.
 
 Example usage:
 
 ```js
-import { async } from '@strapi/utils';
-
 async function addOne(input: number): Promise<number> {
   return input + 1;
 }
@@ -65,7 +60,7 @@ async function double(input: number): Promise<number> {
   return input * 2;
 }
 
-const addOneAndDouble = async.pipe(addOne, double);
+const addOneAndDouble = pipeAsync(addOne, double);
 
 const output = await addOneAndDouble(3);
 

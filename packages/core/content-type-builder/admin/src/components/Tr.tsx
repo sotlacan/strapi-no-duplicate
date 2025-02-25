@@ -1,10 +1,13 @@
-import { styled } from 'styled-components';
+import { pxToRem } from '@strapi/helper-plugin';
+import styled from 'styled-components';
+
+interface TrProps {
+  isFromDynamicZone?: boolean;
+  isChildOfDynamicZone?: boolean;
+}
 
 // Keep component-row for css specificity
-export const Tr = styled.tr<{
-  $isFromDynamicZone?: boolean;
-  $isChildOfDynamicZone?: boolean;
-}>`
+export const Tr = styled.tr<TrProps>`
   &.component-row,
   &.dynamiczone-row {
     position: relative;
@@ -15,24 +18,24 @@ export const Tr = styled.tr<{
     }
 
     > td:first-of-type {
-      padding: 0 0 0 2rem;
+      padding: 0 0 0 ${pxToRem(20)};
       position: relative;
 
       &::before {
         content: '';
-        width: 0.4rem;
+        width: ${pxToRem(4)};
         height: calc(100% - 40px);
         position: absolute;
         top: -7px;
-        left: 2.6rem;
+        left: 1.625rem;
         border-radius: 4px;
 
-        ${({ $isFromDynamicZone, $isChildOfDynamicZone, theme }) => {
-          if ($isChildOfDynamicZone) {
+        ${({ isFromDynamicZone, isChildOfDynamicZone, theme }) => {
+          if (isChildOfDynamicZone) {
             return `background-color: ${theme.colors.primary200};`;
           }
 
-          if ($isFromDynamicZone) {
+          if (isFromDynamicZone) {
             return `background-color: ${theme.colors.primary200};`;
           }
 

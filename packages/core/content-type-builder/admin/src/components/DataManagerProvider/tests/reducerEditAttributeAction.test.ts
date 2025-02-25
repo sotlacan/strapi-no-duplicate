@@ -1,4 +1,5 @@
-import { initialState, reducer, actions } from '../reducer';
+import { EDIT_ATTRIBUTE } from '../constants';
+import { initialState, reducer } from '../reducer';
 
 describe('CTB | components | DataManagerProvider | reducer | EDIT_ATTRIBUTE', () => {
   describe('Editing a common attribute (string, integer, json, media, ...)', () => {
@@ -34,7 +35,8 @@ describe('CTB | components | DataManagerProvider | reducer | EDIT_ATTRIBUTE', ()
         },
       };
 
-      const action = actions.editAttribute({
+      const action: any = {
+        type: EDIT_ATTRIBUTE,
         attributeToSet: {
           type: 'media',
           multiple: true,
@@ -49,7 +51,8 @@ describe('CTB | components | DataManagerProvider | reducer | EDIT_ATTRIBUTE', ()
           required: false,
           name: 'cover',
         },
-      });
+        shouldAddComponentToData: false,
+      };
 
       const expected = {
         ...initialState,
@@ -145,7 +148,8 @@ describe('CTB | components | DataManagerProvider | reducer | EDIT_ATTRIBUTE', ()
         },
       };
 
-      const action = actions.editAttribute({
+      const action: any = {
+        type: EDIT_ATTRIBUTE,
         attributeToSet: {
           type: 'text',
           required: true,
@@ -157,7 +161,8 @@ describe('CTB | components | DataManagerProvider | reducer | EDIT_ATTRIBUTE', ()
           type: 'text',
           name: 'description',
         },
-      });
+        shouldAddComponentToData: false,
+      };
 
       const expected = {
         ...initialState,
@@ -258,7 +263,8 @@ describe('CTB | components | DataManagerProvider | reducer | EDIT_ATTRIBUTE', ()
             },
           };
 
-          const action = actions.editAttribute({
+          const action: any = {
+            type: EDIT_ATTRIBUTE,
             attributeToSet: {
               relation: 'oneToMany',
               targetAttribute: null,
@@ -274,7 +280,8 @@ describe('CTB | components | DataManagerProvider | reducer | EDIT_ATTRIBUTE', ()
               target: contentTypeUID,
               name: 'one_way',
             },
-          });
+            shouldAddComponentToData: false,
+          };
 
           const expected = {
             ...initialState,
@@ -383,7 +390,8 @@ describe('CTB | components | DataManagerProvider | reducer | EDIT_ATTRIBUTE', ()
             },
           };
 
-          const action = actions.editAttribute({
+          const action: any = {
+            type: EDIT_ATTRIBUTE,
             attributeToSet: {
               relation: 'oneToOne',
               targetAttribute: 'address',
@@ -400,7 +408,8 @@ describe('CTB | components | DataManagerProvider | reducer | EDIT_ATTRIBUTE', ()
               type: 'relation',
               name: 'one_way',
             },
-          });
+            shouldAddComponentToData: false,
+          };
 
           const expected = {
             ...initialState,
@@ -509,7 +518,8 @@ describe('CTB | components | DataManagerProvider | reducer | EDIT_ATTRIBUTE', ()
             },
           };
 
-          const action = actions.editAttribute({
+          const action: any = {
+            type: EDIT_ATTRIBUTE,
             attributeToSet: {
               relation: 'oneToOne',
               targetAttribute: null,
@@ -526,7 +536,8 @@ describe('CTB | components | DataManagerProvider | reducer | EDIT_ATTRIBUTE', ()
               type: 'relation',
               name: 'left',
             },
-          });
+            shouldAddComponentToData: false,
+          };
 
           const expected = {
             ...initialState,
@@ -614,7 +625,8 @@ describe('CTB | components | DataManagerProvider | reducer | EDIT_ATTRIBUTE', ()
             },
           };
 
-          const action = actions.editAttribute({
+          const action: any = {
+            type: EDIT_ATTRIBUTE,
             attributeToSet: {
               relation: 'oneToOne',
               targetAttribute: null,
@@ -631,8 +643,8 @@ describe('CTB | components | DataManagerProvider | reducer | EDIT_ATTRIBUTE', ()
               type: 'relation',
               name: 'address',
             },
-          });
-
+            shouldAddComponentToData: false,
+          };
           const expected = {
             ...initialState,
             components: {},
@@ -723,7 +735,8 @@ describe('CTB | components | DataManagerProvider | reducer | EDIT_ATTRIBUTE', ()
             },
           };
 
-          const action = actions.editAttribute({
+          const action: any = {
+            type: EDIT_ATTRIBUTE,
             attributeToSet: {
               relation: 'manyToMany',
               targetAttribute: 'many_to_many_right',
@@ -740,7 +753,8 @@ describe('CTB | components | DataManagerProvider | reducer | EDIT_ATTRIBUTE', ()
               type: 'relation',
               name: 'many_to_many_left',
             },
-          });
+            shouldAddComponentToData: false,
+          };
 
           const expected = {
             ...initialState,
@@ -829,7 +843,8 @@ describe('CTB | components | DataManagerProvider | reducer | EDIT_ATTRIBUTE', ()
             },
           };
 
-          const action = actions.editAttribute({
+          const action: any = {
+            type: EDIT_ATTRIBUTE,
             attributeToSet: {
               relation: 'manyToMany',
               targetAttribute: 'many_to_many_right_updated',
@@ -846,7 +861,8 @@ describe('CTB | components | DataManagerProvider | reducer | EDIT_ATTRIBUTE', ()
               type: 'relation',
               name: 'many_to_many_left',
             },
-          });
+            shouldAddComponentToData: false,
+          };
 
           const expected = {
             ...initialState,
@@ -938,7 +954,8 @@ describe('CTB | components | DataManagerProvider | reducer | EDIT_ATTRIBUTE', ()
             },
           };
 
-          const action = actions.editAttribute({
+          const action: any = {
+            type: EDIT_ATTRIBUTE,
             attributeToSet: {
               relation: 'oneToOne',
               targetAttribute: null,
@@ -955,7 +972,8 @@ describe('CTB | components | DataManagerProvider | reducer | EDIT_ATTRIBUTE', ()
               type: 'relation',
               name: 'one_way',
             },
-          });
+            shouldAddComponentToData: false,
+          };
 
           const expected = {
             ...initialState,
@@ -1050,7 +1068,8 @@ describe('CTB | components | DataManagerProvider | reducer | EDIT_ATTRIBUTE', ()
           },
         };
 
-        const action = actions.editAttribute({
+        const action: any = {
+          type: EDIT_ATTRIBUTE,
           attributeToSet: {
             relation: 'oneToOne',
             targetAttribute: null,
@@ -1067,8 +1086,8 @@ describe('CTB | components | DataManagerProvider | reducer | EDIT_ATTRIBUTE', ()
             type: 'relation',
             name: 'one_way',
           },
-        });
-
+          shouldAddComponentToData: false,
+        };
         const expected = {
           ...initialState,
           components: {},
@@ -1159,7 +1178,8 @@ describe('CTB | components | DataManagerProvider | reducer | EDIT_ATTRIBUTE', ()
           },
         };
 
-        const action = actions.editAttribute({
+        const action: any = {
+          type: EDIT_ATTRIBUTE,
           attributeToSet: {
             relation: 'oneToMany',
             targetAttribute: 'many_to_one',
@@ -1176,7 +1196,8 @@ describe('CTB | components | DataManagerProvider | reducer | EDIT_ATTRIBUTE', ()
             type: 'relation',
             name: 'one_to_many',
           },
-        });
+          shouldAddComponentToData: false,
+        };
 
         const expected = {
           ...initialState,
@@ -1275,7 +1296,8 @@ describe('CTB | components | DataManagerProvider | reducer | EDIT_ATTRIBUTE', ()
           },
         };
 
-        const action = actions.editAttribute({
+        const action: any = {
+          type: EDIT_ATTRIBUTE,
           attributeToSet: {
             relation: 'manyToMany',
             targetAttribute: 'many_to_many_right',
@@ -1292,8 +1314,8 @@ describe('CTB | components | DataManagerProvider | reducer | EDIT_ATTRIBUTE', ()
             type: 'relation',
             name: 'many_to_many_left',
           },
-        });
-
+          shouldAddComponentToData: false,
+        };
         const expected = {
           ...initialState,
           components: {},
@@ -1393,7 +1415,8 @@ describe('CTB | components | DataManagerProvider | reducer | EDIT_ATTRIBUTE', ()
           },
         };
 
-        const action = actions.editAttribute({
+        const action: any = {
+          type: EDIT_ATTRIBUTE,
           attributeToSet: {
             relation: 'oneToOne',
             targetAttribute: null,
@@ -1415,8 +1438,8 @@ describe('CTB | components | DataManagerProvider | reducer | EDIT_ATTRIBUTE', ()
             type: 'relation',
             name: 'one_way',
           },
-        });
-
+          shouldAddComponentToData: false,
+        };
         const expected = {
           ...initialState,
           components: {},
@@ -1523,7 +1546,8 @@ describe('CTB | components | DataManagerProvider | reducer | EDIT_ATTRIBUTE', ()
           },
         };
 
-        const action = actions.editAttribute({
+        const action: any = {
+          type: EDIT_ATTRIBUTE,
           attributeToSet: {
             relation: 'oneToMany',
             targetAttribute: 'many_to_one',
@@ -1545,7 +1569,8 @@ describe('CTB | components | DataManagerProvider | reducer | EDIT_ATTRIBUTE', ()
             type: 'relation',
             name: 'one_to_many',
           },
-        });
+          shouldAddComponentToData: false,
+        };
 
         const expected = {
           ...initialState,
@@ -1675,7 +1700,8 @@ describe('CTB | components | DataManagerProvider | reducer | EDIT_ATTRIBUTE', ()
           },
         };
 
-        const action = actions.editAttribute({
+        const action: any = {
+          type: EDIT_ATTRIBUTE,
           attributeToSet: {
             name: 'category',
             relation: 'oneToOne',
@@ -1697,7 +1723,8 @@ describe('CTB | components | DataManagerProvider | reducer | EDIT_ATTRIBUTE', ()
             targetAttribute: null,
             type: 'relation',
           },
-        });
+          shouldAddComponentToData: false,
+        };
 
         const expected = {
           ...initialState,
@@ -1822,7 +1849,8 @@ describe('CTB | components | DataManagerProvider | reducer | EDIT_ATTRIBUTE', ()
           },
         };
 
-        const action = actions.editAttribute({
+        const action: any = {
+          type: EDIT_ATTRIBUTE,
           attributeToSet: {
             name: 'category-new',
             relation: 'oneToOne',
@@ -1849,7 +1877,8 @@ describe('CTB | components | DataManagerProvider | reducer | EDIT_ATTRIBUTE', ()
               },
             },
           },
-        });
+          shouldAddComponentToData: false,
+        };
 
         const expected = {
           ...initialState,
@@ -1961,7 +1990,8 @@ describe('CTB | components | DataManagerProvider | reducer | EDIT_ATTRIBUTE', ()
           },
         };
 
-        const action = actions.editAttribute({
+        const action: any = {
+          type: EDIT_ATTRIBUTE,
           attributeToSet: {
             name: 'category',
             relation: 'oneToOne',
@@ -1983,7 +2013,8 @@ describe('CTB | components | DataManagerProvider | reducer | EDIT_ATTRIBUTE', ()
             targetAttribute: null,
             type: 'relation',
           },
-        });
+          shouldAddComponentToData: false,
+        };
 
         const expected = {
           ...initialState,
@@ -2100,7 +2131,8 @@ describe('CTB | components | DataManagerProvider | reducer | EDIT_ATTRIBUTE', ()
           },
         };
 
-        const action = actions.editAttribute({
+        const action: any = {
+          type: EDIT_ATTRIBUTE,
           attributeToSet: {
             name: 'category-new',
             relation: 'oneToOne',
@@ -2127,7 +2159,8 @@ describe('CTB | components | DataManagerProvider | reducer | EDIT_ATTRIBUTE', ()
               },
             },
           },
-        });
+          shouldAddComponentToData: false,
+        };
 
         const expected = {
           ...initialState,

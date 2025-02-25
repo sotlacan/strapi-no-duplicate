@@ -13,7 +13,7 @@ export declare namespace GetInitData {
 
   export interface Response {
     data: {
-      fieldSizes: Record<string, { default: number; isResizable: boolean }>;
+      fieldSizes: Record<string, { default: number; isResizeable: boolean }>;
       components: Component[];
       contentTypes: ContentType[];
     };

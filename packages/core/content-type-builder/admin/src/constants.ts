@@ -5,5 +5,3 @@ export const PERMISSIONS = {
   // plugin directly in the browser
   main: [{ action: 'plugin::content-type-builder.read', subject: null }],
 };
-
-export const MAX_COMPONENT_DEPTH = 6;

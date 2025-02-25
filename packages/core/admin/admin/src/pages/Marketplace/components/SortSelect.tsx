@@ -1,6 +1,6 @@
-import { Box, SingleSelectOption, SingleSelect, BoxComponent } from '@strapi/design-system';
+import { Box, SingleSelectOption, SingleSelect } from '@strapi/design-system';
 import { useIntl } from 'react-intl';
-import { styled } from 'styled-components';
+import styled from 'styled-components';
 
 const SORT_TYPES = {
   'name:asc': {
@@ -56,17 +56,18 @@ const SortSelect = ({ sortQuery, handleSelectChange }: SortSelectProps) => {
   return (
     <SelectWrapper>
       <SingleSelect
+        size="S"
+        id="sort-by-select"
         value={sortQuery}
         customizeContent={() => formatMessage(SORT_TYPES[sortQuery].selected)}
         onChange={(sortName) => {
           // @ts-expect-error – in V2 design-system we'll only ever return strings.
           handleSelectChange({ sort: sortName });
         }}
-        aria-label={formatMessage({
+        label={formatMessage({
           id: 'admin.pages.MarketPlacePage.sort.label',
           defaultMessage: 'Sort by',
         })}
-        size="S"
       >
         {Object.entries(SORT_TYPES).map(([sortName, messages]) => {
           return (
@@ -80,11 +81,23 @@ const SortSelect = ({ sortQuery, handleSelectChange }: SortSelectProps) => {
   );
 };
 
-const SelectWrapper = styled<BoxComponent>(Box)`
+const SelectWrapper = styled(Box)`
   font-weight: ${({ theme }) => theme.fontWeights.semiBold};
 
   span {
     font-size: ${({ theme }) => theme.fontSizes[1]};
+  }
+
+  /* Hide the label, every input needs a label. */
+  label {
+    border: 0;
+    clip: rect(0 0 0 0);
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    padding: 0;
+    position: absolute;
+    width: 1px;
   }
 `;
 

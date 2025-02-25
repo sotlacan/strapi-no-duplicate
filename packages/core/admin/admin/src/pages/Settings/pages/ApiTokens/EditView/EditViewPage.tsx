@@ -1,18 +1,23 @@
 import * as React from 'react';
 
-import { Flex } from '@strapi/design-system';
-import { Formik, Form, FormikHelpers } from 'formik';
+import { ContentLayout, Flex, Main } from '@strapi/design-system';
+import {
+  CheckPagePermissions,
+  Form,
+  SettingsPageTitle,
+  useAPIErrorHandler,
+  useFocusWhenNavigate,
+  useGuidedTour,
+  useNotification,
+  useOverlayBlocker,
+  useRBAC,
+  useTracking,
+} from '@strapi/helper-plugin';
+import { Formik, FormikHelpers } from 'formik';
 import { useIntl } from 'react-intl';
-import { useLocation, useMatch, useNavigate } from 'react-router-dom';
+import { useLocation, useHistory, useRouteMatch } from 'react-router-dom';
 
-import { useGuidedTour } from '../../../../../components/GuidedTour/Provider';
-import { Layouts } from '../../../../../components/Layouts/Layout';
-import { Page } from '../../../../../components/PageHelpers';
 import { useTypedSelector } from '../../../../../core/store/hooks';
-import { useNotification } from '../../../../../features/Notifications';
-import { useTracking } from '../../../../../features/Tracking';
-import { useAPIErrorHandler } from '../../../../../hooks/useAPIErrorHandler';
-import { useRBAC } from '../../../../../hooks/useRBAC';
 import {
   useCreateAPITokenMutation,
   useGetAPITokenQuery,
@@ -29,6 +34,7 @@ import {
   ApiTokenPermissionsProvider,
 } from './apiTokenPermissions';
 import { FormApiTokenContainer } from './components/FormApiTokenContainer';
+import { LoadingView } from './components/LoadingView';
 import { Permissions } from './components/Permissions';
 import { schema } from './constants';
 import { initialState, reducer } from './reducer';
@@ -40,9 +46,11 @@ import type { Get, ApiToken } from '../../../../../../../shared/contracts/api-to
  * server response as the source of the truth for the data.
  */
 export const EditView = () => {
+  useFocusWhenNavigate();
   const { formatMessage } = useIntl();
-  const { toggleNotification } = useNotification();
-  const { state: locationState } = useLocation();
+  const toggleNotification = useNotification();
+  const { lockApp, unlockApp } = useOverlayBlocker();
+  const { state: locationState } = useLocation<{ apiToken: ApiToken }>();
   const permissions = useTypedSelector((state) => state.admin_app.permissions);
   const [apiToken, setApiToken] = React.useState<ApiToken | null>(
     locationState?.apiToken?.accessKey
@@ -52,12 +60,12 @@ export const EditView = () => {
       : null
   );
   const { trackUsage } = useTracking();
-  const setCurrentStep = useGuidedTour('EditView', (state) => state.setCurrentStep);
+  const { setCurrentStep } = useGuidedTour();
   const {
     allowedActions: { canCreate, canUpdate, canRegenerate },
   } = useRBAC(permissions.settings?.['api-tokens']);
   const [state, dispatch] = React.useReducer(reducer, initialState);
-  const match = useMatch('/settings/api-tokens/:id');
+  const match = useRouteMatch<{ id: string }>('/settings/api-tokens/:id');
   const id = match?.params?.id;
   const isCreating = id === 'create';
   const {
@@ -65,7 +73,7 @@ export const EditView = () => {
     _unstableFormatValidationErrors: formatValidtionErrors,
   } = useAPIErrorHandler();
 
-  const navigate = useNavigate();
+  const history = useHistory();
 
   const contentAPIPermissionsQuery = useGetPermissionsQuery();
   const contentAPIRoutesQuery = useGetRoutesQuery();
@@ -77,7 +85,7 @@ export const EditView = () => {
   React.useEffect(() => {
     if (contentAPIPermissionsQuery.error) {
       toggleNotification({
-        type: 'danger',
+        type: 'warning',
         message: formatAPIError(contentAPIPermissionsQuery.error),
       });
     }
@@ -86,7 +94,7 @@ export const EditView = () => {
   React.useEffect(() => {
     if (contentAPIRoutesQuery.error) {
       toggleNotification({
-        type: 'danger',
+        type: 'warning',
         message: formatAPIError(contentAPIRoutesQuery.error),
       });
     }
@@ -144,7 +152,7 @@ export const EditView = () => {
   React.useEffect(() => {
     if (error) {
       toggleNotification({
-        type: 'danger',
+        type: 'warning',
         message: formatAPIError(error),
       });
     }
@@ -186,13 +194,15 @@ export const EditView = () => {
       tokenType: API_TOKEN_TYPE,
     });
 
+    // @ts-expect-error context assertation
+    lockApp();
+
     try {
       if (isCreating) {
         const res = await createToken({
           ...body,
           // lifespan must be "null" for unlimited (0 would mean instantly expired and isn't accepted)
-          lifespan:
-            body?.lifespan && body.lifespan !== '0' ? parseInt(body.lifespan.toString(), 10) : null,
+          lifespan: body?.lifespan || null,
           permissions: body.type === 'custom' ? state.selectedActions : null,
         });
 
@@ -201,7 +211,7 @@ export const EditView = () => {
             formik.setErrors(formatValidtionErrors(res.error));
           } else {
             toggleNotification({
-              type: 'danger',
+              type: 'warning',
               message: formatAPIError(res.error),
             });
           }
@@ -222,10 +232,7 @@ export const EditView = () => {
           tokenType: API_TOKEN_TYPE,
         });
 
-        navigate(`../api-tokens/${res.data.id.toString()}`, {
-          state: { apiToken: res.data },
-          replace: true,
-        });
+        history.replace(`/settings/api-tokens/${res.data.id}`, { apiToken: res.data });
         setCurrentStep('apiTokens.success');
       } else {
         const res = await updateToken({
@@ -241,7 +248,7 @@ export const EditView = () => {
             formik.setErrors(formatValidtionErrors(res.error));
           } else {
             toggleNotification({
-              type: 'danger',
+              type: 'warning',
               message: formatAPIError(res.error),
             });
           }
@@ -264,12 +271,15 @@ export const EditView = () => {
       }
     } catch {
       toggleNotification({
-        type: 'danger',
-        message: formatMessage({
+        type: 'warning',
+        message: {
           id: 'notification.error',
           defaultMessage: 'Something went wrong',
-        }),
+        },
       });
+    } finally {
+      // @ts-expect-error context assertation
+      unlockApp();
     }
   };
 
@@ -314,18 +324,13 @@ export const EditView = () => {
   const canEditInputs = (canUpdate && !isCreating) || (canCreate && isCreating);
 
   if (isLoading) {
-    return <Page.Loading />;
+    return <LoadingView apiTokenName={apiToken?.name} />;
   }
 
   return (
     <ApiTokenPermissionsProvider value={providerValue}>
-      <Page.Main>
-        <Page.Title>
-          {formatMessage(
-            { id: 'Settings.PageTitle', defaultMessage: 'Settings - {name}' },
-            { name: 'API Tokens' }
-          )}
-        </Page.Title>
+      <Main>
+        <SettingsPageTitle name="API Tokens" />
         <Formik
           validationSchema={schema}
           validateOnChange={false}
@@ -346,6 +351,7 @@ export const EditView = () => {
             return (
               <Form>
                 <FormHead
+                  backUrl="/settings/api-tokens"
                   title={{
                     id: 'Settings.apiTokens.createPage.title',
                     defaultMessage: 'Create API Token',
@@ -358,7 +364,7 @@ export const EditView = () => {
                   regenerateUrl="/admin/api-tokens/"
                 />
 
-                <Layouts.Content>
+                <ContentLayout>
                   <Flex direction="column" alignItems="stretch" gap={6}>
                     {Boolean(apiToken?.name) && (
                       <TokenBox token={apiToken?.accessKey} tokenType={API_TOKEN_TYPE} />
@@ -381,12 +387,12 @@ export const EditView = () => {
                       }
                     />
                   </Flex>
-                </Layouts.Content>
+                </ContentLayout>
               </Form>
             );
           }}
         </Formik>
-      </Page.Main>
+      </Main>
     </ApiTokenPermissionsProvider>
   );
 };
@@ -397,8 +403,8 @@ export const ProtectedEditView = () => {
   );
 
   return (
-    <Page.Protect permissions={permissions}>
+    <CheckPagePermissions permissions={permissions}>
       <EditView />
-    </Page.Protect>
+    </CheckPagePermissions>
   );
 };

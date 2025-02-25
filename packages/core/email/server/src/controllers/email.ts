@@ -2,7 +2,6 @@ import { pick } from 'lodash/fp';
 import { errors } from '@strapi/utils';
 
 import type Koa from 'koa';
-import type {} from 'koa-body';
 import type { EmailConfig, SendOptions } from '../types';
 
 const { ApplicationError } = errors;
@@ -14,7 +13,7 @@ const { ApplicationError } = errors;
  */
 const emailController = {
   async send(ctx: Koa.Context) {
-    const options = ctx.request.body as SendOptions;
+    const options: SendOptions = ctx.request.body;
 
     try {
       await strapi.plugin('email').service('email').send(options);
@@ -33,7 +32,7 @@ const emailController = {
   },
 
   async test(ctx: Koa.Context) {
-    const { to } = ctx.request.body as Pick<SendOptions, 'to'>;
+    const { to } = ctx.request.body;
 
     if (!to) {
       throw new ApplicationError('No recipient(s) are given');
@@ -43,7 +42,7 @@ const emailController = {
       to,
       subject: `Strapi test mail to: ${to}`,
       text: `Great! You have correctly configured the Strapi email plugin with the ${strapi.config.get(
-        'plugin::email.provider'
+        'plugin.email.provider'
       )} provider. \r\nFor documentation on how to use the email plugin checkout: https://docs.strapi.io/developer-docs/latest/plugins/email.html`,
     };
 

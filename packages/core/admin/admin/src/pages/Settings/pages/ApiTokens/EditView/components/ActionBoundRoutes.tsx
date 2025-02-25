@@ -1,4 +1,4 @@
-import { Grid, Flex, Typography } from '@strapi/design-system';
+import { Flex, GridItem, Typography } from '@strapi/design-system';
 import { useIntl } from 'react-intl';
 
 import { useApiTokenPermissions } from '../apiTokenPermissions';
@@ -13,7 +13,7 @@ export const ActionBoundRoutes = () => {
   const actionSection = selectedAction?.split('.')[0];
 
   return (
-    <Grid.Item
+    <GridItem
       col={5}
       background="neutral150"
       paddingTop={6}
@@ -21,8 +21,6 @@ export const ActionBoundRoutes = () => {
       paddingLeft={7}
       paddingRight={7}
       style={{ minHeight: '100%' }}
-      direction="column"
-      alignItems="stretch"
     >
       {selectedAction ? (
         <Flex direction="column" alignItems="stretch" gap={2}>
@@ -37,13 +35,13 @@ export const ActionBoundRoutes = () => {
         </Flex>
       ) : (
         <Flex direction="column" alignItems="stretch" gap={2}>
-          <Typography variant="delta" tag="h3">
+          <Typography variant="delta" as="h3">
             {formatMessage({
               id: 'Settings.apiTokens.createPage.permissions.header.title',
               defaultMessage: 'Advanced settings',
             })}
           </Typography>
-          <Typography tag="p" textColor="neutral600">
+          <Typography as="p" textColor="neutral600">
             {formatMessage({
               id: 'Settings.apiTokens.createPage.permissions.header.hint',
               defaultMessage:
@@ -52,6 +50,6 @@ export const ActionBoundRoutes = () => {
           </Typography>
         </Flex>
       )}
-    </Grid.Item>
+    </GridItem>
   );
 };

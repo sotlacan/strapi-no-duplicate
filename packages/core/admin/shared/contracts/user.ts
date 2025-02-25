@@ -6,7 +6,7 @@ import type {
   Pagination,
   SanitizedAdminUser,
 } from './shared';
-import type { Data, Modules } from '@strapi/types';
+import type { Entity, EntityService } from '@strapi/types';
 
 /**
  * /create - Create an admin user
@@ -46,9 +46,7 @@ export declare namespace FindAll {
   // TODO make the types for this
   export interface Request {
     body: {};
-    query: Modules.EntityService.Params.Pick<'admin::user', 'filters' | '_q'> & {
-      [key: string]: any;
-    };
+    query: EntityService.Params.Pick<'admin::user', 'filters'>;
   }
 
   export interface Response {
@@ -69,7 +67,7 @@ export declare namespace FindOne {
   }
 
   export interface Params {
-    id: Data.ID;
+    id: Entity.ID;
   }
 
   export interface Response {
@@ -87,7 +85,7 @@ export declare namespace Update {
   }
 
   export interface Params {
-    id: Data.ID;
+    id: Entity.ID;
   }
 
   export interface Response {
@@ -106,7 +104,7 @@ export declare namespace DeleteOne {
   }
 
   export interface Params {
-    id: Data.ID;
+    id: Entity.ID;
   }
 
   export interface Response {
@@ -121,7 +119,7 @@ export declare namespace DeleteOne {
 export declare namespace DeleteMany {
   export interface Request {
     body: {
-      ids: Data.ID[];
+      ids: Entity.ID[];
     };
     query: {};
   }

@@ -3,7 +3,14 @@
 
 import { ACTIONS, RELEASE_ACTION_MODEL_UID, RELEASE_MODEL_UID } from '../constants';
 
+const { features } = require('@strapi/strapi/dist/utils/ee');
 const { register } = require('../register');
+
+jest.mock('@strapi/strapi/dist/utils/ee', () => ({
+  features: {
+    isEnabled: jest.fn(),
+  },
+}));
 
 jest.mock('../utils', () => ({
   getService: jest.fn(),
@@ -15,19 +22,6 @@ const mockGraphQlShadowCrud = jest.fn(() => ({
 }));
 describe('register', () => {
   const strapi = {
-    service(name: string) {
-      switch (name) {
-        case 'admin::permission':
-          return this.admin.services.permission;
-        default:
-          throw new Error(`Service ${name} not found`);
-      }
-    },
-    ee: {
-      features: {
-        isEnabled: jest.fn(),
-      },
-    },
     features: {
       future: {
         isEnabled: jest.fn(() => true),
@@ -59,15 +53,6 @@ describe('register', () => {
         },
       },
     },
-    db: {
-      migrations: {
-        providers: {
-          internal: {
-            register: jest.fn(),
-          },
-        },
-      },
-    },
   };
 
   beforeEach(() => {
@@ -75,23 +60,25 @@ describe('register', () => {
   });
 
   it('should register permissions if cms-content-releases feature is enabled', () => {
-    strapi.ee.features.isEnabled.mockReturnValue(true);
+    features.isEnabled.mockReturnValue(true);
+
     register({ strapi });
 
-    expect(strapi.service('admin::permission').actionProvider.registerMany).toHaveBeenCalledWith(
+    expect(strapi.admin.services.permission.actionProvider.registerMany).toHaveBeenCalledWith(
       ACTIONS
     );
   });
 
   it('should not register permissions if cms-content-releases feature is disabled', () => {
-    strapi.ee.features.isEnabled.mockReturnValue(false);
+    features.isEnabled.mockReturnValue(false);
+
     register({ strapi });
 
-    expect(strapi.service('admin::permission').actionProvider.registerMany).not.toHaveBeenCalled();
+    expect(strapi.admin.services.permission.actionProvider.registerMany).not.toHaveBeenCalled();
   });
 
   it('should exclude the release and release action models from the GraphQL schema when the feature is enabled', async () => {
-    strapi.ee.features.isEnabled.mockReturnValue(true);
+    features.isEnabled.mockReturnValue(true);
 
     await register({ strapi });
 
@@ -101,7 +88,7 @@ describe('register', () => {
   });
 
   it('should exclude the release and release action models from the GraphQL schema when the feature is disabled', async () => {
-    strapi.ee.features.isEnabled.mockReturnValue(false);
+    features.isEnabled.mockReturnValue(false);
 
     await register({ strapi });
 

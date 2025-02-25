@@ -6,6 +6,12 @@ jest.mock('koa-passport', () => ({
 import passport from 'koa-passport';
 
 let ssoEnabled = true;
+jest.mock('@strapi/strapi/dist/utils/ee', () => ({
+  features: {
+    // Disable the SSO feature
+    isEnabled: () => ssoEnabled,
+  },
+}));
 
 import passportService from '../../../../../server/src/services/passport';
 import eePassportService from '../passport';
@@ -13,18 +19,6 @@ import eePassportService from '../passport';
 const { init } = passportService;
 
 describe('Passport', () => {
-  beforeAll(() => {
-    global.strapi = {
-      ee: {
-        features: {
-          isEnabled: jest.fn(() => {
-            return ssoEnabled;
-          }),
-        },
-      },
-    } as any;
-  });
-
   afterEach(() => {
     // Reset the mock on passport.use.toHaveBeenCalledTimes
     jest.clearAllMocks();
@@ -42,7 +36,6 @@ describe('Passport', () => {
       const { getPassportStrategies } = eePassportService;
 
       global.strapi = {
-        ...global.strapi,
         admin: {
           services: {
             passport: { getPassportStrategies },
@@ -76,7 +69,6 @@ describe('Passport', () => {
       const { getPassportStrategies } = eePassportService;
 
       global.strapi = {
-        ...global.strapi,
         admin: {
           services: {
             passport: { getPassportStrategies },

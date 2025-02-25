@@ -1,6 +1,6 @@
 import { isArray, isNil, isString, toPath } from 'lodash/fp';
 import type { Visitor } from '../../traverse/factory';
-import { throwInvalidKey } from '../utils';
+import { throwInvalidParam } from '../utils';
 
 export default (allowedFields: string[] | null = null): Visitor =>
   ({ key, path: { attribute: path } }) => {
@@ -69,7 +69,7 @@ export default (allowedFields: string[] | null = null): Visitor =>
     }
 
     // throw otherwise
-    throwInvalidKey({ key, path });
+    throwInvalidParam({ key });
   };
 
 /**

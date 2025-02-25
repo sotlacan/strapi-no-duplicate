@@ -2,30 +2,23 @@ import uidServiceLoader from '../uid';
 
 describe('Test uid service', () => {
   describe('generateUIDField', () => {
-    const baseStrapi = {
-      getModel() {
-        return this.contentTypes['my-model'];
-      },
-      documents() {
-        return {
-          find: async () => [],
-          findMany: async () => [],
-        };
-      },
-    } as any;
-
     test('Uses modelName if no targetField specified or set', async () => {
       const strapi = {
-        ...baseStrapi,
         contentTypes: {
           'my-model': {
             modelName: 'myTestModel',
-            kind: 'collectionType',
             attributes: {
               slug: {
                 type: 'uid',
               },
             },
+          },
+        },
+        db: {
+          query() {
+            return {
+              findMany: async () => [],
+            };
           },
         },
       } as any;
@@ -42,7 +35,6 @@ describe('Test uid service', () => {
 
     test('Calls findUniqueUID', async () => {
       const strapi = {
-        ...baseStrapi,
         contentTypes: {
           'my-model': {
             modelName: 'myTestModel',
@@ -55,6 +47,13 @@ describe('Test uid service', () => {
                 targetField: 'title',
               },
             },
+          },
+        },
+        db: {
+          query() {
+            return {
+              findMany: async () => [],
+            };
           },
         },
       } as any;
@@ -88,8 +87,7 @@ describe('Test uid service', () => {
         return [{ slug: 'test-title' }];
       });
 
-      let strapi = {
-        ...baseStrapi,
+      const strapi = {
         contentTypes: {
           'my-model': {
             modelName: 'myTestModel',
@@ -104,13 +102,14 @@ describe('Test uid service', () => {
             },
           },
         },
-        documents() {
-          return {
-            findMany,
-          };
+        db: {
+          query() {
+            return {
+              findMany,
+            };
+          },
         },
       } as any;
-
       const uidService = uidServiceLoader({ strapi });
 
       const uid = await uidService.generateUIDField({
@@ -123,10 +122,8 @@ describe('Test uid service', () => {
 
       expect(uid).toBe('test-title-1');
 
-      strapi = {
-        ...strapi,
-        documents: baseStrapi.documents,
-      };
+      // change find response
+      strapi.db.query = () => ({ findMany: jest.fn(async () => []) });
 
       const uidWithEmptyTarget = await uidService.generateUIDField({
         contentTypeUID: 'my-model',
@@ -141,7 +138,6 @@ describe('Test uid service', () => {
 
     test('Uses options for generation', async () => {
       const strapi = {
-        ...baseStrapi,
         contentTypes: {
           'my-model': {
             modelName: 'myTestModel',
@@ -155,6 +151,13 @@ describe('Test uid service', () => {
                 options: { lowercase: false },
               },
             },
+          },
+        },
+        db: {
+          query() {
+            return {
+              findMany: async () => [],
+            };
           },
         },
       } as any;
@@ -173,7 +176,6 @@ describe('Test uid service', () => {
 
     test('Ignores minLength attribute (should be handle by the user)', async () => {
       const strapi = {
-        ...baseStrapi,
         contentTypes: {
           'my-model': {
             modelName: 'myTestModel',
@@ -189,8 +191,14 @@ describe('Test uid service', () => {
             },
           },
         },
+        db: {
+          query() {
+            return {
+              findMany: async () => [],
+            };
+          },
+        },
       } as any;
-
       const uidService = uidServiceLoader({ strapi });
 
       const uid = await uidService.generateUIDField({
@@ -206,7 +214,6 @@ describe('Test uid service', () => {
 
     test('Ignores maxLength attribute (should be handled user side)', async () => {
       const strapi = {
-        ...baseStrapi,
         contentTypes: {
           'my-model': {
             modelName: 'myTestModel',
@@ -222,8 +229,14 @@ describe('Test uid service', () => {
             },
           },
         },
+        db: {
+          query() {
+            return {
+              findMany: async () => [],
+            };
+          },
+        },
       } as any;
-
       const uidService = uidServiceLoader({ strapi });
 
       const uid = await uidService.generateUIDField({
@@ -239,7 +252,6 @@ describe('Test uid service', () => {
 
     test('Generates a UID using the default value if necessary', async () => {
       const strapi = {
-        ...baseStrapi,
         contentTypes: {
           'my-model': {
             modelName: 'myTestModel',
@@ -249,6 +261,13 @@ describe('Test uid service', () => {
                 default: 'slug-default',
               },
             },
+          },
+        },
+        db: {
+          query() {
+            return {
+              findMany: async () => [],
+            };
           },
         },
       } as any;
@@ -265,22 +284,6 @@ describe('Test uid service', () => {
   });
 
   describe('findUniqueUID', () => {
-    const baseStrapi = {
-      getModel() {
-        return this.contentTypes['my-model'];
-      },
-      contentTypes: {
-        'my-model': {
-          modelName: 'myTestModel',
-          attributes: {
-            slug: {
-              type: 'uid',
-            },
-          },
-        },
-      },
-    } as any;
-
     test('Finds closest match', async () => {
       const findMany = jest.fn(async () => {
         return [
@@ -292,14 +295,24 @@ describe('Test uid service', () => {
       });
 
       const strapi = {
-        ...baseStrapi,
-        documents() {
-          return {
-            findMany,
-          };
+        contentTypes: {
+          'my-model': {
+            modelName: 'myTestModel',
+            attributes: {
+              slug: {
+                type: 'uid',
+              },
+            },
+          },
+        },
+        db: {
+          query() {
+            return {
+              findMany,
+            };
+          },
         },
       } as any;
-
       const uidService = uidServiceLoader({ strapi });
 
       const uid = await uidService.findUniqueUID({
@@ -317,29 +330,34 @@ describe('Test uid service', () => {
       });
 
       const strapi = {
-        ...baseStrapi,
-        documents() {
-          return {
-            findMany,
-          };
+        contentTypes: {
+          'my-model': {
+            modelName: 'myTestModel',
+            attributes: {
+              slug: {
+                type: 'uid',
+              },
+            },
+          },
+        },
+        db: {
+          query() {
+            return {
+              findMany,
+            };
+          },
         },
       } as any;
-
       const uidService = uidServiceLoader({ strapi });
 
       await uidService.findUniqueUID({
         contentTypeUID: 'my-model',
         field: 'slug',
         value: 'my-test-model',
-        locale: 'en',
       } as any);
 
       expect(findMany).toHaveBeenCalledWith({
-        filters: {
-          slug: { $startsWith: 'my-test-model' },
-        },
-        locale: 'en',
-        status: 'draft',
+        where: { slug: { $contains: 'my-test-model' } },
       });
     });
   });
@@ -349,40 +367,23 @@ describe('Test uid service', () => {
       const count = jest.fn(async () => 0);
 
       const strapi = {
-        getModel() {
-          return {
-            modelName: 'myTestModel',
-            kind: 'collectionType',
-            attributes: {
-              slug: {
-                type: 'uid',
-              },
-            },
-          };
-        },
-        documents() {
-          return {
-            count,
-          };
+        db: {
+          query() {
+            return {
+              count,
+            };
+          },
         },
       } as any;
-
       const uidService = uidServiceLoader({ strapi });
 
       const isAvailable = await uidService.checkUIDAvailability({
         contentTypeUID: 'my-model',
         field: 'slug',
         value: 'my-test-model',
-        locale: 'en',
       } as any);
 
-      expect(count).toHaveBeenCalledWith({
-        filters: {
-          slug: 'my-test-model',
-        },
-        locale: 'en',
-        status: 'draft',
-      });
+      expect(count).toHaveBeenCalledWith({ where: { slug: 'my-test-model' } });
       expect(isAvailable).toBe(true);
     });
   });

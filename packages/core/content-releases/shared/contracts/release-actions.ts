@@ -1,14 +1,12 @@
-import type { Schema, Modules, UID, Struct } from '@strapi/types';
+import { Attribute, Common, Schema } from '@strapi/types';
 import type { Release, Pagination } from './releases';
 import type { Entity } from '../types';
 
 import type { errors } from '@strapi/utils';
 
-type ReleaseActionEntryType = 'single-types' | 'collection-types';
-
-export type ReleaseActionEntry = Modules.Documents.AnyDocument & {
+export type ReleaseActionEntry = Entity & {
   // Entity attributes
-  [key: string]: Schema.Attribute.AnyAttribute;
+  [key: string]: Attribute.Any;
 } & {
   locale?: string;
 };
@@ -16,19 +14,17 @@ export type ReleaseActionEntry = Modules.Documents.AnyDocument & {
 export interface ReleaseAction extends Entity {
   type: 'publish' | 'unpublish';
   entry: ReleaseActionEntry;
-  contentType: UID.ContentType;
-  entryDocumentId: ReleaseActionEntry['documentId'];
+  contentType: Common.UID.ContentType;
   locale?: string;
   release: Release;
   isEntryValid: boolean;
-  status: 'draft' | 'published' | 'modified';
 }
 
 export interface FormattedReleaseAction extends Entity {
   type: 'publish' | 'unpublish';
   entry: ReleaseActionEntry;
   contentType: {
-    uid: UID.ContentType;
+    uid: Common.UID.ContentType;
     mainFieldValue?: string;
     displayName: string;
   };
@@ -37,7 +33,6 @@ export interface FormattedReleaseAction extends Entity {
     code: string;
   };
   release: Release;
-  status: 'draft' | 'published' | 'modified';
 }
 
 /**
@@ -50,9 +45,11 @@ export declare namespace CreateReleaseAction {
     };
     body: {
       type: ReleaseAction['type'];
-      contentType: UID.ContentType;
-      entryDocumentId?: ReleaseActionEntry['documentId'];
-      locale?: ReleaseActionEntry['locale'];
+      entry: {
+        id: ReleaseActionEntry['id'];
+        locale?: ReleaseActionEntry['locale'];
+        contentType: Common.UID.ContentType;
+      };
     };
   }
 
@@ -72,9 +69,11 @@ export declare namespace CreateManyReleaseActions {
     };
     body: Array<{
       type: ReleaseAction['type'];
-      contentType: UID.ContentType;
-      entryDocumentId: ReleaseActionEntry['documentId'];
-      locale?: ReleaseActionEntry['locale'];
+      entry: {
+        id: ReleaseActionEntry['id'];
+        locale?: ReleaseActionEntry['locale'];
+        contentType: Common.UID.ContentType;
+      };
     }>;
   }
 
@@ -91,11 +90,6 @@ export declare namespace CreateManyReleaseActions {
 /**
  * GET /content-releases/:id/actions - Get all release actions
  */
-
-export interface Stage extends Entity {
-  color: string;
-  name: string;
-}
 
 export type ReleaseActionGroupBy = 'contentType' | 'action' | 'locale';
 export declare namespace GetReleaseActions {
@@ -114,11 +108,8 @@ export declare namespace GetReleaseActions {
     };
     meta: {
       pagination: Pagination;
-      contentTypes: Record<
-        Struct.ContentTypeSchema['uid'],
-        Struct.ContentTypeSchema & { hasReviewWorkflow: boolean; stageRequiredToPublish?: Stage }
-      >;
-      components: Record<Struct.ComponentSchema['uid'], Struct.ComponentSchema>;
+      contentTypes: Record<Schema.ContentType['uid'], Schema.ContentType>;
+      components: Record<Schema.Component['uid'], Schema.Component>;
     };
   }
 }

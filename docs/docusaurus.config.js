@@ -17,7 +17,6 @@ const config = {
   organizationName: 'strapi',
   projectName: 'strapi',
   trailingSlash: false,
-  themes: ['@docusaurus/theme-mermaid'],
 
   // Even if you don't use internalization, you can use this field to set useful
   // metadata like html lang. For example, if your site is Chinese, you may want
@@ -25,9 +24,6 @@ const config = {
   i18n: {
     defaultLocale: 'en',
     locales: ['en'],
-  },
-  markdown: {
-    mermaid: true,
   },
   plugins: [
     () => ({
@@ -42,17 +38,6 @@ const config = {
         };
       },
     }),
-    [
-      'docusaurus-plugin-typedoc',
-      // Plugin / TypeDoc options
-      {
-        entryPoints: ['../packages/core/strapi/src/admin.ts'],
-        tsconfig: '../packages/core/strapi/tsconfig.build.json',
-        entryDocument: null,
-        out: 'exports',
-        watch: process.env.TYPEDOC_WATCH,
-      },
-    ],
     [
       '@cmfcmf/docusaurus-search-local',
       {
@@ -105,12 +90,6 @@ const config = {
             position: 'left',
             sidebarId: 'api',
             label: 'API Reference',
-          },
-          {
-            type: 'docSidebar',
-            position: 'left',
-            sidebarId: 'exports',
-            label: 'Exports',
           },
           {
             type: 'docSidebar',

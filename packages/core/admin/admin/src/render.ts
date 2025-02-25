@@ -1,20 +1,16 @@
 /* eslint-disable no-undef */
+import { getFetchClient } from '@strapi/helper-plugin';
 import { createRoot } from 'react-dom/client';
 
 import { StrapiApp, StrapiAppConstructorArgs } from './StrapiApp';
-import { getFetchClient } from './utils/getFetchClient';
 import { createAbsoluteUrl } from './utils/urls';
 
-import type { Modules } from '@strapi/types';
+import type { FeaturesService } from '@strapi/types';
 
 interface RenderAdminArgs {
-  customisations: {
-    register?: (app: StrapiApp) => Promise<void> | void;
-    bootstrap?: (app: StrapiApp) => Promise<void> | void;
-    config?: StrapiAppConstructorArgs['config'];
-  };
+  customisations: StrapiAppConstructorArgs['adminConfig'];
   plugins: StrapiAppConstructorArgs['appPlugins'];
-  features?: Modules.Features.FeaturesService['config'];
+  features?: FeaturesService['config'];
 }
 
 const renderAdmin = async (
@@ -34,9 +30,9 @@ const renderAdmin = async (
      */
     backendURL: createAbsoluteUrl(process.env.STRAPI_ADMIN_BACKEND_URL),
     isEE: false,
-    telemetryDisabled: process.env.STRAPI_TELEMETRY_DISABLED === 'true',
+    telemetryDisabled: process.env.STRAPI_TELEMETRY_DISABLED === 'true' ? true : false,
     future: {
-      isEnabled: (name: keyof NonNullable<Modules.Features.FeaturesConfig['future']>) => {
+      isEnabled: (name: keyof FeaturesService['config']) => {
         return features?.future?.[name] === true;
       },
     },
@@ -90,13 +86,14 @@ const renderAdmin = async (
   }
 
   const app = new StrapiApp({
-    config: customisations?.config,
+    adminConfig: customisations,
     appPlugins: plugins,
   });
 
-  await app.register(customisations?.register);
-  await app.bootstrap(customisations?.bootstrap);
-  await app.loadTrads(customisations?.config?.translations);
+  await app.bootstrapAdmin();
+  await app.initialize();
+  await app.bootstrap();
+  await app.loadTrads();
 
   createRoot(mountNode).render(app.render());
 

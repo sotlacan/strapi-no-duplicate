@@ -1,5 +1,5 @@
 import type { errors } from '@strapi/utils';
-import type { Core } from '@strapi/types';
+import { Common } from '@strapi/types';
 
 /**
  * GET /content-api/permissions - Get the permissions of all content types
@@ -26,7 +26,7 @@ export declare namespace GetRoutes {
   }
 
   export interface Response {
-    data: Record<string, Core.Route[]>;
+    data: Record<string, Common.Route[]>;
     error?: errors.ApplicationError;
   }
 }

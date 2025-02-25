@@ -37,7 +37,6 @@ export interface Event {
   model: Meta;
   params: Params;
   state: Record<string, unknown>;
-  result?: any;
 }
 
 export type SubscriberFn = (event: Event) => Promise<void> | void;

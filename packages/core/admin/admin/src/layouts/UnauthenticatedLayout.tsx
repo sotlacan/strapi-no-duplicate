@@ -1,25 +1,18 @@
 import * as React from 'react';
 
-import {
-  Box,
-  BoxComponent,
-  Flex,
-  FlexComponent,
-  SingleSelect,
-  SingleSelectOption,
-} from '@strapi/design-system';
+import { Box, Flex, SingleSelect, SingleSelectOption } from '@strapi/design-system';
 import { useIntl } from 'react-intl';
-import { styled } from 'styled-components';
+import styled from 'styled-components';
 
 import { useTypedDispatch, useTypedSelector } from '../core/store/hooks';
 import { setLocale } from '../reducer';
 
-const Wrapper = styled<BoxComponent>(Box)`
+const Wrapper = styled(Box)`
   margin: 0 auto;
   width: 552px;
 `;
 
-export const Column = styled<FlexComponent>(Flex)`
+export const Column = styled(Flex)`
   flex-direction: column;
 `;
 
@@ -73,7 +66,7 @@ interface UnauthenticatedLayoutProps {
 export const UnauthenticatedLayout = ({ children }: UnauthenticatedLayoutProps) => {
   return (
     <div>
-      <Flex tag="header" justifyContent="flex-end">
+      <Flex as="header" justifyContent="flex-end">
         <Box paddingTop={6} paddingRight={8}>
           <LocaleToggle />
         </Box>

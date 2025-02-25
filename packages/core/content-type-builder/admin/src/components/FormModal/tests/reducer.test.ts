@@ -1,12 +1,14 @@
-import { reducer, initialState, actions } from '../reducer';
+import * as actions from '../constants';
+import { reducer, initialState } from '../reducer';
 
 describe('CTB | components | FormModal | reducer | actions', () => {
-  describe('onChange', () => {
+  describe(actions.ON_CHANGE, () => {
     it('Should update the modifiedData object correctly', () => {
-      const action = actions.onChange({
+      const action = {
+        type: actions.ON_CHANGE,
         keys: ['name'],
         value: 'test',
-      });
+      };
 
       const state = {
         ...initialState,
@@ -35,12 +37,11 @@ describe('CTB | components | FormModal | reducer | actions', () => {
           default: '00:30:00',
         },
       };
-
-      const action = actions.onChange({
+      const action = {
+        type: actions.ON_CHANGE,
         keys: ['type'],
         value: 'datetime',
-      });
-
+      };
       const expected = {
         ...initialState,
         modifiedData: {
@@ -61,11 +62,11 @@ describe('CTB | components | FormModal | reducer | actions', () => {
           default: '0',
         },
       };
-
-      const action = actions.onChange({
+      const action = {
+        type: actions.ON_CHANGE,
         keys: ['type'],
         value: 'biginteger',
-      });
+      };
 
       const expected = {
         ...initialState,
@@ -92,14 +93,15 @@ describe('CTB | components | FormModal | reducer | actions', () => {
           type: 'relation',
         },
       };
-      const action = actions.onChangeRelationTarget({
+      const action = {
+        type: actions.ON_CHANGE_RELATION_TARGET,
         target: {
           value: 'api::address.address',
           oneThatIsCreatingARelationWithAnother: 'address',
           selectedContentTypeFriendlyName: 'address',
           targetContentTypeAllowedRelations: null,
         },
-      });
+      };
 
       const expected = {
         ...initialState,
@@ -126,16 +128,15 @@ describe('CTB | components | FormModal | reducer | actions', () => {
           type: 'relation',
         },
       };
-
-      const action = actions.onChangeRelationTarget({
+      const action = {
+        type: actions.ON_CHANGE_RELATION_TARGET,
         target: {
           value: 'api::country.country',
           oneThatIsCreatingARelationWithAnother: 'address',
           selectedContentTypeFriendlyName: 'country',
           targetContentTypeAllowedRelations: null,
         },
-      });
-
+      };
       const expected = {
         ...initialState,
         modifiedData: {
@@ -161,15 +162,15 @@ describe('CTB | components | FormModal | reducer | actions', () => {
           type: 'relation',
         },
       };
-
-      const action = actions.onChangeRelationTarget({
+      const action = {
+        type: actions.ON_CHANGE_RELATION_TARGET,
         target: {
           value: 'api::country.country',
           oneThatIsCreatingARelationWithAnother: 'address',
           selectedContentTypeFriendlyName: 'country',
           targetContentTypeAllowedRelations: ['oneWay'],
         },
-      });
+      };
 
       const expected = {
         ...initialState,
@@ -196,14 +197,15 @@ describe('CTB | components | FormModal | reducer | actions', () => {
           type: 'relation',
         },
       };
-      const action = actions.onChangeRelationTarget({
+      const action = {
+        type: actions.ON_CHANGE_RELATION_TARGET,
         target: {
           value: 'api::country.country',
           oneThatIsCreatingARelationWithAnother: 'address',
           selectedContentTypeFriendlyName: 'country',
           targetContentTypeAllowedRelations: ['oneWay', 'manyWay'],
         },
-      });
+      };
 
       const expected = {
         ...initialState,
@@ -232,12 +234,14 @@ describe('CTB | components | FormModal | reducer | actions', () => {
           type: 'relation',
         },
       };
-      const action = actions.onChangeRelationType({
+      const action = {
+        type: actions.ON_CHANGE_RELATION_TYPE,
         target: {
           value: 'manyToMany',
+
           oneThatIsCreatingARelationWithAnother: 'address',
         },
-      });
+      };
 
       const expected = {
         ...initialState,
@@ -264,13 +268,13 @@ describe('CTB | components | FormModal | reducer | actions', () => {
           type: 'relation',
         },
       };
-
-      const action = actions.onChangeRelationType({
+      const action = {
+        type: actions.ON_CHANGE_RELATION_TYPE,
         target: {
           value: 'oneWay',
           oneThatIsCreatingARelationWithAnother: 'address',
         },
-      });
+      };
 
       const expected = {
         ...initialState,
@@ -297,13 +301,13 @@ describe('CTB | components | FormModal | reducer | actions', () => {
           type: 'relation',
         },
       };
-
-      const action = actions.onChangeRelationType({
+      const action = {
+        type: actions.ON_CHANGE_RELATION_TYPE,
         target: {
           value: 'oneToMany',
           oneThatIsCreatingARelationWithAnother: 'address',
         },
-      });
+      };
 
       const expected = {
         ...initialState,
@@ -322,8 +326,8 @@ describe('CTB | components | FormModal | reducer | actions', () => {
 
   describe('RESET_PROPS', () => {
     it('Should return the initialState', () => {
-      const state = { ...initialState, modifiedData: { foo: 'bar' } };
-      const action = actions.resetProps();
+      const state = { ...initialState, modifiedData: 'test' };
+      const action = { type: actions.RESET_PROPS };
 
       expect(reducer(state, action)).toEqual(initialState);
     });
@@ -331,9 +335,10 @@ describe('CTB | components | FormModal | reducer | actions', () => {
 
   describe('RESET_PROPS_AND_SET_FORM_FOR_ADDING_AN_EXISTING_COMPO', () => {
     it('Should reset the state and update the modifiedData object with the component field basic schema', () => {
-      const action = actions.resetPropsAndSetFormForAddingAnExistingCompo({});
-
-      const state = { ...initialState, modifiedData: { foo: 'bar' } };
+      const action = {
+        type: actions.RESET_PROPS_AND_SET_FORM_FOR_ADDING_AN_EXISTING_COMPO,
+      };
+      const state = { ...initialState, modifiedData: 'test' };
       const expected = {
         ...initialState,
         modifiedData: {
@@ -348,7 +353,7 @@ describe('CTB | components | FormModal | reducer | actions', () => {
 
   describe('RESET_PROPS_AND_SAVE_CURRENT_DATA', () => {
     it('Should reset the state and update the modifiedData and componentToCreate objects correctly', () => {
-      const action = actions.resetPropsAndSaveCurrentData({});
+      const action = { type: actions.RESET_PROPS_AND_SAVE_CURRENT_DATA };
 
       const state = {
         ...initialState,
@@ -387,13 +392,13 @@ describe('CTB | components | FormModal | reducer | actions', () => {
 
   describe('RESET_PROPS_AND_SET_THE_FORM_FOR_ADDING_A_COMPO_TO_A_DZ', () => {
     it('Should reset the state and prepare the form for adding or creating a component to a dynamic zone', () => {
-      const action = actions.resetPropsAndSetTheFormForAddingACompoToADz();
+      const action = {
+        type: actions.RESET_PROPS_AND_SET_THE_FORM_FOR_ADDING_A_COMPO_TO_A_DZ,
+      };
 
       const state = {
         ...initialState,
-        initialData: {
-          foo: 'bar',
-        },
+        initialData: 'test',
         modifiedData: {
           type: 'dynamiczone',
           components: [],
@@ -418,16 +423,13 @@ describe('CTB | components | FormModal | reducer | actions', () => {
 
   describe('SET_DATA_TO_EDIT', () => {
     it('Should set the state correctly', () => {
-      const action = actions.setDataToEdit({
+      const action = {
+        type: actions.SET_DATA_TO_EDIT,
         data: {
           test: true,
         },
-      });
-      const expected = {
-        ...initialState,
-        modifiedData: action.payload.data,
-        initialData: action.payload.data,
       };
+      const expected = { ...initialState, modifiedData: action.data, initialData: action.data };
 
       expect(reducer(initialState, action)).toEqual(expected);
     });
@@ -440,26 +442,27 @@ describe('CTB | components | FormModal | reducer | actions', () => {
         initialData: { test: true },
         modifiedData: { test: true },
       };
-
-      const action = actions.setAttributeDataSchema({
+      const action = {
+        type: actions.SET_ATTRIBUTE_DATA_SCHEMA,
         isEditing: true,
         modifiedDataToSetForEditing: {
           test: true,
         },
-      });
+      };
 
       expect(reducer(initialState, action)).toEqual(expected);
     });
 
     it('Should set the state correctly for a component in step 1', () => {
-      const action = actions.setAttributeDataSchema({
+      const action = {
+        type: actions.SET_ATTRIBUTE_DATA_SCHEMA,
         attributeType: 'component',
         nameToSetForRelation: 'address',
         targetUid: 'api::address.address',
         isEditing: false,
         modifiedDataToSetForEditing: { name: null },
         step: '1',
-      });
+      };
       const expected = {
         ...initialState,
         modifiedData: {
@@ -473,15 +476,15 @@ describe('CTB | components | FormModal | reducer | actions', () => {
     });
 
     it('Should set the state correctly for a component in step 2', () => {
-      const action = actions.setAttributeDataSchema({
+      const action = {
+        type: actions.SET_ATTRIBUTE_DATA_SCHEMA,
         attributeType: 'component',
         nameToSetForRelation: 'address',
         targetUid: 'api::address.address',
         isEditing: false,
         modifiedDataToSetForEditing: { name: null },
         step: '2',
-      });
-
+      };
       const expected = {
         ...initialState,
         modifiedData: {
@@ -494,15 +497,15 @@ describe('CTB | components | FormModal | reducer | actions', () => {
     });
 
     it('Should set the state correctly for a dynamiczone', () => {
-      const action = actions.setAttributeDataSchema({
+      const action = {
+        type: actions.SET_ATTRIBUTE_DATA_SCHEMA,
         attributeType: 'dynamiczone',
         nameToSetForRelation: 'address',
         targetUid: 'api::address.address',
         isEditing: false,
         modifiedDataToSetForEditing: { name: null },
         step: '2',
-      });
-
+      };
       const expected = {
         ...initialState,
         modifiedData: {
@@ -515,15 +518,15 @@ describe('CTB | components | FormModal | reducer | actions', () => {
     });
 
     it('Should set the state correctly for a text', () => {
-      const action = actions.setAttributeDataSchema({
+      const action = {
+        type: actions.SET_ATTRIBUTE_DATA_SCHEMA,
         attributeType: 'text',
         nameToSetForRelation: 'address',
         targetUid: 'api::address.address',
         isEditing: false,
         modifiedDataToSetForEditing: { name: null },
         step: null,
-      });
-
+      };
       const expected = {
         ...initialState,
         modifiedData: {
@@ -535,42 +538,45 @@ describe('CTB | components | FormModal | reducer | actions', () => {
     });
 
     it('Should set the state correctly for a number', () => {
-      const action = actions.setAttributeDataSchema({
+      const action = {
+        type: actions.SET_ATTRIBUTE_DATA_SCHEMA,
         attributeType: 'number',
         nameToSetForRelation: 'address',
         targetUid: 'api::address.address',
         isEditing: false,
         modifiedDataToSetForEditing: { name: null },
         step: null,
-      });
+      };
       const expected = { ...initialState, modifiedData: {} };
 
       expect(reducer(initialState, action)).toEqual(expected);
     });
 
     it('Should set the state correctly for a date', () => {
-      const action = actions.setAttributeDataSchema({
+      const action = {
+        type: actions.SET_ATTRIBUTE_DATA_SCHEMA,
         attributeType: 'date',
         nameToSetForRelation: 'address',
         targetUid: 'api::address.address',
         isEditing: false,
         modifiedDataToSetForEditing: { name: null },
         step: null,
-      });
+      };
       const expected = { ...initialState, modifiedData: {} };
 
       expect(reducer(initialState, action)).toEqual(expected);
     });
 
     it('Should set the state correctly for a media', () => {
-      const action = actions.setAttributeDataSchema({
+      const action = {
+        type: actions.SET_ATTRIBUTE_DATA_SCHEMA,
         attributeType: 'media',
         nameToSetForRelation: 'address',
         targetUid: 'api::address.address',
         isEditing: false,
         modifiedDataToSetForEditing: { name: null },
         step: null,
-      });
+      };
       const expected = {
         ...initialState,
         modifiedData: {
@@ -584,28 +590,30 @@ describe('CTB | components | FormModal | reducer | actions', () => {
     });
 
     it('Should set the state correctly for an enumeration', () => {
-      const action = actions.setAttributeDataSchema({
+      const action = {
+        type: actions.SET_ATTRIBUTE_DATA_SCHEMA,
         attributeType: 'enumeration',
         nameToSetForRelation: 'address',
         targetUid: 'api::address.address',
         isEditing: false,
         modifiedDataToSetForEditing: { name: null },
         step: null,
-      });
+      };
       const expected = { ...initialState, modifiedData: { type: 'enumeration', enum: [] } };
 
       expect(reducer(initialState, action)).toEqual(expected);
     });
 
     it('Should set the state correctly for a relation', () => {
-      const action = actions.setAttributeDataSchema({
+      const action = {
+        type: actions.SET_ATTRIBUTE_DATA_SCHEMA,
         attributeType: 'relation',
         nameToSetForRelation: 'address test',
         targetUid: 'api::address.address',
         isEditing: false,
         modifiedDataToSetForEditing: { name: null },
         step: null,
-      });
+      };
       const expected = {
         ...initialState,
         modifiedData: {
@@ -621,14 +629,15 @@ describe('CTB | components | FormModal | reducer | actions', () => {
     });
 
     it('Should set the state correctly for the other cases', () => {
-      const action = actions.setAttributeDataSchema({
+      const action = {
+        type: actions.SET_ATTRIBUTE_DATA_SCHEMA,
         attributeType: 'json',
         nameToSetForRelation: 'address',
         targetUid: 'api::address.address',
         isEditing: false,
         modifiedDataToSetForEditing: { name: null },
         step: null,
-      });
+      };
       const expected = { ...initialState, modifiedData: { type: 'json', default: null } };
 
       expect(reducer(initialState, action)).toEqual(expected);
@@ -637,7 +646,8 @@ describe('CTB | components | FormModal | reducer | actions', () => {
 
   describe('SET_DYNAMIC_ZONE_DATA_SCHEMA', () => {
     it('Should set the dynamic zone schema correctly', () => {
-      const action = actions.setDynamicZoneDataSchema({
+      const action = {
+        type: actions.SET_DYNAMIC_ZONE_DATA_SCHEMA,
         attributeToEdit: {
           type: 'dynamiczone',
           components: [],
@@ -645,12 +655,11 @@ describe('CTB | components | FormModal | reducer | actions', () => {
           createComponent: false,
           componentToCreate: { type: 'component' },
         },
-      });
-
+      };
       const expected = {
         ...initialState,
-        modifiedData: action.payload.attributeToEdit,
-        initialData: action.payload.attributeToEdit,
+        modifiedData: action.attributeToEdit,
+        initialData: action.attributeToEdit,
       };
 
       expect(reducer(initialState, action)).toEqual(expected);
@@ -659,12 +668,13 @@ describe('CTB | components | FormModal | reducer | actions', () => {
 
   describe('SET_ERRORS', () => {
     it('Should set the formErrors object correctly', () => {
-      const action = actions.setErrors({
+      const action = {
+        type: actions.SET_ERRORS,
         errors: {
           test: 'this is required',
         },
-      });
-      const expected = { ...initialState, formErrors: action.payload.errors };
+      };
+      const expected = { ...initialState, formErrors: action.errors };
 
       expect(reducer(initialState, action)).toEqual(expected);
     });

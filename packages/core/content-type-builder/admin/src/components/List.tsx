@@ -1,21 +1,8 @@
 import { ComponentType, Fragment } from 'react';
 
-import { useTracking } from '@strapi/admin/strapi-admin';
-import {
-  Box,
-  Button,
-  EmptyStateLayout,
-  Table,
-  Tbody,
-  Td,
-  TFooter,
-  Th,
-  Thead,
-  Tr,
-  Typography,
-} from '@strapi/design-system';
+import { Box, Button, Table, TFooter, Th, Thead, Tr, Typography } from '@strapi/design-system';
+import { EmptyBodyTable, useTracking } from '@strapi/helper-plugin';
 import { Plus } from '@strapi/icons';
-import { EmptyDocuments } from '@strapi/icons/symbols';
 import { useIntl } from 'react-intl';
 
 import { useDataManager } from '../hooks/useDataManager';
@@ -28,7 +15,7 @@ import { DynamicZoneList } from './DynamicZoneList';
 import { NestedTFooter } from './NestedFooter';
 
 import type { SchemaType } from '../types';
-import type { Internal } from '@strapi/types';
+import type { UID } from '@strapi/types';
 
 interface ListProps {
   addComponentToDZ?: () => void;
@@ -40,7 +27,7 @@ interface ListProps {
   isMain?: boolean;
   items: any[];
   secondLoopComponentUid?: string | null;
-  targetUid?: Internal.UID.Schema;
+  targetUid?: UID.Any;
   isSub?: boolean;
 }
 
@@ -85,20 +72,13 @@ export const List = ({
             </Th>
           </Tr>
         </Thead>
-        <Tbody>
-          <Tr>
-            <Td colSpan={2}>
-              <EmptyStateLayout
-                content={formatMessage({
-                  id: getTrad('table.content.create-first-content-type'),
-                  defaultMessage: 'Create your first Collection-Type',
-                })}
-                hasRadius
-                icon={<EmptyDocuments width="16rem" />}
-              />
-            </Td>
-          </Tr>
-        </Tbody>
+        <EmptyBodyTable
+          colSpan={2}
+          content={{
+            id: getTrad('table.content.create-first-content-type'),
+            defaultMessage: 'Create your first Collection-Type',
+          }}
+        />
       </Table>
     );
   }
@@ -120,40 +100,28 @@ export const List = ({
             </Th>
           </Tr>
         </Thead>
-        <Tbody>
-          <Tr>
-            <Td colSpan={2}>
-              <EmptyStateLayout
-                action={
-                  <Button
-                    onClick={onClickAddField}
-                    size="L"
-                    startIcon={<Plus />}
-                    variant="secondary"
-                  >
-                    {formatMessage({
-                      id: getTrad('table.button.no-fields'),
-                      defaultMessage: 'Add new field',
-                    })}
-                  </Button>
+        <EmptyBodyTable
+          action={
+            <Button onClick={onClickAddField} size="L" startIcon={<Plus />} variant="secondary">
+              {formatMessage({
+                id: getTrad('table.button.no-fields'),
+                defaultMessage: 'Add new field',
+              })}
+            </Button>
+          }
+          colSpan={2}
+          content={
+            isInContentTypeView
+              ? {
+                  id: getTrad('table.content.no-fields.collection-type'),
+                  defaultMessage: 'Add your first field to this Collection-Type',
                 }
-                content={formatMessage(
-                  isInContentTypeView
-                    ? {
-                        id: getTrad('table.content.no-fields.collection-type'),
-                        defaultMessage: 'Add your first field to this Collection-Type',
-                      }
-                    : {
-                        id: getTrad('table.content.no-fields.component'),
-                        defaultMessage: 'Add your first field to this component',
-                      }
-                )}
-                hasRadius
-                icon={<EmptyDocuments width="16rem" />}
-              />
-            </Td>
-          </Tr>
-        </Tbody>
+              : {
+                  id: getTrad('table.content.no-fields.component'),
+                  defaultMessage: 'Add your first field to this component',
+                }
+          }
+        />
       </Table>
     );
   }
@@ -170,12 +138,12 @@ export const List = ({
             <thead>
               <tr>
                 <th>
-                  <Typography variant="sigma" textColor="neutral800">
+                  <Typography variant="sigma" textColor="neutral600">
                     {formatMessage({ id: 'global.name', defaultMessage: 'Name' })}
                   </Typography>
                 </th>
                 <th colSpan={2}>
-                  <Typography variant="sigma" textColor="neutral800">
+                  <Typography variant="sigma" textColor="neutral600">
                     {formatMessage({ id: 'global.type', defaultMessage: 'Type' })}
                   </Typography>
                 </th>
@@ -226,7 +194,7 @@ export const List = ({
       </Box>
 
       {isMain && isInDevelopmentMode && (
-        <TFooter cursor="pointer" icon={<Plus />} onClick={onClickAddField}>
+        <TFooter icon={<Plus />} onClick={onClickAddField}>
           {formatMessage({
             id: getTrad(
               `form.button.add.field.to.${

@@ -1,6 +1,6 @@
 import * as React from 'react';
 
-import { useTracking } from '@strapi/admin/strapi-admin';
+import { useTracking } from '@strapi/helper-plugin';
 
 import { FormModalNavigationContext } from '../../contexts/FormModalNavigationContext';
 
@@ -41,7 +41,6 @@ export const FormModalNavigationProvider = ({ children }: FormModalNavigationPro
         modalType: 'customField',
         attributeType,
         customFieldUid,
-        activeTab: 'basic',
       };
     });
   };
@@ -59,7 +58,6 @@ export const FormModalNavigationProvider = ({ children }: FormModalNavigationPro
         step,
         attributeType,
         showBackLink: true,
-        activeTab: 'basic',
       };
     });
   };
@@ -89,14 +87,13 @@ export const FormModalNavigationProvider = ({ children }: FormModalNavigationPro
         modalType: 'chooseAttribute',
         isOpen: true,
         showBackLink: false,
-        activeTab: 'basic',
       };
     });
   };
 
   const onOpenModalCreateSchema = (nextState: State) => {
     setFormModalNavigationState((prevState) => {
-      return { ...prevState, ...nextState, isOpen: true, activeTab: 'basic' };
+      return { ...prevState, ...nextState, isOpen: true };
     });
   };
 
@@ -108,7 +105,6 @@ export const FormModalNavigationProvider = ({ children }: FormModalNavigationPro
         actionType: 'edit',
         modalType: 'editCategory',
         isOpen: true,
-        activeTab: 'basic',
       };
     });
   };
@@ -131,7 +127,6 @@ export const FormModalNavigationProvider = ({ children }: FormModalNavigationPro
         attributeName,
         attributeType,
         isOpen: true,
-        activeTab: 'basic',
       };
     });
   };
@@ -168,7 +163,6 @@ export const FormModalNavigationProvider = ({ children }: FormModalNavigationPro
         targetUid,
         kind,
         isOpen: true,
-        activeTab: 'basic',
       };
     });
   };
@@ -184,7 +178,6 @@ export const FormModalNavigationProvider = ({ children }: FormModalNavigationPro
         forTarget,
         targetUid,
         modalType: 'chooseAttribute',
-        activeTab: 'basic',
       };
     });
   };
@@ -196,7 +189,6 @@ export const FormModalNavigationProvider = ({ children }: FormModalNavigationPro
         attributeType: 'component',
         modalType: 'attribute',
         step: '2',
-        activeTab: 'basic',
       };
     });
   };
@@ -211,16 +203,6 @@ export const FormModalNavigationProvider = ({ children }: FormModalNavigationPro
         step: '1',
         attributeType: null,
         attributeName: null,
-        activeTab: 'basic',
-      };
-    });
-  };
-
-  const setActiveTab = (value: string) => {
-    setFormModalNavigationState((prev: State) => {
-      return {
-        ...prev,
-        activeTab: value,
       };
     });
   };
@@ -244,7 +226,6 @@ export const FormModalNavigationProvider = ({ children }: FormModalNavigationPro
           onOpenModalEditCustomField,
           onOpenModalEditSchema,
           setFormModalNavigationState,
-          setActiveTab,
         } as any
       }
     >

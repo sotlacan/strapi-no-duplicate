@@ -1,11 +1,9 @@
 {
-  "extends": "./tsconfig.json",
+  "extends": "./admin/tsconfig.json",
+  "include": ["./admin/src", "./admin/custom.d.ts", "./shared"],
+  "exclude": ["tests", "**/*.test.*"],
   "compilerOptions": {
-    "rootDir": "../",
-    "baseUrl": ".",
-    "outDir": "../dist",
-    "noEmit": false
-  },
-  "include": ["./src", "./custom.d.ts", "../shared"],
-  "exclude": ["node_modules", "tests", "**/*.test.*"]
+    "rootDir": ".",
+    "outDir": "./dist"
+  }
 }

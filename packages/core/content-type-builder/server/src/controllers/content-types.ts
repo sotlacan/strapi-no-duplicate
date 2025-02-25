@@ -1,13 +1,17 @@
 import _ from 'lodash';
 import type { Context } from 'koa';
-import type {} from 'koa-body';
-import type { Internal } from '@strapi/types';
+import 'koa-bodyparser';
+
+import { contentTypes } from '@strapi/utils';
+import type { UID } from '@strapi/types';
 import { getService } from '../utils';
 import {
   validateContentTypeInput,
   validateUpdateContentTypeInput,
   validateKind,
 } from './validation/content-type';
+
+const { hasDraftAndPublish } = contentTypes;
 
 export default {
   async getContentTypes(ctx: Context) {
@@ -25,11 +29,10 @@ export default {
       .filter(
         (uid) =>
           !kind ||
-          _.get(strapi.contentTypes[uid as Internal.UID.ContentType], 'kind', 'collectionType') ===
-            kind
+          _.get(strapi.contentTypes[uid as UID.ContentType], 'kind', 'collectionType') === kind
       )
       .map((uid) =>
-        contentTypeService.formatContentType(strapi.contentTypes[uid as Internal.UID.ContentType])
+        contentTypeService.formatContentType(strapi.contentTypes[uid as UID.ContentType])
       );
 
     ctx.send({
@@ -52,7 +55,7 @@ export default {
   },
 
   async createContentType(ctx: Context) {
-    const body = ctx.request.body as any;
+    const { body } = ctx.request;
 
     try {
       await validateContentTypeInput(body);
@@ -73,10 +76,11 @@ export default {
       const metricsPayload = {
         eventProperties: {
           kind: contentType.kind,
+          hasDraftAndPublish: hasDraftAndPublish(contentType.schema),
         },
       };
 
-      if (_.isEmpty(strapi.apis)) {
+      if (_.isEmpty(strapi.api)) {
         await strapi.telemetry.send('didCreateFirstContentType', metricsPayload);
       } else {
         await strapi.telemetry.send('didCreateContentType', metricsPayload);
@@ -96,7 +100,7 @@ export default {
 
   async updateContentType(ctx: Context) {
     const { uid } = ctx.params;
-    const body = ctx.request.body as any;
+    const { body } = ctx.request;
 
     if (!_.has(strapi.contentTypes, uid)) {
       return ctx.send({ error: 'contentType.notFound' }, 404);

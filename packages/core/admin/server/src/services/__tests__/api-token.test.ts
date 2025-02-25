@@ -49,10 +49,8 @@ describe('API Token', () => {
       const create = jest.fn(({ data }) => Promise.resolve(data));
 
       global.strapi = {
-        db: {
-          query() {
-            return { create };
-          },
+        query() {
+          return { create };
         },
         config: {
           get: jest.fn(() => ''),
@@ -97,10 +95,8 @@ describe('API Token', () => {
 
       const create = jest.fn(({ data }) => Promise.resolve(data));
       global.strapi = {
-        db: {
-          query() {
-            return { create };
-          },
+        query() {
+          return { create };
         },
         config: {
           get: jest.fn(() => ''),
@@ -138,10 +134,8 @@ describe('API Token', () => {
 
       const create = jest.fn(({ data }) => Promise.resolve(data));
       global.strapi = {
-        db: {
-          query() {
-            return { create };
-          },
+        query() {
+          return { create };
         },
         config: {
           get: jest.fn(() => ''),
@@ -184,23 +178,24 @@ describe('API Token', () => {
 
       global.strapi = {
         ...getActionProvider(['admin::content.content.read'] as any),
-        db: {
-          query() {
-            return {
-              findOne,
-              create,
-              load,
-            };
-          },
+        query() {
+          return {
+            findOne,
+            create,
+          };
         },
         config: {
           get: jest.fn(() => ''),
+        },
+        entityService: {
+          load,
         },
       } as any;
 
       const res = await apiTokenCreate(attributes);
 
       expect(load).toHaveBeenCalledWith(
+        'admin::api-token',
         {
           ...createTokenResult,
         },
@@ -267,23 +262,24 @@ describe('API Token', () => {
 
       global.strapi = {
         ...getActionProvider(['admin::content.content.read'] as any),
-        db: {
-          query() {
-            return {
-              findOne,
-              create,
-              load,
-            };
-          },
+        query() {
+          return {
+            findOne,
+            create,
+          };
         },
         config: {
           get: jest.fn(() => ''),
+        },
+        entityService: {
+          load,
         },
       } as any;
 
       const res = await apiTokenCreate(attributes);
 
       expect(load).toHaveBeenCalledWith(
+        'admin::api-token',
         {
           ...createTokenResult,
         },
@@ -340,17 +336,17 @@ describe('API Token', () => {
 
       global.strapi = {
         ...getActionProvider(['api::foo.foo.find', 'api::foo.foo.create'] as any),
-        db: {
-          query() {
-            return {
-              findOne,
-              create,
-              load,
-            };
-          },
+        query() {
+          return {
+            findOne,
+            create,
+          };
         },
         config: {
           get: jest.fn(() => ''),
+        },
+        entityService: {
+          load,
         },
       } as any;
 
@@ -388,16 +384,16 @@ describe('API Token', () => {
 
       global.strapi = {
         ...getActionProvider(['valid-permission'] as any),
-        db: {
-          query() {
-            return {
-              create,
-              load,
-            };
-          },
+        query() {
+          return {
+            create,
+          };
         },
         config: {
           get: jest.fn(() => ''),
+        },
+        entityService: {
+          load,
         },
       } as any;
 
@@ -486,10 +482,8 @@ describe('API Token', () => {
       const findMany = jest.fn().mockResolvedValue(tokens);
 
       global.strapi = {
-        db: {
-          query() {
-            return { findMany };
-          },
+        query() {
+          return { findMany };
         },
       } as any;
 
@@ -516,10 +510,8 @@ describe('API Token', () => {
       const mockedDelete = jest.fn().mockResolvedValue(token);
 
       global.strapi = {
-        db: {
-          query() {
-            return { delete: mockedDelete };
-          },
+        query() {
+          return { delete: mockedDelete };
         },
       } as any;
 
@@ -537,10 +529,8 @@ describe('API Token', () => {
       const mockedDelete = jest.fn().mockResolvedValue(null);
 
       global.strapi = {
-        db: {
-          query() {
-            return { delete: mockedDelete };
-          },
+        query() {
+          return { delete: mockedDelete };
         },
       } as any;
 
@@ -551,7 +541,6 @@ describe('API Token', () => {
         where: { id: 42 },
         populate: ['permissions'],
       });
-
       expect(res).toEqual(null);
     });
   });
@@ -568,10 +557,8 @@ describe('API Token', () => {
       const findOne = jest.fn().mockResolvedValue(token);
 
       global.strapi = {
-        db: {
-          query() {
-            return { findOne };
-          },
+        query() {
+          return { findOne };
         },
       } as any;
 
@@ -589,10 +576,8 @@ describe('API Token', () => {
       const findOne = jest.fn().mockResolvedValue(null);
 
       global.strapi = {
-        db: {
-          query() {
-            return { findOne };
-          },
+        query() {
+          return { findOne };
         },
       } as any;
 
@@ -612,10 +597,8 @@ describe('API Token', () => {
       const update = jest.fn(({ data }) => Promise.resolve(data));
 
       global.strapi = {
-        db: {
-          query() {
-            return { update };
-          },
+        query() {
+          return { update };
         },
         config: {
           get: jest.fn(() => ''),
@@ -639,10 +622,8 @@ describe('API Token', () => {
       const update = jest.fn(() => Promise.resolve(null));
 
       global.strapi = {
-        db: {
-          query() {
-            return { update };
-          },
+        query() {
+          return { update };
         },
         config: {
           get: jest.fn(() => ''),
@@ -679,18 +660,18 @@ describe('API Token', () => {
       const load = jest.fn();
 
       global.strapi = {
-        db: {
-          query() {
-            return {
-              update,
-              findOne,
-              delete: deleteFn,
-              load,
-            };
-          },
+        query() {
+          return {
+            update,
+            findOne,
+            delete: deleteFn,
+          };
         },
         config: {
           get: jest.fn(() => ''),
+        },
+        entityService: {
+          load,
         },
       } as any;
 
@@ -739,19 +720,19 @@ describe('API Token', () => {
 
       global.strapi = {
         ...getActionProvider(['valid-permission-A'] as any),
-        db: {
-          query() {
-            return {
-              update,
-              findOne,
-              delete: deleteFn,
-              create,
-              load,
-            };
-          },
+        query() {
+          return {
+            update,
+            findOne,
+            delete: deleteFn,
+            create,
+          };
         },
         config: {
           get: jest.fn(() => ''),
+        },
+        entityService: {
+          load,
         },
       } as any;
 
@@ -809,19 +790,19 @@ describe('API Token', () => {
         );
 
       global.strapi = {
-        db: {
-          query() {
-            return {
-              update,
-              findOne,
-              delete: deleteFn,
-              create,
-              load,
-            };
-          },
+        query() {
+          return {
+            update,
+            findOne,
+            delete: deleteFn,
+            create,
+          };
         },
         config: {
           get: jest.fn(() => ''),
+        },
+        entityService: {
+          load,
         },
       } as any;
 
@@ -898,19 +879,19 @@ describe('API Token', () => {
           'admin::subject.newAction',
           'admin::subject.otherAction',
         ] as any),
-        db: {
-          query() {
-            return {
-              update,
-              findOne,
-              delete: deleteFn,
-              create,
-              load,
-            };
-          },
+        query() {
+          return {
+            update,
+            findOne,
+            delete: deleteFn,
+            create,
+          };
         },
         config: {
           get: jest.fn(() => ''),
+        },
+        entityService: {
+          load,
         },
       } as any;
 
@@ -972,10 +953,8 @@ describe('API Token', () => {
       const findOne = jest.fn().mockResolvedValue(token);
 
       global.strapi = {
-        db: {
-          query() {
-            return { findOne };
-          },
+        query() {
+          return { findOne };
         },
       } as any;
 
@@ -993,10 +972,8 @@ describe('API Token', () => {
       const findOne = jest.fn().mockResolvedValue(null);
 
       global.strapi = {
-        db: {
-          query() {
-            return { findOne };
-          },
+        query() {
+          return { findOne };
         },
       } as any;
 

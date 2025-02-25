@@ -1,7 +1,4 @@
-import type * as Schema from '../../../schema';
-
-import type * as UID from '../../../uid';
-import type { Guard } from '../../../utils';
+import type { Attribute, Common, Utils } from '../../../types';
 
 /**
  * Wildcard notation for the fields.
@@ -19,9 +16,9 @@ export type WildcardNotation = '*';
  * type C = 'populatableField'; // ❌
  * type D = '<random_string>'; // ❌
  */
-export type SingleAttribute<TSchemaUID extends UID.Schema> =
+export type SingleAttribute<TSchemaUID extends Common.UID.Schema> =
   | 'id'
-  | Guard.Never<Schema.NonPopulatableAttributeNames<TSchemaUID>, string>;
+  | Utils.Guard.Never<Attribute.GetNonPopulatableKeys<TSchemaUID>, string>;
 
 /**
  * Union of all possible string representation for fields
@@ -34,7 +31,7 @@ export type SingleAttribute<TSchemaUID extends UID.Schema> =
  * type E = 'populatableField'; // ❌
  * type F = '<random_string>'; // ❌
  */
-export type StringNotation<TSchemaUID extends UID.Schema> =
+export type StringNotation<TSchemaUID extends Common.UID.Schema> =
   | WildcardNotation
   | SingleAttribute<TSchemaUID>
   // TODO: Loose type checking to avoid circular dependencies & infinite recursion
@@ -51,7 +48,7 @@ export type StringNotation<TSchemaUID extends UID.Schema> =
  * type F = ['populatableField']; // ❌
  * type G = ['<random_string>']; // ❌
  */
-export type ArrayNotation<TSchemaUID extends UID.Schema> = Exclude<
+export type ArrayNotation<TSchemaUID extends Common.UID.Schema> = Exclude<
   StringNotation<TSchemaUID>,
   WildcardNotation
 >[];
@@ -72,6 +69,6 @@ export type ArrayNotation<TSchemaUID extends UID.Schema> = Exclude<
  * type J = 'populatableField'; // ❌
  * type K = '<random_string>'; // ❌
  */
-export type Any<TSchemaUID extends UID.Schema> =
+export type Any<TSchemaUID extends Common.UID.Schema> =
   | StringNotation<TSchemaUID>
   | ArrayNotation<TSchemaUID>;

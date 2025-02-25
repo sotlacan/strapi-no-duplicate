@@ -28,6 +28,7 @@ describe('Content Type Generator', () => {
         pluralName: 'testContentTypes',
         kind: 'singleType',
         id: 'testContentType',
+        useDraftAndPublish: false,
         destination: 'new',
         bootstrapApi: false,
         attributes: [],
@@ -58,11 +59,12 @@ describe('Content Type Generator', () => {
         displayName: 'testContentType',
       },
       options: {
+        draftAndPublish: false,
         comment: '',
       },
       attributes: {},
     });
-  }, 30000);
+  });
 
   test('it scaffolds a new API', async () => {
     await strapiGenerators.generate(
@@ -73,6 +75,7 @@ describe('Content Type Generator', () => {
         pluralName: 'testContentTypes',
         kind: 'singleType',
         id: 'testContentType',
+        useDraftAndPublish: false,
         destination: 'new',
         bootstrapApi: true,
         attributes: [],
@@ -145,6 +148,7 @@ describe('Content Type Generator', () => {
         pluralName: 'testContentTypes',
         kind: 'singleType',
         id: 'testContentType',
+        useDraftAndPublish: false,
         destination: 'new',
         bootstrapApi: false,
         attributes: [

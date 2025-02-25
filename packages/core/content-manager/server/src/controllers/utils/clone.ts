@@ -1,6 +1,5 @@
 import { set } from 'lodash/fp';
 import strapiUtils from '@strapi/utils';
-import { ProhibitedCloningField } from '../../../../shared/contracts/collection-types';
 
 const { isVisibleAttribute } = strapiUtils.contentTypes;
 
@@ -9,6 +8,7 @@ const { isVisibleAttribute } = strapiUtils.contentTypes;
  * We can't use special characters as delimiters, because the path includes display names
  * for dynamic zone components, which can contain any character.
  */
+type ProhibitedCloningField = [string[], 'unique' | 'relation'];
 
 function checkRelation(model: any, attributeName: any, path: string[]): ProhibitedCloningField[] {
   // we don't care about createdBy, updatedBy, localizations etc.

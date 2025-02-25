@@ -1,20 +1,20 @@
 import * as utils from '@strapi/utils';
 import { pick } from 'lodash/fp';
-import type { Core } from '@strapi/types';
+import type { Common } from '@strapi/types';
 import { getService } from '../utils';
 import { validateCreateLocaleInput, validateUpdateLocaleInput } from '../validation/locales';
 import { formatLocale } from '../domain/locale';
 
-const { setCreatorFields } = utils;
+const { setCreatorFields, sanitize } = utils;
 const { ApplicationError } = utils.errors;
 
 const sanitizeLocale = (locale: any) => {
   const model = strapi.getModel('plugin::i18n.locale');
 
-  return strapi.contentAPI.sanitize.output(locale, model);
+  return sanitize.contentAPI.output(locale, model);
 };
 
-const controller: Core.Controller = {
+const controller: Common.Controller = {
   async listLocales(ctx) {
     const localesService = getService('locales');
 
@@ -26,7 +26,7 @@ const controller: Core.Controller = {
 
   async createLocale(ctx) {
     const { user } = ctx.state;
-    const body = ctx.request.body as any;
+    const { body } = ctx.request;
     const { isDefault, ...localeToCreate } = body;
 
     await validateCreateLocaleInput(body);
@@ -54,7 +54,7 @@ const controller: Core.Controller = {
   async updateLocale(ctx) {
     const { user } = ctx.state;
     const { id } = ctx.params;
-    const body = ctx.request.body as any;
+    const { body } = ctx.request;
     const { isDefault, ...updates } = body;
 
     await validateUpdateLocaleInput(body);

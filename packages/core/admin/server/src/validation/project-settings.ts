@@ -1,45 +1,45 @@
-import { z } from 'zod';
-import { validateZod } from '@strapi/utils';
+import { yup, validateYupSchemaSync } from '@strapi/utils';
 
 const MAX_IMAGE_WIDTH = 750;
 const MAX_IMAGE_HEIGHT = MAX_IMAGE_WIDTH;
 const MAX_IMAGE_FILE_SIZE = 1024 * 1024; // 1Mo
+const ALLOWED_IMAGE_FILE_TYPES = ['image/jpeg', 'image/png', 'image/svg+xml'];
 
-const updateProjectSettings = z
+const updateProjectSettings = yup
   .object({
-    menuLogo: z.string().nullish(),
-    authLogo: z.string().nullish(),
+    menuLogo: yup.string(),
+    authLogo: yup.string(),
   })
-  .strict();
+  .noUnknown();
 
-const updateProjectSettingsLogo = z.object({
-  originalFilename: z.string().nullish(),
-  mimetype: z.enum(['image/jpeg', 'image/png', 'image/svg+xml']),
-  size: z.number().max(MAX_IMAGE_FILE_SIZE).nullish(),
+const updateProjectSettingsLogo = yup.object({
+  name: yup.string(),
+  type: yup.string().oneOf(ALLOWED_IMAGE_FILE_TYPES),
+  size: yup.number().max(MAX_IMAGE_FILE_SIZE),
 });
 
-const updateProjectSettingsFiles = z
+const updateProjectSettingsFiles = yup
   .object({
-    menuLogo: updateProjectSettingsLogo.nullish(),
-    authLogo: updateProjectSettingsLogo.nullish(),
+    menuLogo: updateProjectSettingsLogo,
+    authLogo: updateProjectSettingsLogo,
   })
-  .strict();
+  .noUnknown();
 
-const logoDimensions = z.object({
-  width: z.number().max(MAX_IMAGE_WIDTH).nullish(),
-  height: z.number().max(MAX_IMAGE_HEIGHT).nullish(),
+const logoDimensions = yup.object({
+  width: yup.number().max(MAX_IMAGE_WIDTH),
+  height: yup.number().max(MAX_IMAGE_HEIGHT),
 });
 
-const updateProjectSettingsImagesDimensions = z
+const updateProjectSettingsImagesDimensions = yup
   .object({
-    menuLogo: logoDimensions.nullish(),
-    authLogo: logoDimensions.nullish(),
+    menuLogo: logoDimensions,
+    authLogo: logoDimensions,
   })
-  .strict();
+  .noUnknown();
 
-export const validateUpdateProjectSettings = validateZod(updateProjectSettings);
-export const validateUpdateProjectSettingsFiles = validateZod(updateProjectSettingsFiles);
-export const validateUpdateProjectSettingsImagesDimensions = validateZod(
+export const validateUpdateProjectSettings = validateYupSchemaSync(updateProjectSettings);
+export const validateUpdateProjectSettingsFiles = validateYupSchemaSync(updateProjectSettingsFiles);
+export const validateUpdateProjectSettingsImagesDimensions = validateYupSchemaSync(
   updateProjectSettingsImagesDimensions
 );
 

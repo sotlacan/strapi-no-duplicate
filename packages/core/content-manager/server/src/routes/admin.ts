@@ -159,6 +159,7 @@ export default {
       config: {
         middlewares: [routing],
         policies: [
+          'plugin::content-manager.has-draft-and-publish',
           'admin::isAuthenticatedAdmin',
           {
             name: 'plugin::content-manager.hasPermissions',
@@ -174,25 +175,11 @@ export default {
       config: {
         middlewares: [routing],
         policies: [
+          'plugin::content-manager.has-draft-and-publish',
           'admin::isAuthenticatedAdmin',
           {
             name: 'plugin::content-manager.hasPermissions',
             config: { actions: ['plugin::content-manager.explorer.publish'] },
-          },
-        ],
-      },
-    },
-    {
-      method: 'POST',
-      path: '/single-types/:model/actions/discard',
-      handler: 'single-types.discard',
-      config: {
-        middlewares: [routing],
-        policies: [
-          'admin::isAuthenticatedAdmin',
-          {
-            name: 'plugin::content-manager.hasPermissions',
-            config: { actions: ['plugin::content-manager.explorer.update'] },
           },
         ],
       },
@@ -319,26 +306,12 @@ export default {
     },
     {
       method: 'POST',
-      path: '/collection-types/:model/actions/publish',
-      handler: 'collection-types.publish',
-      config: {
-        middlewares: [routing],
-        policies: [
-          'admin::isAuthenticatedAdmin',
-          {
-            name: 'plugin::content-manager.hasPermissions',
-            config: { actions: ['plugin::content-manager.explorer.publish'] },
-          },
-        ],
-      },
-    },
-    {
-      method: 'POST',
       path: '/collection-types/:model/:id/actions/publish',
       handler: 'collection-types.publish',
       config: {
         middlewares: [routing],
         policies: [
+          'plugin::content-manager.has-draft-and-publish',
           'admin::isAuthenticatedAdmin',
           {
             name: 'plugin::content-manager.hasPermissions',
@@ -354,25 +327,11 @@ export default {
       config: {
         middlewares: [routing],
         policies: [
+          'plugin::content-manager.has-draft-and-publish',
           'admin::isAuthenticatedAdmin',
           {
             name: 'plugin::content-manager.hasPermissions',
             config: { actions: ['plugin::content-manager.explorer.publish'] },
-          },
-        ],
-      },
-    },
-    {
-      method: 'POST',
-      path: '/collection-types/:model/:id/actions/discard',
-      handler: 'collection-types.discard',
-      config: {
-        middlewares: [routing],
-        policies: [
-          'admin::isAuthenticatedAdmin',
-          {
-            name: 'plugin::content-manager.hasPermissions',
-            config: { actions: ['plugin::content-manager.explorer.update'] },
           },
         ],
       },
@@ -399,6 +358,7 @@ export default {
       config: {
         middlewares: [routing],
         policies: [
+          'plugin::content-manager.has-draft-and-publish',
           'admin::isAuthenticatedAdmin',
           {
             name: 'plugin::content-manager.hasPermissions',
@@ -414,6 +374,7 @@ export default {
       config: {
         middlewares: [routing],
         policies: [
+          'plugin::content-manager.has-draft-and-publish',
           'admin::isAuthenticatedAdmin',
           {
             name: 'plugin::content-manager.hasPermissions',

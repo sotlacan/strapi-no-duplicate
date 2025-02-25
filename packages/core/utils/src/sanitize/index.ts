@@ -1,8 +1,8 @@
 import { CurriedFunction1 } from 'lodash';
 import { isArray, cloneDeep, omit } from 'lodash/fp';
 
-import { constants, getNonWritableAttributes } from '../content-types';
-import { pipe as pipeAsync } from '../async';
+import { getNonWritableAttributes } from '../content-types';
+import { pipeAsync } from '../async';
 
 import * as visitors from './visitors';
 import * as sanitizers from './sanitizers';
@@ -15,26 +15,14 @@ export interface Options {
   auth?: unknown;
 }
 
-export interface Sanitizer {
+interface Sanitizer {
   (schema: Model): CurriedFunction1<Data, Promise<Data>>;
 }
 export interface SanitizeFunc {
   (data: unknown, schema: Model, options?: Options): Promise<unknown>;
 }
 
-export interface APIOptions {
-  sanitizers?: Sanitizers;
-  getModel: (model: string) => Model;
-}
-
-export interface Sanitizers {
-  input?: Sanitizer[];
-  output?: Sanitizer[];
-}
-
-const createAPISanitizers = (opts: APIOptions) => {
-  const { getModel } = opts;
-
+const createContentAPISanitizers = () => {
   const sanitizeInput: SanitizeFunc = (data: unknown, schema: Model, { auth } = {}) => {
     if (!schema) {
       throw new Error('Missing schema in sanitizeInput');
@@ -47,21 +35,20 @@ const createAPISanitizers = (opts: APIOptions) => {
 
     const transforms = [
       // Remove first level ID in inputs
-      omit(constants.ID_ATTRIBUTE),
-      omit(constants.DOC_ID_ATTRIBUTE),
+      omit('id'),
       // Remove non-writable attributes
-      traverseEntity(visitors.removeRestrictedFields(nonWritableAttributes), { schema, getModel }),
+      traverseEntity(visitors.removeRestrictedFields(nonWritableAttributes), { schema }),
     ];
 
     if (auth) {
       // Remove restricted relations
-      transforms.push(
-        traverseEntity(visitors.removeRestrictedRelations(auth), { schema, getModel })
-      );
+      transforms.push(traverseEntity(visitors.removeRestrictedRelations(auth), { schema }));
     }
 
     // Apply sanitizers from registry if exists
-    opts?.sanitizers?.input?.forEach((sanitizer: Sanitizer) => transforms.push(sanitizer(schema)));
+    strapi.sanitizers
+      .get('content-api.input')
+      .forEach((sanitizer: Sanitizer) => transforms.push(sanitizer(schema)));
 
     return pipeAsync(...transforms)(data as Data);
   };
@@ -78,18 +65,16 @@ const createAPISanitizers = (opts: APIOptions) => {
       return res;
     }
 
-    const transforms = [
-      (data: Data) => sanitizers.defaultSanitizeOutput({ schema, getModel }, data),
-    ];
+    const transforms = [(data: Data) => sanitizers.defaultSanitizeOutput(schema, data)];
 
     if (auth) {
-      transforms.push(
-        traverseEntity(visitors.removeRestrictedRelations(auth), { schema, getModel })
-      );
+      transforms.push(traverseEntity(visitors.removeRestrictedRelations(auth), { schema }));
     }
 
     // Apply sanitizers from registry if exists
-    opts?.sanitizers?.output?.forEach((sanitizer: Sanitizer) => transforms.push(sanitizer(schema)));
+    strapi.sanitizers
+      .get('content-api.output')
+      .forEach((sanitizer: Sanitizer) => transforms.push(sanitizer(schema)));
 
     return pipeAsync(...transforms)(data as Data);
   };
@@ -133,12 +118,10 @@ const createAPISanitizers = (opts: APIOptions) => {
       return Promise.all(filters.map((filter) => sanitizeFilters(filter, schema, { auth })));
     }
 
-    const transforms = [sanitizers.defaultSanitizeFilters({ schema, getModel })];
+    const transforms = [sanitizers.defaultSanitizeFilters(schema)];
 
     if (auth) {
-      transforms.push(
-        traverseQueryFilters(visitors.removeRestrictedRelations(auth), { schema, getModel })
-      );
+      transforms.push(traverseQueryFilters(visitors.removeRestrictedRelations(auth), { schema }));
     }
 
     return pipeAsync(...transforms)(filters);
@@ -148,12 +131,10 @@ const createAPISanitizers = (opts: APIOptions) => {
     if (!schema) {
       throw new Error('Missing schema in sanitizeSort');
     }
-    const transforms = [sanitizers.defaultSanitizeSort({ schema, getModel })];
+    const transforms = [sanitizers.defaultSanitizeSort(schema)];
 
     if (auth) {
-      transforms.push(
-        traverseQuerySort(visitors.removeRestrictedRelations(auth), { schema, getModel })
-      );
+      transforms.push(traverseQuerySort(visitors.removeRestrictedRelations(auth), { schema }));
     }
 
     return pipeAsync(...transforms)(sort);
@@ -163,7 +144,7 @@ const createAPISanitizers = (opts: APIOptions) => {
     if (!schema) {
       throw new Error('Missing schema in sanitizeFields');
     }
-    const transforms = [sanitizers.defaultSanitizeFields({ schema, getModel })];
+    const transforms = [sanitizers.defaultSanitizeFields(schema)];
 
     return pipeAsync(...transforms)(fields);
   };
@@ -172,12 +153,10 @@ const createAPISanitizers = (opts: APIOptions) => {
     if (!schema) {
       throw new Error('Missing schema in sanitizePopulate');
     }
-    const transforms = [sanitizers.defaultSanitizePopulate({ schema, getModel })];
+    const transforms = [sanitizers.defaultSanitizePopulate(schema)];
 
     if (auth) {
-      transforms.push(
-        traverseQueryPopulate(visitors.removeRestrictedRelations(auth), { schema, getModel })
-      );
+      transforms.push(traverseQueryPopulate(visitors.removeRestrictedRelations(auth), { schema }));
     }
 
     return pipeAsync(...transforms)(populate);
@@ -194,6 +173,10 @@ const createAPISanitizers = (opts: APIOptions) => {
   };
 };
 
-export { createAPISanitizers, sanitizers, visitors };
+const contentAPI = createContentAPISanitizers();
 
-export type APISanitiers = ReturnType<typeof createAPISanitizers>;
+export default {
+  contentAPI,
+  sanitizers,
+  visitors,
+};

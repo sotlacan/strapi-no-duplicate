@@ -1,4 +1,4 @@
-import { translatedErrors as errorsTrads } from '@strapi/admin/strapi-admin';
+import { translatedErrors as errorsTrads } from '@strapi/helper-plugin';
 import { snakeCase } from 'lodash/fp';
 import * as yup from 'yup';
 
@@ -18,7 +18,7 @@ export const createComponentSchema = (
       .string()
       .test({
         name: 'nameAlreadyUsed',
-        message: errorsTrads.unique.id,
+        message: errorsTrads.unique,
         test(value) {
           if (!value) {
             return false;
@@ -53,11 +53,11 @@ export const createComponentSchema = (
           });
         },
       })
-      .required(errorsTrads.required.id),
+      .required(errorsTrads.required),
     category: yup
       .string()
-      .matches(CATEGORY_NAME_REGEX, errorsTrads.regex.id)
-      .required(errorsTrads.required.id),
+      .matches(CATEGORY_NAME_REGEX, errorsTrads.regex)
+      .required(errorsTrads.required),
 
     icon: yup.string(),
   };

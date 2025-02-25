@@ -1,31 +1,25 @@
+import { Box, Flex, Icon, Tooltip, Typography, Divider, Button } from '@strapi/design-system';
+import { LinkButton } from '@strapi/design-system/v2';
 import {
-  Box,
-  Flex,
-  Tooltip,
-  Typography,
-  Divider,
-  Button,
-  LinkButton,
-  TypographyComponent,
-} from '@strapi/design-system';
-import { CheckCircle, ExternalLink, Download, Star, Check, Duplicate } from '@strapi/icons';
-import { GitHub } from '@strapi/icons/symbols';
+  useTracking,
+  pxToRem,
+  AppInfoContextValue,
+  useNotification,
+  useClipboard,
+} from '@strapi/helper-plugin';
+import { CheckCircle, ExternalLink, Download, Github, Star, Check, Duplicate } from '@strapi/icons';
 import pluralize from 'pluralize';
 import { useIntl } from 'react-intl';
 import * as semver from 'semver';
-import { styled } from 'styled-components';
+import styled from 'styled-components';
 
 import StrapiLogo from '../../../assets/images/logo-strapi-2022.svg';
-import { AppInfoContextValue } from '../../../features/AppInfo';
-import { useNotification } from '../../../features/Notifications';
-import { useTracking } from '../../../features/Tracking';
-import { useClipboard } from '../../../hooks/useClipboard';
 
 import type { Plugin, Provider } from '../hooks/useMarketplaceData';
 import type { NpmPackageType } from '../MarketplacePage';
 
 // Custom component to have an ellipsis after the 2nd line
-const EllipsisText = styled<TypographyComponent<'p'>>(Typography)`
+const EllipsisText = styled(Typography)`
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
@@ -65,12 +59,6 @@ const NpmPackageCard = ({
     attributes.slug
   }`;
 
-  const versionRange = semver.validRange(attributes.strapiVersion);
-
-  const isCompatible = versionRange
-    ? semver.satisfies(strapiAppVersion ?? '', versionRange)
-    : false;
-
   return (
     <Flex
       direction="column"
@@ -89,7 +77,7 @@ const NpmPackageCard = ({
       <Box>
         <Flex direction="row" justifyContent="space-between" alignItems="flex-start">
           <Box
-            tag="img"
+            as="img"
             src={attributes.logo.url}
             alt={`${attributes.name} logo`}
             hasRadius
@@ -103,11 +91,8 @@ const NpmPackageCard = ({
           />
         </Flex>
         <Box paddingTop={4}>
-          <Typography tag="h3" variant="delta">
-            <Flex
-              alignItems="center"
-              gap={attributes.validated && !attributes.madeByStrapi ? 2 : 1}
-            >
+          <Typography as="h3" variant="delta">
+            <Flex alignItems="center">
               {attributes.name}
               {attributes.validated && !attributes.madeByStrapi && (
                 <Tooltip
@@ -116,25 +101,30 @@ const NpmPackageCard = ({
                     defaultMessage: 'Plugin verified by Strapi',
                   })}
                 >
-                  <CheckCircle fill="success600" />
+                  <Flex>
+                    <Icon as={CheckCircle} marginLeft={2} color="success600" />
+                  </Flex>
                 </Tooltip>
               )}
               {attributes.madeByStrapi && (
                 <Tooltip description={madeByStrapiMessage}>
-                  <Box
-                    tag="img"
-                    src={StrapiLogo}
-                    alt={madeByStrapiMessage}
-                    width={6}
-                    height="auto"
-                  />
+                  <Flex>
+                    <Box
+                      as="img"
+                      src={StrapiLogo}
+                      alt={madeByStrapiMessage}
+                      marginLeft={1}
+                      width={6}
+                      height="auto"
+                    />
+                  </Flex>
                 </Tooltip>
               )}
             </Flex>
           </Typography>
         </Box>
         <Box paddingTop={2}>
-          <EllipsisText tag="p" variant="omega" textColor="neutral600">
+          <EllipsisText as="p" variant="omega" textColor="neutral600">
             {attributes.description}
           </EllipsisText>
         </Box>
@@ -164,7 +154,6 @@ const NpmPackageCard = ({
         <InstallPluginButton
           isInstalled={isInstalled}
           isInDevelopmentMode={isInDevelopmentMode}
-          isCompatible={isCompatible}
           commandToCopy={commandToCopy}
           strapiAppVersion={strapiAppVersion}
           strapiPeerDepVersion={attributes.strapiVersion}
@@ -184,19 +173,17 @@ interface InstallPluginButtonProps
   commandToCopy: string;
   pluginName: string;
   strapiPeerDepVersion?: string;
-  isCompatible?: boolean;
 }
 
 const InstallPluginButton = ({
   isInstalled,
   isInDevelopmentMode,
-  isCompatible,
   commandToCopy,
   strapiAppVersion,
   strapiPeerDepVersion,
   pluginName,
 }: InstallPluginButtonProps) => {
-  const { toggleNotification } = useNotification();
+  const toggleNotification = useNotification();
   const { formatMessage } = useIntl();
   const { trackUsage } = useTracking();
   const { copy } = useClipboard();
@@ -208,7 +195,7 @@ const InstallPluginButton = ({
       trackUsage('willInstallPlugin');
       toggleNotification({
         type: 'success',
-        message: formatMessage({ id: 'admin.pages.MarketPlacePage.plugin.copy.success' }),
+        message: { id: 'admin.pages.MarketPlacePage.plugin.copy.success' },
       });
     }
   };
@@ -216,20 +203,20 @@ const InstallPluginButton = ({
   // Already installed
   if (isInstalled) {
     return (
-      <Flex gap={2} paddingLeft={4}>
-        <Check width="1.2rem" height="1.2rem" color="success600" />
+      <Box paddingLeft={4}>
+        <Icon as={Check} marginRight={2} width={12} height={12} color="success600" />
         <Typography variant="omega" textColor="success600" fontWeight="bold">
           {formatMessage({
             id: 'admin.pages.MarketPlacePage.plugin.installed',
             defaultMessage: 'Installed',
           })}
         </Typography>
-      </Flex>
+      </Box>
     );
   }
 
   // In development, show install button
-  if (isInDevelopmentMode && isCompatible !== false) {
+  if (isInDevelopmentMode) {
     return (
       <CardButton
         strapiAppVersion={strapiAppVersion}
@@ -275,29 +262,38 @@ const CardButton = ({
       return (
         <Tooltip
           data-testid={`tooltip-${pluginName}`}
-          label={formatMessage(
-            {
-              id: 'admin.pages.MarketPlacePage.plugin.version',
-              defaultMessage:
-                'Update your Strapi version: "{strapiAppVersion}" to: "{versionRange}"',
-            },
-            {
-              strapiAppVersion,
-              versionRange,
-            }
-          )}
+          description={
+            !versionRange
+              ? formatMessage(
+                  {
+                    id: 'admin.pages.MarketPlacePage.plugin.version.null',
+                    defaultMessage:
+                      'Unable to verify compatibility with your Strapi version: "{strapiAppVersion}"',
+                  },
+                  { strapiAppVersion }
+                )
+              : formatMessage(
+                  {
+                    id: 'admin.pages.MarketPlacePage.plugin.version',
+                    defaultMessage:
+                      'Update your Strapi version: "{strapiAppVersion}" to: "{versionRange}"',
+                  },
+                  {
+                    strapiAppVersion,
+                    versionRange,
+                  }
+                )
+          }
         >
-          <span>
-            <Button
-              size="S"
-              startIcon={<Duplicate />}
-              variant="secondary"
-              onClick={handleCopy}
-              disabled={!isCompatible}
-            >
-              {installMessage}
-            </Button>
-          </span>
+          <Button
+            size="S"
+            startIcon={<Duplicate />}
+            variant="secondary"
+            onClick={handleCopy}
+            disabled={!isCompatible}
+          >
+            {installMessage}
+          </Button>
         </Tooltip>
       );
     }
@@ -327,8 +323,8 @@ const PackageStats = ({ githubStars = 0, npmDownloads = 0, npmPackageType }: Pac
     <Flex gap={1}>
       {!!githubStars && (
         <>
-          <GitHub height="1.2rem" width="1.2rem" aria-hidden />
-          <Star height="1.2rem" width="1.2rem" fill="warning500" aria-hidden />
+          <Icon as={Github} height={pxToRem(12)} width={pxToRem(12)} aria-hidden />
+          <Icon as={Star} height={pxToRem(12)} width={pxToRem(12)} color="warning500" aria-hidden />
           <p
             aria-label={formatMessage(
               {
@@ -345,10 +341,10 @@ const PackageStats = ({ githubStars = 0, npmDownloads = 0, npmPackageType }: Pac
               {githubStars}
             </Typography>
           </p>
-          <VerticalDivider />
+          <VerticalDivider unsetMargin={false} />
         </>
       )}
-      <Download height="1.2rem" width="1.2rem" aria-hidden />
+      <Icon as={Download} height={pxToRem(12)} width={pxToRem(12)} aria-hidden />
       <p
         aria-label={formatMessage(
           {
@@ -370,7 +366,7 @@ const PackageStats = ({ githubStars = 0, npmDownloads = 0, npmPackageType }: Pac
 };
 
 const VerticalDivider = styled(Divider)`
-  width: 1.2rem;
+  width: ${pxToRem(12)};
   transform: rotate(90deg);
 `;
 

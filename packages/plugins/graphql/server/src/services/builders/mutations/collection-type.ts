@@ -1,139 +1,154 @@
-import { extendType, nonNull, idArg } from 'nexus';
+import { extendType, nonNull } from 'nexus';
+import { sanitize } from '@strapi/utils';
 import type * as Nexus from 'nexus';
-import type { Struct } from '@strapi/types';
+import type { Schema } from '@strapi/types';
 import type { Context } from '../../types';
 
 export default ({ strapi }: Context) => {
   const { service: getService } = strapi.plugin('graphql');
 
   const { naming } = getService('utils');
-  const { args } = getService('internals');
+  const { transformArgs } = getService('builders').utils;
+  const { toEntityResponse } = getService('format').returnTypes;
 
   const {
     getCreateMutationTypeName,
     getUpdateMutationTypeName,
     getDeleteMutationTypeName,
+    getEntityResponseName,
     getContentTypeInputName,
-    getTypeName,
   } = naming;
 
   const addCreateMutation = (
     t: Nexus.blocks.ObjectDefinitionBlock<'Mutation'>,
-    contentType: Struct.CollectionTypeSchema
+    contentType: Schema.CollectionType
   ) => {
     const { uid } = contentType;
 
     const createMutationName = getCreateMutationTypeName(contentType);
-    const typeName = getTypeName(contentType);
+    const responseTypeName = getEntityResponseName(contentType);
 
     t.field(createMutationName, {
-      type: typeName,
-
-      extensions: {
-        strapi: {
-          contentType,
-        },
-      },
+      type: responseTypeName,
 
       args: {
         // Create payload
-        status: args.PublicationStatusArg,
         data: nonNull(getContentTypeInputName(contentType)),
       },
 
       async resolve(parent, args, context) {
         const { auth } = context.state;
+        const transformedArgs = transformArgs(args, { contentType });
 
         // Sanitize input data
-        const sanitizedInputData = await strapi.contentAPI.sanitize.input(args.data, contentType, {
-          auth,
-        });
+        const sanitizedInputData = await sanitize.contentAPI.input(
+          transformedArgs.data,
+          contentType,
+          { auth }
+        );
 
-        return strapi.documents!(uid).create({
-          ...args,
-          data: sanitizedInputData,
-        });
+        Object.assign(transformedArgs, { data: sanitizedInputData });
+
+        const { create } = getService('builders')
+          .get('content-api')
+          .buildMutationsResolvers({ contentType });
+
+        const value = await create(parent, transformedArgs);
+
+        return toEntityResponse(value, { args: transformedArgs, resourceUID: uid });
       },
     });
   };
 
   const addUpdateMutation = (
     t: Nexus.blocks.ObjectDefinitionBlock<'Mutation'>,
-    contentType: Struct.CollectionTypeSchema
+    contentType: Schema.CollectionType
   ) => {
     const { uid } = contentType;
 
     const updateMutationName = getUpdateMutationTypeName(contentType);
-    const typeName = getTypeName(contentType);
+    const responseTypeName = getEntityResponseName(contentType);
+
+    // todo[v4]: Don't allow to filter using every unique attributes for now
+    // Only authorize filtering using unique scalar fields for updateOne queries
+    // const uniqueAttributes = getUniqueAttributesFiltersMap(attributes);
 
     t.field(updateMutationName, {
-      type: typeName,
-
-      extensions: {
-        strapi: {
-          contentType,
-        },
-      },
+      type: responseTypeName,
 
       args: {
-        documentId: nonNull(idArg()),
-        status: args.PublicationStatusArg,
+        // Query args
+        id: nonNull('ID'),
+        // todo[v4]: Don't allow to filter using every unique attributes for now
+        // ...uniqueAttributes,
+
+        // Update payload
         data: nonNull(getContentTypeInputName(contentType)),
       },
 
       async resolve(parent, args, context) {
         const { auth } = context.state;
-
-        const { data, ...restParams } = args;
+        const transformedArgs = transformArgs(args, { contentType });
 
         // Sanitize input data
-        const sanitizedInputData = await strapi.contentAPI.sanitize.input(data, contentType, {
-          auth,
-        });
+        const sanitizedInputData = await sanitize.contentAPI.input(
+          transformedArgs.data,
+          contentType,
+          { auth }
+        );
 
-        return strapi.documents!(uid).update({
-          ...restParams,
-          data: sanitizedInputData,
-        });
+        Object.assign(transformedArgs, { data: sanitizedInputData });
+
+        const { update } = getService('builders')
+          .get('content-api')
+          .buildMutationsResolvers({ contentType });
+
+        const value = await update(parent, transformedArgs);
+
+        return toEntityResponse(value, { args: transformedArgs, resourceUID: uid });
       },
     });
   };
 
   const addDeleteMutation = (
     t: Nexus.blocks.ObjectDefinitionBlock<'Mutation'>,
-    contentType: Struct.CollectionTypeSchema
+    contentType: Schema.CollectionType
   ) => {
     const { uid } = contentType;
 
     const deleteMutationName = getDeleteMutationTypeName(contentType);
+    const responseTypeName = getEntityResponseName(contentType);
 
-    const { DELETE_MUTATION_RESPONSE_TYPE_NAME } = strapi.plugin('graphql').service('constants');
+    // todo[v4]: Don't allow to filter using every unique attributes for now
+    // Only authorize filtering using unique scalar fields for updateOne queries
+    // const uniqueAttributes = getUniqueAttributesFiltersMap(attributes);
 
     t.field(deleteMutationName, {
-      type: DELETE_MUTATION_RESPONSE_TYPE_NAME,
-
-      extensions: {
-        strapi: {
-          contentType,
-        },
-      },
+      type: responseTypeName,
 
       args: {
-        documentId: nonNull(idArg()),
+        // Query args
+        id: nonNull('ID'),
+        // todo[v4]: Don't allow to filter using every unique attributes for now
+        // ...uniqueAttributes,
       },
 
-      async resolve(parent, args) {
-        const { documentId } = args;
+      async resolve(parent, args, ctx) {
+        const transformedArgs = transformArgs(args, { contentType });
 
-        await strapi.documents!(uid).delete({ documentId });
+        const { delete: deleteResolver } = getService('builders')
+          .get('content-api')
+          .buildMutationsResolvers({ contentType });
 
-        return { documentId };
+        const value = await deleteResolver(parent, args, ctx);
+
+        return toEntityResponse(value, { args: transformedArgs, resourceUID: uid });
       },
     });
   };
 
   return {
-    buildCollectionTypeMutations(contentType: Struct.CollectionTypeSchema) {
+    buildCollectionTypeMutations(contentType: Schema.CollectionType) {
       const createMutationName = `Mutation.${getCreateMutationTypeName(contentType)}`;
       const updateMutationName = `Mutation.${getUpdateMutationTypeName(contentType)}`;
       const deleteMutationName = `Mutation.${getDeleteMutationTypeName(contentType)}`;

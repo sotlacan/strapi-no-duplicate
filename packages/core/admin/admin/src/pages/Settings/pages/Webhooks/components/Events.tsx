@@ -1,8 +1,12 @@
 import * as React from 'react';
 
+import { createContext } from '@radix-ui/react-context';
 import {
+  BaseCheckbox,
   Checkbox,
+  FieldLabel,
   Flex,
+  Loader,
   RawTable as Table,
   RawTbody as Tbody,
   RawTd as Td,
@@ -11,17 +15,23 @@ import {
   RawTr as Tr,
   Typography,
   VisuallyHidden,
-  Field,
-  CheckboxProps,
 } from '@strapi/design-system';
+import { useFormikContext, FieldInputProps } from 'formik';
 import { MessageDescriptor, useIntl } from 'react-intl';
-import { styled } from 'styled-components';
+import styled from 'styled-components';
 
-import { useField } from '../../../../../components/Form';
+import { useContentTypes } from '../../../../../hooks/useContentTypes';
 
 /* -------------------------------------------------------------------------------------------------
  * EventsRoot
  * -----------------------------------------------------------------------------------------------*/
+
+interface WebhookEventContextValue {
+  isDraftAndPublish: boolean;
+}
+
+const [WebhookEventProvider, useWebhookEvent] =
+  createContext<WebhookEventContextValue>('WebhookEvent');
 
 interface EventsRootProps {
   children: React.ReactNode;
@@ -29,6 +39,12 @@ interface EventsRootProps {
 
 const EventsRoot = ({ children }: EventsRootProps) => {
   const { formatMessage } = useIntl();
+  const { collectionTypes, isLoading } = useContentTypes();
+
+  const isDraftAndPublish = React.useMemo(
+    () => collectionTypes.some((ct) => ct.options?.draftAndPublish === true),
+    [collectionTypes]
+  );
 
   const label = formatMessage({
     id: 'Settings.webhooks.form.events',
@@ -36,11 +52,20 @@ const EventsRoot = ({ children }: EventsRootProps) => {
   });
 
   return (
-    <Flex direction="column" alignItems="stretch" gap={1}>
-      <Field.Label aria-hidden>{label}</Field.Label>
-      {/* @ts-expect-error – TODO: add colCount & rowCount */}
-      <StyledTable aria-label={label}>{children}</StyledTable>
-    </Flex>
+    <WebhookEventProvider isDraftAndPublish={isDraftAndPublish}>
+      <Flex direction="column" alignItems="stretch" gap={1}>
+        <FieldLabel aria-hidden>{label}</FieldLabel>
+        {isLoading && (
+          <Loader>
+            {formatMessage({
+              id: 'Settings.webhooks.events.isLoading',
+              defaultMessage: 'Events loading',
+            })}
+          </Loader>
+        )}
+        <StyledTable aria-label={label}>{children}</StyledTable>
+      </Flex>
+    </WebhookEventProvider>
   );
 };
 
@@ -58,8 +83,9 @@ const StyledTable = styled(Table)`
   th {
     padding-block-start: ${({ theme }) => theme.spaces[3]};
     padding-block-end: ${({ theme }) => theme.spaces[3]};
-    width: 6%;
+    width: 10%;
     vertical-align: middle;
+    text-align: center;
   }
 
   tbody tr td:first-child {
@@ -79,21 +105,26 @@ interface EventsHeadersProps {
   getHeaders?: typeof getCEHeaders;
 }
 
-const getCEHeaders = (): MessageDescriptor[] => {
+const getCEHeaders = (isDraftAndPublish: boolean): MessageDescriptor[] => {
   const headers = [
     { id: 'Settings.webhooks.events.create', defaultMessage: 'Create' },
     { id: 'Settings.webhooks.events.update', defaultMessage: 'Update' },
     { id: 'app.utils.delete', defaultMessage: 'Delete' },
-    { id: 'app.utils.publish', defaultMessage: 'Publish' },
-    { id: 'app.utils.unpublish', defaultMessage: 'Unpublish' },
   ];
+
+  if (isDraftAndPublish) {
+    headers.push({ id: 'app.utils.publish', defaultMessage: 'Publish' });
+    headers.push({ id: 'app.utils.unpublish', defaultMessage: 'Unpublish' });
+  }
 
   return headers;
 };
 
 const EventsHeaders = ({ getHeaders = getCEHeaders }: EventsHeadersProps) => {
+  const { isDraftAndPublish } = useWebhookEvent('Headers');
+
   const { formatMessage } = useIntl();
-  const headers = getHeaders();
+  const headers = getHeaders(isDraftAndPublish);
 
   return (
     <Thead>
@@ -148,11 +179,13 @@ interface EventsBodyProps {
 }
 
 const EventsBody = ({ providedEvents }: EventsBodyProps) => {
-  const events = providedEvents || getCEEvents();
-  const { value = [], onChange } = useField<string[]>('events');
+  const { isDraftAndPublish } = useWebhookEvent('Body');
+
+  const events = providedEvents || getCEEvents(isDraftAndPublish);
+  const { values, handleChange: onChange } = useFormikContext<FormikContextValue>();
 
   const inputName = 'events';
-  const inputValue = value;
+  const inputValue = values.events;
   const disabledEvents: string[] = [];
 
   const formattedValue = inputValue.reduce<Record<string, string[]>>((acc, curr) => {
@@ -166,7 +199,9 @@ const EventsBody = ({ providedEvents }: EventsBodyProps) => {
     return acc;
   }, {});
 
-  const handleSelect: EventsRowProps['handleSelect'] = (name, value) => {
+  const handleSelect: React.ChangeEventHandler<HTMLInputElement> = ({
+    target: { name, value },
+  }) => {
     const set = new Set(inputValue);
 
     if (value) {
@@ -174,11 +209,12 @@ const EventsBody = ({ providedEvents }: EventsBodyProps) => {
     } else {
       set.delete(name);
     }
-
-    onChange(inputName, Array.from(set));
+    onChange({ target: { name: inputName, value: Array.from(set) } });
   };
 
-  const handleSelectAll: EventsRowProps['handleSelectAll'] = (name, value) => {
+  const handleSelectAll: React.ChangeEventHandler<HTMLInputElement> = ({
+    target: { name, value },
+  }) => {
     const set = new Set(inputValue);
 
     if (value) {
@@ -190,8 +226,7 @@ const EventsBody = ({ providedEvents }: EventsBodyProps) => {
     } else {
       events[name].forEach((event) => set.delete(event));
     }
-
-    onChange(inputName, Array.from(set));
+    onChange({ target: { name: inputName, value: Array.from(set) } });
   };
 
   return (
@@ -213,14 +248,18 @@ const EventsBody = ({ providedEvents }: EventsBodyProps) => {
   );
 };
 
-const getCEEvents = (): Required<Pick<EventsBodyProps, 'providedEvents'>>['providedEvents'] => {
+const getCEEvents = (
+  isDraftAndPublish: boolean
+): Required<Pick<EventsBodyProps, 'providedEvents'>>['providedEvents'] => {
   const entryEvents: FormikContextValue['events'] = [
     'entry.create',
     'entry.update',
     'entry.delete',
-    'entry.publish',
-    'entry.unpublish',
   ];
+
+  if (isDraftAndPublish) {
+    entryEvents.push('entry.publish', 'entry.unpublish');
+  }
 
   return {
     entry: entryEvents,
@@ -236,8 +275,8 @@ interface EventsRowProps {
   disabledEvents?: string[];
   events?: string[];
   inputValue?: string[];
-  handleSelect: (name: string, value: boolean) => void;
-  handleSelectAll: (name: string, value: boolean) => void;
+  handleSelect: FieldInputProps<string>['onChange'];
+  handleSelectAll: FieldInputProps<string>['onChange'];
   name: string;
 }
 
@@ -255,10 +294,12 @@ const EventsRow = ({
   const hasSomeCheckboxSelected = inputValue.length > 0;
   const areAllCheckboxesSelected = inputValue.length === enabledCheckboxes.length;
 
-  const onChangeAll: CheckboxProps['onCheckedChange'] = () => {
+  const onChangeAll: React.ChangeEventHandler<HTMLInputElement> = ({ target: { name } }) => {
     const valueToSet = !areAllCheckboxesSelected;
 
-    handleSelectAll(name, valueToSet);
+    handleSelectAll({
+      target: { name, value: valueToSet },
+    });
   };
 
   const targetColumns = 5;
@@ -267,17 +308,14 @@ const EventsRow = ({
     <Tr>
       <Td>
         <Checkbox
+          indeterminate={hasSomeCheckboxSelected && !areAllCheckboxesSelected}
           aria-label={formatMessage({
             id: 'global.select-all-entries',
             defaultMessage: 'Select all entries',
           })}
           name={name}
-          checked={
-            hasSomeCheckboxSelected && !areAllCheckboxesSelected
-              ? 'indeterminate'
-              : areAllCheckboxesSelected
-          }
-          onCheckedChange={onChangeAll}
+          onChange={onChangeAll}
+          value={areAllCheckboxesSelected}
         >
           {removeHyphensAndTitleCase(name)}
         </Checkbox>
@@ -285,16 +323,14 @@ const EventsRow = ({
 
       {events.map((event) => {
         return (
-          <Td key={event} textAlign="center">
-            <Flex width="100%" justifyContent="center">
-              <Checkbox
-                disabled={disabledEvents.includes(event)}
-                aria-label={event}
-                name={event}
-                checked={inputValue.includes(event)}
-                onCheckedChange={(value) => handleSelect(event, !!value)}
-              />
-            </Flex>
+          <Td key={event}>
+            <BaseCheckbox
+              disabled={disabledEvents.includes(event)}
+              aria-label={event}
+              name={event}
+              value={inputValue.includes(event)}
+              onValueChange={(value) => handleSelect({ target: { name: event, value } })}
+            />
           </Td>
         );
       })}

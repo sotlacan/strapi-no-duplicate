@@ -1,11 +1,12 @@
 import { merge, map, pipe, reduce } from 'lodash/fp';
-import type { Core } from '@strapi/types';
+import type { Strapi } from '@strapi/types';
 
 // Builders Factories
 
 import enums from './enums';
 import dynamicZone from './dynamic-zones';
 import entity from './entity';
+import entityMeta from './entity-meta';
 import typeBuilder from './type';
 import response from './response';
 import responseCollection from './response-collection';
@@ -27,6 +28,7 @@ const buildersFactories = [
   enums,
   dynamicZone,
   entity,
+  entityMeta,
   typeBuilder,
   response,
   responseCollection,
@@ -39,7 +41,7 @@ const buildersFactories = [
   resolvers,
 ];
 
-export default ({ strapi }: { strapi: Core.Strapi }) => {
+export default ({ strapi }: { strapi: Strapi }) => {
   const buildersMap = new Map();
 
   return {

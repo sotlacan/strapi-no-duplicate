@@ -36,10 +36,7 @@ export default [
     method: 'POST',
     path: '/forgot-password',
     handler: 'authentication.forgotPassword',
-    config: {
-      auth: false,
-      middlewares: ['plugin::email.rateLimit'],
-    },
+    config: { auth: false },
   },
   {
     method: 'POST',

@@ -1,16 +1,15 @@
-import { Layouts } from '@strapi/admin/strapi-admin';
-import { Box, Main, EmptyStateLayout, LinkButton } from '@strapi/design-system';
-import { ExternalLink } from '@strapi/icons';
-import { EmptyPermissions } from '@strapi/icons/symbols';
+import { Box, Layout, Main, HeaderLayout, EmptyStateLayout } from '@strapi/design-system';
+import { LinkButton } from '@strapi/design-system/v2';
+import { ExternalLink, EmptyPermissions } from '@strapi/icons';
 import { useIntl } from 'react-intl';
 
 const PurchaseContentReleases = () => {
   const { formatMessage } = useIntl();
 
   return (
-    <Layouts.Root>
+    <Layout>
       <Main>
-        <Layouts.Header
+        <HeaderLayout
           title={formatMessage({
             id: 'content-releases.pages.Releases.title',
             defaultMessage: 'Releases',
@@ -22,7 +21,7 @@ const PurchaseContentReleases = () => {
         />
         <Box paddingLeft={10} paddingRight={10}>
           <EmptyStateLayout
-            icon={<EmptyPermissions width="16rem" />}
+            icon={<EmptyPermissions width="10rem" />}
             content={formatMessage({
               id: 'content-releases.pages.PurchaseRelease.not-available',
               defaultMessage:
@@ -32,7 +31,7 @@ const PurchaseContentReleases = () => {
               <LinkButton
                 variant="default"
                 endIcon={<ExternalLink />}
-                href="https://strapi.io/features/releases?utm_campaign=In-Product-CTA&utm_source=Releases"
+                href="https://strapi.io/pricing-self-hosted?utm_campaign=Growth-Experiments&utm_source=In-Product&utm_medium=Releases"
                 isExternal
                 target="_blank"
               >
@@ -45,7 +44,7 @@ const PurchaseContentReleases = () => {
           />
         </Box>
       </Main>
-    </Layouts.Root>
+    </Layout>
   );
 };
 

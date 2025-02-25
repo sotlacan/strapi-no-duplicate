@@ -1,5 +1,5 @@
 import { Writable } from 'stream';
-import type { Core, UID } from '@strapi/types';
+import type { LoadedStrapi, Common } from '@strapi/types';
 
 import { last } from 'lodash/fp';
 
@@ -10,8 +10,8 @@ import * as queries from '../../../../queries';
 import { resolveComponentUID } from '../../../../../utils/components';
 
 interface IEntitiesRestoreStreamOptions {
-  strapi: Core.Strapi;
-  updateMappingTable<TSchemaUID extends UID.Schema>(
+  strapi: LoadedStrapi;
+  updateMappingTable<TSchemaUID extends Common.UID.Schema>(
     type: TSchemaUID,
     oldID: number,
     newID: number
@@ -47,7 +47,7 @@ export const createEntitiesWriteStream = (options: IEntitiesRestoreStreamOptions
           // For each difference found on an ID attribute,
           // update the mapping the table accordingly
           diffs.forEach((diff) => {
-            if (diff.kind === 'modified' && last(diff.path) === 'id' && 'kind' in contentType) {
+            if (diff.kind === 'modified' && last(diff.path) === 'id') {
               const target = resolveComponentUID({ paths: diff.path, data, contentType, strapi });
 
               // If no type is found for the given path, then ignore the diff

@@ -1,43 +1,14 @@
-import { isArray, getOr, prop } from 'lodash/fp';
+import { capitalize, isArray, getOr, prop } from 'lodash/fp';
 import { getService } from '../../utils';
 
-const actions = [
-  {
-    section: 'settings',
-    category: 'Internationalization',
-    subCategory: 'Locales',
-    pluginName: 'i18n',
-    displayName: 'Create',
-    uid: 'locale.create',
-  },
-  {
-    section: 'settings',
-    category: 'Internationalization',
-    subCategory: 'Locales',
-    pluginName: 'i18n',
-    displayName: 'Read',
-    uid: 'locale.read',
-    aliases: [
-      { actionId: 'plugin::content-manager.explorer.read', subjects: ['plugin::i18n.locale'] },
-    ],
-  },
-  {
-    section: 'settings',
-    category: 'Internationalization',
-    subCategory: 'Locales',
-    pluginName: 'i18n',
-    displayName: 'Update',
-    uid: 'locale.update',
-  },
-  {
-    section: 'settings',
-    category: 'Internationalization',
-    subCategory: 'Locales',
-    pluginName: 'i18n',
-    displayName: 'Delete',
-    uid: 'locale.delete',
-  },
-];
+const actions = ['create', 'read', 'update', 'delete'].map((uid) => ({
+  section: 'settings',
+  category: 'Internationalization',
+  subCategory: 'Locales',
+  pluginName: 'i18n',
+  displayName: capitalize(uid),
+  uid: `locale.${uid}`,
+}));
 
 const addLocalesPropertyIfNeeded = ({ value: action }: any) => {
   const {
@@ -72,7 +43,7 @@ const shouldApplyLocalesPropertyToSubject = ({ property, subject }: any) => {
 };
 
 const addAllLocalesToPermissions = async (permissions: any) => {
-  const { actionProvider } = strapi.service('admin::permission');
+  const { actionProvider } = strapi.admin.services.permission;
   const { find: findAllLocales } = getService('locales');
 
   const allLocales = await findAllLocales();
@@ -100,8 +71,8 @@ const addAllLocalesToPermissions = async (permissions: any) => {
 };
 
 const syncSuperAdminPermissionsWithLocales = async () => {
-  const roleService = strapi.service('admin::role');
-  const permissionService = strapi.service('admin::permission');
+  const roleService = strapi.admin.services.role;
+  const permissionService = strapi.admin.services.permission;
 
   const superAdminRole = await roleService.getSuperAdmin();
 
@@ -123,21 +94,21 @@ const syncSuperAdminPermissionsWithLocales = async () => {
 };
 
 const registerI18nActions = async () => {
-  const { actionProvider } = strapi.service('admin::permission');
+  const { actionProvider } = strapi.admin.services.permission;
 
   await actionProvider.registerMany(actions);
 };
 
 const registerI18nActionsHooks = () => {
-  const { actionProvider } = strapi.service('admin::permission');
-  const { hooks } = strapi.service('admin::role');
+  const { actionProvider } = strapi.admin.services.permission;
+  const { hooks } = strapi.admin.services.role;
 
   actionProvider.hooks.appliesPropertyToSubject.register(shouldApplyLocalesPropertyToSubject);
   hooks.willResetSuperAdminPermissions.register(addAllLocalesToPermissions);
 };
 
 const updateActionsProperties = () => {
-  const { actionProvider } = strapi.service('admin::permission');
+  const { actionProvider } = strapi.admin.services.permission;
 
   // Register the transformation for every new action
   actionProvider.hooks.willRegister.register(addLocalesPropertyIfNeeded);

@@ -1,7 +1,26 @@
-import * as React from 'react';
+import { SyntheticEvent, useCallback, useEffect, useMemo, useRef } from 'react';
 
-import { useStrapiApp, useTracking, useNotification } from '@strapi/admin/strapi-admin';
-import { Button, Divider, Flex, Modal, Tabs } from '@strapi/design-system';
+import {
+  Box,
+  Button,
+  Divider,
+  Flex,
+  ModalBody,
+  ModalFooter,
+  ModalLayout,
+  Tab,
+  TabGroup,
+  TabPanel,
+  TabPanels,
+  Tabs,
+} from '@strapi/design-system';
+import {
+  getYupInnerErrors,
+  useCustomFields,
+  useNotification,
+  useStrapiApp,
+  useTracking,
+} from '@strapi/helper-plugin';
 import get from 'lodash/get';
 import has from 'lodash/has';
 import isEqual from 'lodash/isEqual';
@@ -9,15 +28,13 @@ import set from 'lodash/set';
 import toLower from 'lodash/toLower';
 import { useIntl } from 'react-intl';
 import { shallowEqual, useDispatch, useSelector } from 'react-redux';
-import { useNavigate } from 'react-router-dom';
-import { styled } from 'styled-components';
+import { useHistory } from 'react-router-dom';
 
 import { useDataManager } from '../../hooks/useDataManager';
 import { useFormModalNavigation } from '../../hooks/useFormModalNavigation';
 import { pluginId } from '../../pluginId';
 import { getTrad, isAllowedContentTypesForRelations } from '../../utils';
 import { findAttribute } from '../../utils/findAttribute';
-import { getYupInnerErrors } from '../../utils/getYupInnerErrors';
 // New compos
 import { AllowedTypesSelect } from '../AllowedTypesSelect';
 import { IconByType } from '../AttributeIcon';
@@ -43,8 +60,19 @@ import { SingularName } from '../SingularName';
 import { TabForm } from '../TabForm';
 import { TextareaEnum } from '../TextareaEnum';
 
+import {
+  ON_CHANGE,
+  RESET_PROPS,
+  RESET_PROPS_AND_SAVE_CURRENT_DATA,
+  RESET_PROPS_AND_SET_FORM_FOR_ADDING_AN_EXISTING_COMPO,
+  RESET_PROPS_AND_SET_THE_FORM_FOR_ADDING_A_COMPO_TO_A_DZ,
+  SET_ATTRIBUTE_DATA_SCHEMA,
+  SET_CUSTOM_FIELD_DATA_SCHEMA,
+  SET_DATA_TO_EDIT,
+  SET_DYNAMIC_ZONE_DATA_SCHEMA,
+  SET_ERRORS,
+} from './constants';
 import { forms } from './forms/forms';
-import { actions } from './reducer';
 import { makeSelectFormModal } from './selectors';
 import { canEditContentType } from './utils/canEditContentType';
 import { createComponentUid, createUid } from './utils/createUid';
@@ -53,15 +81,10 @@ import { getFormInputNames } from './utils/getFormInputNames';
 
 import type { CustomFieldAttributeParams } from '../../contexts/DataManagerContext';
 import type { AttributeType } from '../../types';
-import type { Internal } from '@strapi/types';
+import type { Common } from '@strapi/types';
 
 /* eslint-disable indent */
 /* eslint-disable react/no-array-index-key */
-
-const FormComponent = styled.form`
-  overflow: auto;
-`;
-
 export const FormModal = () => {
   const {
     onCloseModal,
@@ -81,21 +104,19 @@ export const FormModal = () => {
     step,
     targetUid,
     showBackLink,
-    activeTab,
-    setActiveTab,
   } = useFormModalNavigation();
+  const customField = useCustomFields().get(customFieldUid);
 
-  const getPlugin = useStrapiApp('FormModal', (state) => state.getPlugin);
-  const getCustomField = useStrapiApp('FormModal', (state) => state.customFields.get);
-  const customField = getCustomField(customFieldUid);
+  const tabGroupRef = useRef<any>();
 
-  const formModalSelector = React.useMemo(makeSelectFormModal, []);
+  const formModalSelector = useMemo(makeSelectFormModal, []);
   const dispatch = useDispatch();
-  const { toggleNotification } = useNotification();
+  const toggleNotification = useNotification();
   const reducerState = useSelector((state) => formModalSelector(state), shallowEqual);
-  const navigate = useNavigate();
+  const { push } = useHistory();
   const { trackUsage } = useTracking();
   const { formatMessage } = useIntl();
+  const { getPlugin } = useStrapiApp();
   const ctbPlugin = getPlugin(pluginId);
   const ctbFormsAPI: any = ctbPlugin?.apis.forms;
   const inputsFromPlugins = ctbFormsAPI.components.inputs;
@@ -133,7 +154,7 @@ export const FormModal = () => {
   const pathToSchema =
     forTarget === 'contentType' || forTarget === 'component' ? [forTarget] : [forTarget, targetUid];
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (isOpen) {
       const collectionTypesForRelation = sortedContentTypesList.filter(
         isAllowedContentTypesForRelations
@@ -160,66 +181,79 @@ export const FormModal = () => {
 
       // Edit category
       if (modalType === 'editCategory' && actionType === 'edit') {
-        dispatch(
-          actions.setDataToEdit({
-            data: {
-              name: categoryName,
-            },
-          })
-        );
+        dispatch({
+          type: SET_DATA_TO_EDIT,
+          modalType,
+          actionType,
+          data: {
+            name: categoryName,
+          },
+        });
       }
 
       // Create content type we need to add the default option draftAndPublish
       if (modalType === 'contentType' && actionType === 'create') {
-        dispatch(
-          actions.setDataToEdit({
-            data: {
-              draftAndPublish: true,
-            },
-          })
-        );
+        dispatch({
+          type: SET_DATA_TO_EDIT,
+          modalType,
+          actionType,
+          data: {
+            draftAndPublish: true,
+          },
+          pluginOptions: {},
+        });
       }
 
       // Edit content type
       if (modalType === 'contentType' && actionType === 'edit') {
-        const { displayName, draftAndPublish, kind, pluginOptions, pluralName, singularName } = get(
-          allDataSchema,
-          [...pathToSchema, 'schema'],
-          {
-            displayName: null,
-            pluginOptions: {},
-            singularName: null,
-            pluralName: null,
-          }
-        );
+        const {
+          displayName,
+          draftAndPublish,
+          kind,
+          pluginOptions,
+          pluralName,
+          reviewWorkflows,
+          singularName,
+        } = get(allDataSchema, [...pathToSchema, 'schema'], {
+          displayName: null,
+          pluginOptions: {},
+          singularName: null,
+          pluralName: null,
+        });
 
-        dispatch(
-          actions.setDataToEdit({
-            data: {
-              displayName,
-              draftAndPublish,
-              kind,
-              pluginOptions,
-              pluralName,
-              singularName,
-            },
-          })
-        );
+        dispatch({
+          type: SET_DATA_TO_EDIT,
+          actionType,
+          modalType,
+          data: {
+            displayName,
+            draftAndPublish,
+            kind,
+            pluginOptions,
+            pluralName,
+            // because review-workflows is an EE feature the attribute does
+            // not always exist, but the component prop-types expect a boolean,
+            // so we have to ensure undefined is casted to false
+            reviewWorkflows: reviewWorkflows ?? false,
+            singularName,
+          },
+        });
       }
 
       // Edit component
       if (modalType === 'component' && actionType === 'edit') {
         const data = get(allDataSchema, pathToSchema, {});
 
-        dispatch(
-          actions.setDataToEdit({
-            data: {
-              displayName: data.schema.displayName,
-              category: data.category,
-              icon: data.schema.icon,
-            },
-          })
-        );
+        dispatch({
+          type: SET_DATA_TO_EDIT,
+          actionType,
+          modalType,
+          data: {
+            displayName: data.schema.displayName,
+            category: data.category,
+            icon: data.schema.icon,
+          },
+        });
       }
 
       // Special case for the dynamic zone
@@ -234,11 +268,10 @@ export const FormModal = () => {
           componentToCreate: { type: 'component' },
         };
 
-        dispatch(
-          actions.setDynamicZoneDataSchema({
-            attributeToEdit,
-          })
-        );
+        dispatch({
+          type: SET_DYNAMIC_ZONE_DATA_SCHEMA,
+          attributeToEdit,
+        });
       }
 
       // Set the predefined data structure to create an attribute
@@ -261,38 +294,29 @@ export const FormModal = () => {
         }
 
         if (modalType === 'customField') {
-          if (actionType === 'edit') {
-            dispatch(
-              actions.setCustomFieldDataSchema({
-                isEditing: true,
-                modifiedDataToSetForEditing: attributeToEdit,
-              })
-            );
-          } else {
-            dispatch(
-              actions.setCustomFieldDataSchema({
-                customField: customField!,
-                isEditing: false,
-                modifiedDataToSetForEditing: attributeToEdit,
-              })
-            );
-          }
+          dispatch({
+            type: SET_CUSTOM_FIELD_DATA_SCHEMA,
+            customField,
+            isEditing: actionType === 'edit',
+            modifiedDataToSetForEditing: attributeToEdit,
+            // NOTE: forTarget is used in the i18n middleware
+            forTarget,
+          });
         } else {
-          dispatch(
-            actions.setAttributeDataSchema({
-              attributeType,
-              nameToSetForRelation: get(collectionTypesForRelation, ['0', 'title'], 'error'),
-              targetUid: get(collectionTypesForRelation, ['0', 'uid'], 'error'),
-              isEditing: actionType === 'edit',
-              modifiedDataToSetForEditing: attributeToEdit,
-              step,
-              // forTarget,
-            })
-          );
+          dispatch({
+            type: SET_ATTRIBUTE_DATA_SCHEMA,
+            attributeType,
+            nameToSetForRelation: get(collectionTypesForRelation, ['0', 'title'], 'error'),
+            targetUid: get(collectionTypesForRelation, ['0', 'uid'], 'error'),
+            isEditing: actionType === 'edit',
+            modifiedDataToSetForEditing: attributeToEdit,
+            step,
+            forTarget,
+          });
         }
       }
     } else {
-      dispatch(actions.resetProps());
+      dispatch({ type: RESET_PROPS });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
@@ -344,7 +368,7 @@ export const FormModal = () => {
       // This is happening when the user click on the link from the left menu
     } else if (isCreatingComponent) {
       schema = forms.component.schema(
-        Object.keys(components) as Internal.UID.Component[],
+        Object.keys(components) as Common.UID.Component[],
         modifiedData.category || '',
         reservedNames,
         actionType === 'edit',
@@ -369,7 +393,7 @@ export const FormModal = () => {
       // The data is set in the componentToCreate key
     } else if (isComponentAttribute && isCreatingComponentFromAView && isInFirstComponentStep) {
       schema = forms.component.schema(
-        Object.keys(components) as Internal.UID.Component[],
+        Object.keys(components) as Common.UID.Component[],
         get(modifiedData, 'componentToCreate.category', ''),
         reservedNames,
         actionType === 'edit',
@@ -424,7 +448,7 @@ export const FormModal = () => {
       // eslint-disable-next-line no-lonely-if
       if (isInFirstComponentStep && isCreatingComponentFromAView) {
         schema = forms.component.schema(
-          Object.keys(components) as Internal.UID.Component[],
+          Object.keys(components) as Common.UID.Component[],
           get(modifiedData, 'componentToCreate.category', ''),
           reservedNames,
           actionType === 'edit',
@@ -441,7 +465,7 @@ export const FormModal = () => {
     await schema.validate(dataToValidate, { abortEarly: false });
   };
 
-  const handleChange = React.useCallback(
+  const handleChange = useCallback(
     ({
       target: { name, value, type, ...rest },
     }: {
@@ -480,23 +504,22 @@ export const FormModal = () => {
       // Since the onBlur is deactivated we remove the errors directly when changing an input
       delete clonedErrors[name];
 
-      dispatch(
-        actions.setErrors({
-          errors: clonedErrors,
-        })
-      );
+      dispatch({
+        type: SET_ERRORS,
+        errors: clonedErrors,
+      });
 
-      dispatch(
-        actions.onChange({
-          keys: name.split('.'),
-          value: val,
-        })
-      );
+      dispatch({
+        type: ON_CHANGE,
+        keys: name.split('.'),
+        value: val,
+        ...rest,
+      });
     },
     [dispatch, formErrors]
   );
 
-  const handleSubmit = async (e: React.SyntheticEvent, shouldContinue = isCreating) => {
+  const handleSubmit = async (e: SyntheticEvent, shouldContinue = isCreating) => {
     e.preventDefault();
 
     try {
@@ -510,7 +533,7 @@ export const FormModal = () => {
         if (isCreating) {
           createSchema({ ...modifiedData, kind }, modalType, uid);
           // Redirect the user to the created content type
-          navigate({ pathname: `/plugins/${pluginId}/content-types/${uid}` });
+          push({ pathname: `/plugins/${pluginId}/content-types/${uid}` });
 
           // Navigate to the choose attribute modal
           onNavigateToChooseAttributeModal({
@@ -522,11 +545,11 @@ export const FormModal = () => {
           if (canEditContentType(allDataSchema, modifiedData)) {
             onCloseModal();
 
-            await submitData(modifiedData);
+            submitData(modifiedData);
           } else {
             toggleNotification({
-              type: 'danger',
-              message: formatMessage({ id: 'notification.contentType.relations.conflict' }),
+              type: 'warning',
+              message: { id: 'notification.contentType.relations.conflict' },
             });
           }
 
@@ -542,7 +565,7 @@ export const FormModal = () => {
           createSchema(rest, 'component', componentUid, category);
 
           // Redirect the user to the created component
-          navigate({
+          push({
             pathname: `/plugins/${pluginId}/component-categories/${category}/${componentUid}`,
           });
 
@@ -552,7 +575,7 @@ export const FormModal = () => {
             targetUid: componentUid,
           });
         } else {
-          updateSchema(modifiedData, modalType, targetUid as Internal.UID.Component);
+          updateSchema(modifiedData, modalType, targetUid);
 
           // Close the modal
           onCloseModal();
@@ -607,9 +630,14 @@ export const FormModal = () => {
           // so the search is different
           if (isCreating) {
             // Step 1 of adding a component to a DZ, the user has the option to create a component
-            dispatch(actions.resetPropsAndSetTheFormForAddingACompoToADz());
+            dispatch({
+              type: RESET_PROPS_AND_SET_THE_FORM_FOR_ADDING_A_COMPO_TO_A_DZ,
+            });
 
-            setActiveTab('basic');
+            if (tabGroupRef.current !== undefined) {
+              tabGroupRef.current._handlers.setSelectedTabIndex(0);
+            }
+
             onNavigateToAddCompoToDZModal({ dynamicZoneTarget: modifiedData.name });
           } else {
             onCloseModal();
@@ -644,7 +672,10 @@ export const FormModal = () => {
           // This way we don't have to add some logic to re-run the useEffect
           // The first step is either needed to create a component or just to navigate
           // To the modal for adding a "common field"
-          dispatch(actions.resetPropsAndSetFormForAddingAnExistingCompo({}));
+          dispatch({
+            type: RESET_PROPS_AND_SET_FORM_FOR_ADDING_AN_EXISTING_COMPO,
+            forTarget,
+          });
 
           // We don't want all the props to be reset
           return;
@@ -658,7 +689,7 @@ export const FormModal = () => {
           forTarget,
           targetUid,
           // This change the dispatched type
-          // either 'editAttribute' or 'addAttribute' in the DataManagerProvider
+          // either 'EDIT_ATTRIBUTE' or 'ADD_ATTRIBUTE' in the DataManagerProvider
           actionType === 'edit',
           // This is for the edit part
           initialData,
@@ -693,7 +724,10 @@ export const FormModal = () => {
 
           // Here we clear the reducer state but we also keep the created component
           // If we were to create the component before
-          dispatch(actions.resetPropsAndSaveCurrentData({}));
+          dispatch({
+            type: RESET_PROPS_AND_SAVE_CURRENT_DATA,
+            forTarget,
+          });
 
           onNavigateToCreateComponentStep2();
 
@@ -725,7 +759,7 @@ export const FormModal = () => {
         // Add the field to the schema
         addAttribute(modifiedData, forTarget, targetUid, false);
 
-        dispatch(actions.resetProps());
+        dispatch({ type: RESET_PROPS });
 
         // Open modal attribute for adding attr to component
         if (shouldContinue) {
@@ -779,15 +813,16 @@ export const FormModal = () => {
         return;
       }
 
-      dispatch(actions.resetProps());
+      dispatch({
+        type: RESET_PROPS,
+      });
     } catch (err: any) {
       const errors = getYupInnerErrors(err);
 
-      dispatch(
-        actions.setErrors({
-          errors,
-        })
-      );
+      dispatch({
+        type: SET_ERRORS,
+        errors,
+      });
     }
   };
 
@@ -802,7 +837,10 @@ export const FormModal = () => {
 
     if (confirm) {
       onCloseModal();
-      dispatch(actions.resetProps());
+
+      dispatch({
+        type: RESET_PROPS,
+      });
     }
   };
 
@@ -813,7 +851,9 @@ export const FormModal = () => {
     } else {
       onCloseModal();
       // Reset the reducer
-      dispatch(actions.resetProps());
+      dispatch({
+        type: RESET_PROPS,
+      });
     }
   };
 
@@ -867,6 +907,10 @@ export const FormModal = () => {
     // We need the nested components so we know when to remove the component option
     nestedComponents
   );
+
+  if (!isOpen) {
+    return null;
+  }
 
   if (!modalType) {
     return null;
@@ -964,98 +1008,104 @@ export const FormModal = () => {
   };
 
   return (
-    <Modal.Root open={isOpen} onOpenChange={handleClosed}>
-      <Modal.Content>
-        <FormModalHeader
-          actionType={actionType}
-          attributeName={attributeName}
-          categoryName={categoryName}
-          contentTypeKind={kind as IconByType}
-          dynamicZoneTarget={dynamicZoneTarget}
-          modalType={modalType}
+    <ModalLayout onClose={handleClosed} labelledBy="title">
+      <FormModalHeader
+        actionType={actionType}
+        attributeName={attributeName}
+        categoryName={categoryName}
+        contentTypeKind={kind as IconByType}
+        dynamicZoneTarget={dynamicZoneTarget}
+        modalType={modalType}
+        forTarget={forTarget}
+        targetUid={targetUid}
+        attributeType={attributeType as IconByType}
+        customFieldUid={customFieldUid}
+        showBackLink={showBackLink}
+      />
+      {isPickingAttribute && (
+        <AttributeOptions
+          attributes={displayedAttributes}
           forTarget={forTarget}
-          targetUid={targetUid}
-          attributeType={attributeType as IconByType}
-          customFieldUid={customFieldUid}
-          showBackLink={showBackLink}
+          kind={schemaKind || 'collectionType'}
         />
-        {isPickingAttribute && (
-          <AttributeOptions
-            attributes={displayedAttributes}
-            forTarget={forTarget}
-            kind={schemaKind || 'collectionType'}
-          />
-        )}
-        {!isPickingAttribute && (
-          <FormComponent onSubmit={handleSubmit}>
-            <Modal.Body>
-              <Tabs.Root
-                variant="simple"
-                value={activeTab}
-                onValueChange={(value) => {
-                  setActiveTab(value);
-                  sendAdvancedTabEvent(value);
-                }}
-                hasError={
-                  doesBaseFormHasError ? 'basic' : doesAdvancedFormHasError ? 'advanced' : undefined
+      )}
+      {!isPickingAttribute && (
+        <form onSubmit={handleSubmit}>
+          <ModalBody>
+            <TabGroup
+              label="todo"
+              id="tabs"
+              variant="simple"
+              ref={tabGroupRef}
+              onTabChange={(selectedTab) => {
+                if (selectedTab === 1) {
+                  sendAdvancedTabEvent('advanced');
                 }
-              >
-                <Flex justifyContent="space-between">
-                  <FormModalSubHeader
-                    actionType={actionType}
-                    forTarget={forTarget}
-                    kind={kind}
-                    step={step}
-                    modalType={modalType}
-                    attributeType={attributeType}
-                    attributeName={attributeName}
-                    customField={customField}
-                  />
-                  <Tabs.List>
-                    <Tabs.Trigger value="basic">
-                      {formatMessage({
-                        id: getTrad('popUpForm.navContainer.base'),
-                        defaultMessage: 'Basic settings',
-                      })}
-                    </Tabs.Trigger>
-                    <Tabs.Trigger value="advanced" disabled={shouldDisableAdvancedTab()}>
-                      {formatMessage({
-                        id: getTrad('popUpForm.navContainer.advanced'),
-                        defaultMessage: 'Advanced settings',
-                      })}
-                    </Tabs.Trigger>
-                  </Tabs.List>
-                </Flex>
-                <Divider marginBottom={6} />
-                <Tabs.Content value="basic">
-                  <Flex direction="column" alignItems="stretch" gap={6}>
-                    <TabForm
-                      form={baseForm}
-                      formErrors={formErrors}
-                      genericInputProps={genericInputProps}
-                      modifiedData={modifiedData}
-                      onChange={handleChange}
-                    />
-                  </Flex>
-                </Tabs.Content>
-                <Tabs.Content value="advanced">
-                  <Flex direction="column" alignItems="stretch" gap={6}>
-                    <TabForm
-                      form={advancedForm}
-                      formErrors={formErrors}
-                      genericInputProps={genericInputProps}
-                      modifiedData={modifiedData}
-                      onChange={handleChange}
-                    />
-                  </Flex>
-                </Tabs.Content>
-              </Tabs.Root>
-            </Modal.Body>
-            <Modal.Footer>
-              <Button variant="tertiary" onClick={handleClosed}>
-                {formatMessage({ id: 'app.components.Button.cancel', defaultMessage: 'Cancel' })}
-              </Button>
-              {/* TODO: refactor this component. Nuf said. */}
+              }}
+            >
+              <Flex justifyContent="space-between">
+                <FormModalSubHeader
+                  actionType={actionType}
+                  forTarget={forTarget}
+                  kind={kind}
+                  step={step}
+                  modalType={modalType}
+                  attributeType={attributeType}
+                  attributeName={attributeName}
+                  customField={customField}
+                />
+                <Tabs>
+                  <Tab hasError={doesBaseFormHasError}>
+                    {formatMessage({
+                      id: getTrad('popUpForm.navContainer.base'),
+                      defaultMessage: 'Basic settings',
+                    })}
+                  </Tab>
+                  <Tab
+                    hasError={doesAdvancedFormHasError}
+                    // TODO put aria-disabled
+                    disabled={shouldDisableAdvancedTab()}
+                  >
+                    {formatMessage({
+                      id: getTrad('popUpForm.navContainer.advanced'),
+                      defaultMessage: 'Advanced settings',
+                    })}
+                  </Tab>
+                </Tabs>
+              </Flex>
+
+              <Divider />
+
+              <Box paddingTop={6}>
+                <TabPanels>
+                  <TabPanel>
+                    <Flex direction="column" alignItems="stretch" gap={6}>
+                      <TabForm
+                        form={baseForm}
+                        formErrors={formErrors}
+                        genericInputProps={genericInputProps}
+                        modifiedData={modifiedData}
+                        onChange={handleChange}
+                      />
+                    </Flex>
+                  </TabPanel>
+                  <TabPanel>
+                    <Flex direction="column" alignItems="stretch" gap={6}>
+                      <TabForm
+                        form={advancedForm}
+                        formErrors={formErrors}
+                        genericInputProps={genericInputProps}
+                        modifiedData={modifiedData}
+                        onChange={handleChange}
+                      />
+                    </Flex>
+                  </TabPanel>
+                </TabPanels>
+              </Box>
+            </TabGroup>
+          </ModalBody>
+          <ModalFooter
+            endActions={
               <FormModalEndActions
                 deleteCategory={deleteCategory}
                 deleteContentType={deleteData}
@@ -1090,10 +1140,15 @@ export const FormModal = () => {
                 onSubmitEditDz={handleSubmit}
                 onClickFinish={handleClickFinish}
               />
-            </Modal.Footer>
-          </FormComponent>
-        )}
-      </Modal.Content>
-    </Modal.Root>
+            }
+            startActions={
+              <Button variant="tertiary" onClick={handleClosed}>
+                {formatMessage({ id: 'app.components.Button.cancel', defaultMessage: 'Cancel' })}
+              </Button>
+            }
+          />
+        </form>
+      )}
+    </ModalLayout>
   );
 };

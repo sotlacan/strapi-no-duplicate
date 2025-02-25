@@ -8,7 +8,7 @@
     "deploy": "docusaurus deploy",
     "docusaurus": "docusaurus",
     "serve": "docusaurus serve",
-    "start": "TYPEDOC_WATCH=true docusaurus start",
+    "start": "docusaurus start",
     "swizzle": "docusaurus swizzle",
     "write-heading-ids": "docusaurus write-heading-ids",
     "write-translations": "docusaurus write-translations"
@@ -27,20 +27,15 @@
   },
   "dependencies": {
     "@cmfcmf/docusaurus-search-local": "1.1.0",
-    "@docusaurus/core": "3.5.2",
-    "@docusaurus/preset-classic": "3.5.2",
-    "@docusaurus/theme-mermaid": "3.5.2",
+    "@docusaurus/core": "3.1.1",
+    "@docusaurus/preset-classic": "3.1.1",
     "@mdx-js/react": "^3.0.0",
     "clsx": "^1.1.1",
     "prism-react-renderer": "^2.1.0",
-    "react": "18.3.0",
-    "react-dom": "18.3.0"
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
   },
   "devDependencies": {
-    "@docusaurus/module-type-aliases": "3.5.2",
-    "docusaurus-plugin-typedoc": "0.22.0",
-    "typedoc": "0.25.9",
-    "typedoc-plugin-markdown": "3.17.1",
-    "typescript": "5.3.3"
+    "@docusaurus/module-type-aliases": "3.1.1"
   }
 }

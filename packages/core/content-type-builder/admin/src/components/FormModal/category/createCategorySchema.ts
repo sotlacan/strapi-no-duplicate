@@ -1,4 +1,4 @@
-import { translatedErrors as errorsTrads } from '@strapi/admin/strapi-admin';
+import { translatedErrors as errorsTrads } from '@strapi/helper-plugin';
 import * as yup from 'yup';
 
 import { CATEGORY_NAME_REGEX } from './regex';
@@ -7,10 +7,10 @@ export const createCategorySchema = (usedCategoryNames: Array<string>) => {
   const shape = {
     name: yup
       .string()
-      .matches(CATEGORY_NAME_REGEX, errorsTrads.regex.id)
+      .matches(CATEGORY_NAME_REGEX, errorsTrads.regex)
       .test({
         name: 'nameNotAllowed',
-        message: errorsTrads.unique.id,
+        message: errorsTrads.unique,
         test(value) {
           if (!value) {
             return false;
@@ -18,7 +18,7 @@ export const createCategorySchema = (usedCategoryNames: Array<string>) => {
           return !usedCategoryNames.includes(value?.toLowerCase());
         },
       })
-      .required(errorsTrads.required.id),
+      .required(errorsTrads.required),
   };
 
   return yup.object(shape);

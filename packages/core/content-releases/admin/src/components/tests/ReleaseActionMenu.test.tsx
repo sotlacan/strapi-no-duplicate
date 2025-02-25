@@ -2,6 +2,12 @@ import { render, screen } from '@tests/utils';
 
 import { ReleaseActionMenu } from '../ReleaseActionMenu';
 
+jest.mock('@strapi/helper-plugin', () => ({
+  ...jest.requireActual('@strapi/helper-plugin'),
+  // eslint-disable-next-line
+  CheckPermissions: ({ children }: { children: JSX.Element }) => <div>{children}</div>,
+}));
+
 describe('ReleaseActionMenu', () => {
   it('should render the menu with its options', async () => {
     const { user } = render(
@@ -9,17 +15,17 @@ describe('ReleaseActionMenu', () => {
         <ReleaseActionMenu.DeleteReleaseActionItem releaseId="1" actionId="1" />
         <ReleaseActionMenu.ReleaseActionEntryLinkItem
           contentTypeUid="api::category.category"
-          locale="en-GB"
-          documentId="1"
+          locale="en"
+          entryId="1"
         />
       </ReleaseActionMenu.Root>
     );
 
-    await user.click(await screen.findByRole('button', { name: 'Release action options' }));
+    const menuTrigger = screen.getByRole('button', { name: 'Release action options' });
+    expect(menuTrigger).toBeInTheDocument();
 
-    expect(
-      await screen.findByRole('menuitem', { name: 'Remove from release' })
-    ).toBeInTheDocument();
-    expect(await screen.findByRole('menuitem', { name: 'Edit entry' })).toBeInTheDocument();
+    await user.click(menuTrigger);
+    expect(screen.getByRole('menuitem', { name: 'Remove from release' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Edit entry' })).toBeInTheDocument();
   });
 });

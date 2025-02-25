@@ -1,20 +1,96 @@
-import { render, waitFor } from '@testing-library/react';
+import { render } from '@testing-library/react';
 
 import { StrapiApp } from '../StrapiApp';
 
 describe('ADMIN | new StrapiApp', () => {
   it('should render the app without plugins', async () => {
     const app = new StrapiApp();
-    const { getByRole } = render(app.render());
+    const { findByRole } = render(app.render());
 
-    await waitFor(
-      () => {
-        expect(getByRole('combobox')).toBeInTheDocument();
-      },
+    await findByRole('combobox');
+  });
+
+  it('should create a valid store', () => {
+    const app = new StrapiApp();
+
+    const store = app.createStore();
+
+    expect(store.getState()).toMatchInlineSnapshot(`
       {
-        timeout: 60000,
+        "adminApi": {
+          "config": {
+            "focused": true,
+            "keepUnusedDataFor": 60,
+            "middlewareRegistered": false,
+            "online": true,
+            "reducerPath": "adminApi",
+            "refetchOnFocus": false,
+            "refetchOnMountOrArgChange": false,
+            "refetchOnReconnect": false,
+          },
+          "mutations": {},
+          "provided": {},
+          "queries": {},
+          "subscriptions": {},
+        },
+        "admin_app": {
+          "language": {
+            "locale": "en",
+            "localeNames": {
+              "en": "English",
+            },
+          },
+          "permissions": {},
+          "theme": {
+            "availableThemes": [],
+            "currentTheme": "system",
+          },
+        },
+        "content-manager_app": {
+          "collectionTypeLinks": [],
+          "components": [],
+          "fieldSizes": {},
+          "models": [],
+          "singleTypeLinks": [],
+          "status": "loading",
+        },
+        "content-manager_editViewCrudReducer": {
+          "componentsDataStructure": {},
+          "contentTypeDataStructure": {},
+          "data": null,
+          "isLoading": true,
+          "setModifiedDataOnly": false,
+          "status": "resolved",
+        },
+        "content-manager_editViewLayoutManager": {
+          "currentLayout": {
+            "components": {},
+            "contentType": null,
+          },
+        },
+        "content-manager_listView": {
+          "components": {},
+          "contentType": null,
+          "data": [],
+          "displayedHeaders": [],
+          "initialDisplayedHeaders": [],
+          "isLoading": true,
+          "pagination": {
+            "page": 0,
+            "pageCount": 0,
+            "pageSize": 0,
+            "total": 0,
+          },
+        },
+        "content-manager_rbacManager": {
+          "permissions": null,
+        },
+        "rbacProvider": {
+          "allPermissions": null,
+          "collectionTypesRelatedPermissions": {},
+        },
       }
-    );
+    `);
   });
 
   describe('Hook api', () => {
@@ -71,6 +147,22 @@ describe('ADMIN | new StrapiApp', () => {
       expect(res).toBe(7);
     });
 
+    it('runs the "moto" hooks in waterfall asynchronously', async () => {
+      const app = new StrapiApp();
+
+      app.createHook('hello');
+      app.createHook('moto');
+
+      app.registerHook('hello', () => 5);
+      app.registerHook('moto', (n) => n + 1);
+      app.registerHook('moto', (n) => Promise.resolve(n + 2));
+      app.registerHook('moto', (n) => n + 3);
+
+      const res = await app.runHookWaterfall('moto', 1, true);
+
+      expect(res).toBe(7);
+    });
+
     it('runs the "moto" hooks in parallel', async () => {
       const app = new StrapiApp();
 
@@ -94,8 +186,8 @@ describe('ADMIN | new StrapiApp', () => {
     it('the settings should be defined', () => {
       const app = new StrapiApp();
 
-      expect(app.router.settings).toBeDefined();
-      expect(app.router.settings.global).toBeDefined();
+      expect(app.settings).toBeDefined();
+      expect(app.settings.global).toBeDefined();
     });
 
     it('should creates a new section', () => {
@@ -104,7 +196,7 @@ describe('ADMIN | new StrapiApp', () => {
       const links = [
         {
           Component: jest.fn(),
-          to: 'bar',
+          to: '/bar',
           id: 'bar',
           intlLabel: { id: 'bar', defaultMessage: 'bar' },
           permissions: [],
@@ -112,15 +204,15 @@ describe('ADMIN | new StrapiApp', () => {
       ];
       app.createSettingSection(section, links);
 
-      expect(app.router.settings.foo).toBeDefined();
-      expect(app.router.settings.foo.links).toMatchInlineSnapshot(`[]`);
+      expect(app.settings.foo).toBeDefined();
+      expect(app.settings.foo.links).toEqual(links);
     });
 
     it('should add a link correctly to the global section', () => {
       const app = new StrapiApp();
       const link = {
         Component: jest.fn(),
-        to: 'bar',
+        to: '/bar',
         id: 'bar',
         intlLabel: { id: 'bar', defaultMessage: 'bar' },
         permissions: [],
@@ -128,57 +220,12 @@ describe('ADMIN | new StrapiApp', () => {
 
       app.addSettingsLink('global', link);
 
-      expect(app.router.settings.global.links).toHaveLength(1);
-      expect(app.router.settings.global.links[0]).toMatchInlineSnapshot(`
-        {
-          "id": "bar",
-          "intlLabel": {
-            "defaultMessage": "bar",
-            "id": "bar",
-          },
-          "permissions": [],
-          "to": "bar",
-        }
-      `);
+      expect(app.settings.global.links).toHaveLength(1);
+      expect(app.settings.global.links[0]).toEqual(link);
     });
 
     it('should add an array of links correctly to the global section', () => {
       const app = new StrapiApp();
-      const links = [
-        {
-          Component: jest.fn(),
-          to: 'bar',
-          id: 'bar',
-          intlLabel: { id: 'bar', defaultMessage: 'bar' },
-          permissions: [],
-        },
-      ];
-
-      app.addSettingsLinks('global', links);
-
-      expect(app.router.settings.global.links).toHaveLength(1);
-      expect(app.router.settings.global.links).toMatchInlineSnapshot(`
-        [
-          {
-            "id": "bar",
-            "intlLabel": {
-              "defaultMessage": "bar",
-              "id": "bar",
-            },
-            "permissions": [],
-            "to": "bar",
-          },
-        ]
-      `);
-    });
-
-    it('should warn if a user supplies an absolute link', () => {
-      const originalWarn = console.warn;
-      const consoleSpy = jest.fn();
-      console.warn = consoleSpy;
-
-      const app = new StrapiApp();
-
       const links = [
         {
           Component: jest.fn(),
@@ -191,41 +238,8 @@ describe('ADMIN | new StrapiApp', () => {
 
       app.addSettingsLinks('global', links);
 
-      expect(consoleSpy.mock.calls[0]).toMatchInlineSnapshot(`
-        [
-          "[bar]: the \`to\` property of your settings link is an absolute path. It should be relative to \`/settings\`. This has been corrected for you but will be removed in a future version of Strapi.",
-        ]
-      `);
-
-      console.warn = originalWarn;
-    });
-
-    it('should warn if a user supplies an async component', () => {
-      const originalWarn = console.warn;
-      const consoleSpy = jest.fn();
-      console.warn = consoleSpy;
-
-      const app = new StrapiApp();
-
-      const links = [
-        {
-          Component: async () => ({ default: jest.fn() }),
-          to: 'bar',
-          id: 'bar',
-          intlLabel: { id: 'bar', defaultMessage: 'bar' },
-          permissions: [],
-        },
-      ];
-
-      app.addSettingsLinks('global', links);
-
-      expect(consoleSpy.mock.calls[0]).toMatchInlineSnapshot(`
-        [
-          "[bar]: [deprecated] addSettingsLink() was called with an async Component from the plugin "bar". This will be removed in the future. Please use: \`Component: () => import(path)\` ensuring you return a default export instead.",
-        ]
-      `);
-
-      console.warn = originalWarn;
+      expect(app.settings.global.links).toHaveLength(1);
+      expect(app.settings.global.links).toEqual(links);
     });
   });
 
@@ -443,15 +457,15 @@ describe('ADMIN | new StrapiApp', () => {
     it('the menu should be defined', () => {
       const app = new StrapiApp();
 
-      expect(app.router.menu).toBeDefined();
-      expect(Array.isArray(app.router.menu)).toBe(true);
+      expect(app.menu).toBeDefined();
+      expect(Array.isArray(app.menu)).toBe(true);
     });
 
     it('addMenuLink should add a link to the menu', () => {
       const app = new StrapiApp();
       const link = {
         Component: jest.fn(),
-        to: 'plugins/bar',
+        to: '/plugins/bar',
         intlLabel: { id: 'bar', defaultMessage: 'bar' },
         permissions: [],
         icon: () => <>{'book'}</>,
@@ -459,111 +473,95 @@ describe('ADMIN | new StrapiApp', () => {
 
       app.addMenuLink(link);
 
-      expect(app.router.menu[0]).toBeDefined();
-      expect(app.router.menu[0]).toMatchInlineSnapshot(`
-        {
-          "icon": [Function],
-          "intlLabel": {
-            "defaultMessage": "bar",
-            "id": "bar",
-          },
-          "permissions": [],
-          "to": "plugins/bar",
-        }
-      `);
+      expect(app.menu[0]).toBeDefined();
+      expect(app.menu[0]).toEqual(link);
     });
 
-    it('should warn if a user supplies an absolute link', () => {
-      const originalWarn = console.warn;
-      const consoleSpy = jest.fn();
-      console.warn = consoleSpy;
-
+    it('addCorePluginMenuLink should add a link to the menu', () => {
       const app = new StrapiApp();
-
       const link = {
-        Component: jest.fn(),
-        to: '/bar',
-        id: 'bar',
-        intlLabel: { id: 'bar', defaultMessage: 'bar' },
+        to: '/plugins/content-type-builder',
+        icon: () => <>{'book'}</>,
         permissions: [],
-        icon: jest.fn(),
+        intlLabel: {
+          id: 'content-type-builder.plugin.name',
+          defaultMessage: 'Content Type builder',
+        },
       };
 
-      app.addMenuLink(link);
+      app.addCorePluginMenuLink(link);
 
-      expect(consoleSpy.mock.calls[0]).toMatchInlineSnapshot(`
-        [
-          "[bar]: the \`to\` property of your menu link is an absolute path, it should be relative to the root of the application. This has been corrected for you but will be removed in a future version of Strapi.",
-        ]
-      `);
-
-      console.warn = originalWarn;
-    });
-
-    it('should warn if a user supplies an async component', () => {
-      const originalWarn = console.warn;
-      const consoleSpy = jest.fn();
-      console.warn = consoleSpy;
-
-      const app = new StrapiApp();
-
-      const link = {
-        Component: async () => ({ default: jest.fn() }),
-        to: 'bar',
-        id: 'bar',
-        intlLabel: { id: 'bar', defaultMessage: 'bar' },
-        permissions: [],
-        icon: jest.fn(),
-      };
-
-      app.addMenuLink(link);
-
-      expect(consoleSpy.mock.calls[0]).toMatchInlineSnapshot(`
-        [
-          "[bar]: [deprecated] addMenuLink() was called with an async Component from the plugin "bar". This will be removed in the future. Please use: \`Component: () => import(path)\` ensuring you return a default export instead.",
-        ]
-      `);
-
-      console.warn = originalWarn;
+      expect(app.menu).toHaveLength(1);
+      expect(app.menu[0]).toEqual(link);
     });
   });
 
   describe('createCustomConfigurations', () => {
     it('should add a locale', () => {
-      const app = new StrapiApp({ config: { locales: ['fr'] } });
+      const adminConfig = {
+        config: { locales: ['fr'] },
+      };
+      const app = new StrapiApp({ adminConfig });
+
+      app.createCustomConfigurations();
 
       expect(app.configurations.locales).toEqual(['en', 'fr']);
     });
 
     it('should override the authLogo', () => {
-      const app = new StrapiApp({ config: { auth: { logo: 'fr' } } });
+      const adminConfig = {
+        config: { auth: { logo: 'fr' } },
+      };
+      const app = new StrapiApp({ adminConfig });
+
+      app.createCustomConfigurations();
 
       expect(app.configurations.authLogo).toBe('fr');
     });
 
     it('should override the menuLogo', () => {
-      const app = new StrapiApp({ config: { menu: { logo: 'fr' } } });
+      const adminConfig = {
+        config: { menu: { logo: 'fr' } },
+      };
+      const app = new StrapiApp({ adminConfig });
+
+      app.createCustomConfigurations();
 
       expect(app.configurations.menuLogo).toBe('fr');
     });
 
     it('should override the favicon', () => {
-      const app = new StrapiApp({ config: { head: { favicon: 'fr' } } });
+      const adminConfig = {
+        config: { head: { favicon: 'fr' } },
+      };
+      const app = new StrapiApp({ adminConfig });
+
+      app.createCustomConfigurations();
 
       expect(app.configurations.head.favicon).toBe('fr');
     });
 
     it('should override the light theme', () => {
+      const adminConfig = {
+        config: { theme: { light: { colors: { red: 'black' } } } },
+      };
       // @ts-expect-error - test mocks
-      const app = new StrapiApp({ config: { theme: { light: { colors: { red: 'black' } } } } });
+      const app = new StrapiApp({ adminConfig });
+
+      app.createCustomConfigurations();
 
       // @ts-expect-error - test mocks
       expect(app.configurations.themes.light.colors.red).toBe('black');
     });
 
     it('should override the dark theme', () => {
+      const adminConfig = {
+        config: { theme: { dark: { colors: { red: 'black' } } } },
+      };
       // @ts-expect-error - test mocks
-      const app = new StrapiApp({ config: { theme: { dark: { colors: { red: 'black' } } } } });
+      const app = new StrapiApp({ adminConfig });
+
+      app.createCustomConfigurations();
 
       // @ts-expect-error - test mocks
       expect(app.configurations.themes.dark.colors.red).toBe('black');
@@ -574,8 +572,14 @@ describe('ADMIN | new StrapiApp', () => {
 
       console.warn = jest.fn();
 
+      const adminConfig = {
+        config: { theme: { colors: { red: 'black' } } },
+      };
+
       // @ts-expect-error - test mocks
-      const app = new StrapiApp({ config: { theme: { colors: { red: 'black' } } } });
+      const app = new StrapiApp({ adminConfig });
+
+      app.createCustomConfigurations();
 
       // @ts-expect-error - test mocks
       expect(app.configurations.themes.light.colors.red).toBe('black');
@@ -585,13 +589,23 @@ describe('ADMIN | new StrapiApp', () => {
     });
 
     it('should override the tutorials', () => {
-      const app = new StrapiApp({ config: { tutorials: false } });
+      const adminConfig = {
+        config: { tutorials: false },
+      };
+      const app = new StrapiApp({ adminConfig });
+
+      app.createCustomConfigurations();
 
       expect(app.configurations.tutorials).toBeFalsy();
     });
 
     it('should override the release notification', () => {
-      const app = new StrapiApp({ config: { notifications: { releases: false } } });
+      const adminConfig = {
+        config: { notifications: { releases: false } },
+      };
+      const app = new StrapiApp({ adminConfig });
+
+      app.createCustomConfigurations();
 
       expect(app.configurations.notifications.releases).toBeFalsy();
     });

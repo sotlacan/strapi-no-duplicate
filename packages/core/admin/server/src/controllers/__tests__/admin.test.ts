@@ -1,19 +1,26 @@
 import adminController from '../admin';
 
+jest.mock('@strapi/strapi/dist/utils/ee', () => {
+  const eeModule = () => false;
+
+  Object.assign(eeModule, {
+    features: {
+      isEnabled() {
+        return false;
+      },
+      list() {
+        return [];
+      },
+    },
+  });
+
+  return eeModule;
+});
+
 describe('Admin Controller', () => {
   describe('init', () => {
     beforeAll(() => {
       global.strapi = {
-        ee: {
-          features: {
-            isEnabled() {
-              return false;
-            },
-            list() {
-              return [];
-            },
-          },
-        },
         config: {
           get: jest.fn(() => 'foo'),
         },
@@ -38,7 +45,7 @@ describe('Admin Controller', () => {
         'packageJsonStrapi.telemetryDisabled',
         null
       );
-      expect(global.strapi.service('admin::user').exists).toHaveBeenCalled();
+      expect(global.strapi.admin.services.user.exists).toHaveBeenCalled();
       expect(result.data).toBeDefined();
       expect(result.data).toStrictEqual({
         uuid: 'foo',
@@ -63,7 +70,7 @@ describe('Admin Controller', () => {
                 },
                 uuid: 'testuuid',
                 environment: 'development',
-              })[key] || value
+              }[key] || value)
           ),
         },
         EE: true,

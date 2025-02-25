@@ -34,7 +34,7 @@ const createTestBuilder = (options = {}) => {
       const model = strapi.getModel(modelsUtils.toContentTypeUID(modelName));
       const fixtures = this.fixturesFor(modelName);
 
-      return strapi.contentAPI.sanitize.output(fixtures, model);
+      return sanitize.contentAPI.output(fixtures, model);
     },
 
     fixturesFor(modelName) {

@@ -1,5 +1,5 @@
-import * as _ from 'lodash';
-import * as dates from 'date-fns';
+import _ = require('lodash');
+import dates = require('date-fns');
 
 const timeRegex = /^(2[0-3]|[01][0-9]):([0-5][0-9]):([0-5][0-9])(.[0-9]{1,3})?$/;
 

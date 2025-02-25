@@ -1,10 +1,10 @@
 import { isDynamicZoneAttribute } from '../../content-types';
-import { throwInvalidKey } from '../utils';
+import { throwInvalidParam } from '../utils';
 import type { Visitor } from '../../traverse/factory';
 
-const visitor: Visitor = ({ key, attribute, path }) => {
+const visitor: Visitor = ({ key, attribute }) => {
   if (isDynamicZoneAttribute(attribute)) {
-    throwInvalidKey({ key, path: path.attribute });
+    throwInvalidParam({ key });
   }
 };
 

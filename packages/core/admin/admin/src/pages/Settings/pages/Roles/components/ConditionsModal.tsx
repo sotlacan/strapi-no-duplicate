@@ -4,14 +4,17 @@ import {
   Box,
   Button,
   Flex,
-  Modal,
+  ModalBody,
+  ModalFooter,
+  ModalHeader,
+  ModalLayout,
+  ModalLayoutProps,
   MultiSelectNested,
   MultiSelectNestedProps,
   Typography,
-  Breadcrumbs,
-  Crumb,
 } from '@strapi/design-system';
-import { produce } from 'immer';
+import { Breadcrumbs, Crumb } from '@strapi/design-system/v2';
+import produce from 'immer';
 import get from 'lodash/get';
 import groupBy from 'lodash/groupBy';
 import upperFirst from 'lodash/upperFirst';
@@ -41,14 +44,16 @@ interface ConditionAction extends Pick<ActionRowProps, 'label'> {
 interface ConditionsModalProps extends Pick<ActionRowProps, 'isFormDisabled'> {
   actions?: Array<ConditionAction | HiddenCheckboxAction | VisibleCheckboxAction>;
   headerBreadCrumbs?: string[];
-  onClose?: () => void;
+  onClosed: ModalLayoutProps['onClose'];
+  onToggle: () => void;
 }
 
 const ConditionsModal = ({
   actions = [],
   headerBreadCrumbs = [],
   isFormDisabled,
-  onClose,
+  onClosed,
+  onToggle,
 }: ConditionsModalProps) => {
   const { formatMessage } = useIntl();
   const { availableConditions, modifiedData, onChangeConditions } = usePermissionsDataManager();
@@ -100,20 +105,12 @@ const ConditionsModal = ({
     );
 
     onChangeConditions(conditionsWithoutCategory);
-    onClose && onClose();
-  };
-
-  const onCloseModal = () => {
-    setState(
-      createDefaultConditionsForm(actionsToDisplay, modifiedData, arrayOfOptionsGroupedByCategory)
-    );
-
-    onClose && onClose();
+    onToggle();
   };
 
   return (
-    <Modal.Content>
-      <Modal.Header>
+    <ModalLayout labelledBy="condition-modal-breadcrumbs" onClose={onClosed}>
+      <ModalHeader>
         <Breadcrumbs id="condition-modal-breadcrumbs" label={headerBreadCrumbs.join(', ')}>
           {headerBreadCrumbs.map((label, index, arr) => (
             <Crumb isCurrent={index === arr.length - 1} key={label}>
@@ -126,8 +123,8 @@ const ConditionsModal = ({
             </Crumb>
           ))}
         </Breadcrumbs>
-      </Modal.Header>
-      <Modal.Body>
+      </ModalHeader>
+      <ModalBody>
         {actionsToDisplay.length === 0 && (
           <Typography>
             {formatMessage({
@@ -155,19 +152,23 @@ const ConditionsModal = ({
             );
           })}
         </ul>
-      </Modal.Body>
-      <Modal.Footer>
-        <Button variant="tertiary" onClick={() => onCloseModal()}>
-          {formatMessage({ id: 'app.components.Button.cancel', defaultMessage: 'Cancel' })}
-        </Button>
-        <Button onClick={handleSubmit}>
-          {formatMessage({
-            id: 'Settings.permissions.conditions.apply',
-            defaultMessage: 'Apply',
-          })}
-        </Button>
-      </Modal.Footer>
-    </Modal.Content>
+      </ModalBody>
+      <ModalFooter
+        startActions={
+          <Button variant="tertiary" onClick={onToggle}>
+            {formatMessage({ id: 'app.components.Button.cancel', defaultMessage: 'Cancel' })}
+          </Button>
+        }
+        endActions={
+          <Button onClick={handleSubmit}>
+            {formatMessage({
+              id: 'Settings.permissions.conditions.apply',
+              defaultMessage: 'Apply',
+            })}
+          </Button>
+        }
+      />
+    </ModalLayout>
   );
 };
 
@@ -239,14 +240,8 @@ const ActionRow = ({
   };
 
   return (
-    <Flex
-      tag="li"
-      background={isGrey ? 'neutral100' : 'neutral0'}
-      paddingBottom={3}
-      paddingTop={3}
-      justifyContent={'space-evenly'}
-    >
-      <Flex style={{ width: 180 }}>
+    <Flex as="li" background={isGrey ? 'neutral100' : 'neutral0'} paddingBottom={3} paddingTop={3}>
+      <Flex paddingLeft={6} style={{ width: 180 }}>
         <Typography variant="sigma" textColor="neutral600">
           {formatMessage({
             id: 'Settings.permissions.conditions.can',
@@ -269,6 +264,7 @@ const ActionRow = ({
         </Typography>
       </Flex>
       <Box style={{ maxWidth: 430, width: '100%' }}>
+        {/* @ts-expect-error – fix this label issue */}
         <MultiSelectNested
           id={name}
           customizeContent={(values = []) => `${values.length} currently selected`}

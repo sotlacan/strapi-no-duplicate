@@ -23,16 +23,15 @@ The container module permits to generate containers.
 
 ## Module: container
 
-### class Container
+### `createContainer(strapi)`
 
-### `new Container()`
-
+- `strapi`: <Type>Strapi</Type> [See Strapi class documentation](strapi.mdx)
 - Returns: <Type>Container</Type>
 
 ```javascript
-const container = new Container();
+const container = createContainer(strapi);
 
-container.add('config', {
+container.register('config', {
   get: (configName) => {},
   set: (configName, value) => {},
 });
@@ -40,24 +39,24 @@ container.add('config', {
 const dbConfig = container.get('config').get('database');
 ```
 
-### `container.add(name, resolver)`
+### `container.register(name, resolver)`
 
 - `name`: <Type>String</Type> UID of the content
 - `resolver`: <Type>Function</Type> | <Type>Any</Type>
   - As a function, the function will be executed when the first get method is called on this content. The result of this function will define the content of this UID.
   - `resolver(context, args)`
-    - `context`: <Type>Container</Type> The container instance
+    - `context`: { <Type>Strapi</Type> } [See Strapi class documentation](strapi.mdx)
     - `args`: <Type>Any</Type> Anything to be used by the resolver function
   - As anything else, this value will be resolved when getting this specified content through its UID.
 
 Register a new content to be accessed inside the container. If the name is already used, it will throw an error.
 
 ```javascript
-const container = new Container();
+const container = createContainer(strapi);
 
-container.add('config', (container, args) => {});
+container.register('config', ({ strapi }, args) => {});
 // or
-container.add('services', {});
+container.register('services', {});
 ```
 
 ### `container.get(name, args)`
@@ -68,9 +67,9 @@ container.add('services', {});
 Get the value stored for a specific `name`.
 
 ```javascript
-const container = new Container();
+const container = createContainer(strapi);
 
-container.add('config', { db: 'sqlite' });
+container.register('config', { db: 'sqlite' });
 
 const config = container.get('config');
 // config.db === 'sqlite'
@@ -81,9 +80,9 @@ const config = container.get('config');
 Please pay attention that the resolver result value isn't awaited. So if resolver returns a promise, the value stored will be a promise.
 
 ```javascript
-const container = new Container();
+const container = createContainer(strapi);
 
-container.add('boolean', (bool) => bool);
+container.register('boolean', (bool) => bool);
 
 // First call - The value is resolved through the resolver above "(bool) => bool"
 container.get('boolean', true);
@@ -97,3 +96,9 @@ container.get('boolean');
 container.get('boolean', false);
 // true
 ```
+
+### `container.extend()`
+
+:::info
+To be developed
+:::

@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-var-requires */
-import type { Core } from '@strapi/types';
+import type { LoadedStrapi } from '@strapi/types';
 
 import { ACTIONS, RELEASE_MODEL_UID, RELEASE_ACTION_MODEL_UID } from './constants';
 import {
@@ -10,19 +10,17 @@ import {
   disableContentTypeLocalized,
   enableContentTypeLocalized,
 } from './migrations';
-import { addEntryDocumentToReleaseActions } from './migrations/database/5.0.0-document-id-in-actions';
 
-export const register = async ({ strapi }: { strapi: Core.Strapi }) => {
-  if (strapi.ee.features.isEnabled('cms-content-releases')) {
-    await strapi.service('admin::permission').actionProvider.registerMany(ACTIONS);
+const { features } = require('@strapi/strapi/dist/utils/ee');
 
-    strapi.db.migrations.providers.internal.register(addEntryDocumentToReleaseActions);
+export const register = async ({ strapi }: { strapi: LoadedStrapi }) => {
+  if (features.isEnabled('cms-content-releases')) {
+    await strapi.admin.services.permission.actionProvider.registerMany(ACTIONS);
 
     strapi
       .hook('strapi::content-types.beforeSync')
-      .register(disableContentTypeLocalized)
-      .register(deleteActionsOnDisableDraftAndPublish);
-
+      .register(deleteActionsOnDisableDraftAndPublish)
+      .register(disableContentTypeLocalized);
     strapi
       .hook('strapi::content-types.afterSync')
       .register(deleteActionsOnDeleteContentType)

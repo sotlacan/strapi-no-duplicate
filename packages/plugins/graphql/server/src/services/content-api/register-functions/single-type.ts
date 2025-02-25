@@ -1,15 +1,15 @@
-import type { Core, Struct } from '@strapi/types';
+import type { Strapi, Schema } from '@strapi/types';
 import type { TypeRegistry } from '../../type-registry';
 
 const registerSingleType = (
-  contentType: Struct.SingleTypeSchema,
+  contentType: Schema.SingleType,
   {
     registry,
     strapi,
     builders,
   }: {
     registry: TypeRegistry;
-    strapi: Core.Strapi;
+    strapi: Strapi;
     builders: any;
   }
 ) => {

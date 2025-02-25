@@ -1,7 +1,6 @@
 import permissions from '@strapi/permissions';
-import { providerFactory, sanitize, validate } from '@strapi/utils';
-
-import type { Route } from '../core';
+import { providerFactory } from '@strapi/utils';
+import { Common } from '../types';
 
 export interface Condition {
   name: string;
@@ -33,7 +32,5 @@ export interface PermissionUtilities {
 
 export interface ContentApi {
   permissions: PermissionUtilities;
-  getRoutesMap: () => Promise<Record<string, Route[]>>;
-  sanitize: sanitize.APISanitiers;
-  validate: validate.APIValidators;
+  getRoutesMap: () => Promise<Record<string, Common.Route[]>>;
 }

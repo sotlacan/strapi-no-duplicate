@@ -2,6 +2,11 @@ import { render, screen } from '@tests/utils';
 
 import { UseCasePage } from '../UseCasePage';
 
+jest.mock('@strapi/helper-plugin', () => ({
+  ...jest.requireActual('@strapi/helper-plugin'),
+  useNotification: jest.fn(),
+}));
+
 describe('Admin | UseCasePage', () => {
   it('should not show Other input if select value is not Other', async () => {
     const { queryByTestId, user } = render(<UseCasePage />);
@@ -16,7 +21,7 @@ describe('Admin | UseCasePage', () => {
   });
 
   it('should show Other input if select value is Other', async () => {
-    const { getByRole, user } = render(<UseCasePage />);
+    const { getByTestId, user } = render(<UseCasePage />);
 
     const selectInput = screen.getByRole('combobox', { name: 'What type of work do you do?' });
 
@@ -24,6 +29,6 @@ describe('Admin | UseCasePage', () => {
 
     await user.click(screen.getByRole('option', { name: 'Other' }));
 
-    expect(getByRole('textbox', { name: 'Other' })).toBeInTheDocument();
+    expect(getByTestId('other')).toBeInTheDocument();
   });
 });

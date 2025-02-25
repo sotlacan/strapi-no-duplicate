@@ -1,5 +1,5 @@
-import { async } from '@strapi/utils';
-import type { Core, UID, Modules } from '@strapi/types';
+import { pipeAsync } from '@strapi/utils';
+import { LoadedStrapi as Strapi, EntityService, Common } from '@strapi/types';
 
 const ACTIONS = {
   read: 'plugin::content-manager.explorer.read',
@@ -8,10 +8,9 @@ const ACTIONS = {
   delete: 'plugin::content-manager.explorer.delete',
   publish: 'plugin::content-manager.explorer.publish',
   unpublish: 'plugin::content-manager.explorer.publish',
-  discard: 'plugin::content-manager.explorer.update',
 } as const;
 
-type Entity = Modules.EntityService.Result<UID.ContentType>;
+type Entity = EntityService.Result<Common.UID.ContentType>;
 type Query = {
   page?: string;
   pageSize?: string;
@@ -19,45 +18,26 @@ type Query = {
 };
 
 const createPermissionChecker =
-  (strapi: Core.Strapi) =>
+  (strapi: Strapi) =>
   ({ userAbility, model }: { userAbility: any; model: string }) => {
-    const permissionsManager = strapi.service('admin::permission').createPermissionsManager({
+    const permissionsManager = strapi.admin.services.permission.createPermissionsManager({
       ability: userAbility,
       model,
     });
 
-    const { actionProvider } = strapi.service('admin::permission');
-
-    const toSubject = (entity?: Entity) => {
-      return entity ? permissionsManager.toSubject(entity, model) : model;
-    };
+    const toSubject = (entity?: Entity) =>
+      entity ? permissionsManager.toSubject(entity, model) : model;
 
     // @ts-expect-error preserve the parameter order
     // eslint-disable-next-line @typescript-eslint/default-param-last
     const can = (action: string, entity?: Entity, field: string) => {
-      const subject = toSubject(entity);
-      const aliases = actionProvider.unstable_aliases(action, model) as string[];
-
-      return (
-        // Test the original action to see if it passes
-        userAbility.can(action, subject, field) ||
-        // Else try every known alias if at least one of them succeed, then the user "can"
-        aliases.some((alias) => userAbility.can(alias, subject, field))
-      );
+      return userAbility.can(action, toSubject(entity), field);
     };
 
     // @ts-expect-error preserve the parameter order
     // eslint-disable-next-line @typescript-eslint/default-param-last
     const cannot = (action: string, entity?: Entity, field: string) => {
-      const subject = toSubject(entity);
-      const aliases = actionProvider.unstable_aliases(action, model) as string[];
-
-      return (
-        // Test both the original action
-        userAbility.cannot(action, subject, field) &&
-        // and every known alias, if all of them fail (cannot), then the user truly "cannot"
-        aliases.every((alias) => userAbility.cannot(alias, subject, field))
-      );
+      return userAbility.cannot(action, toSubject(entity), field);
     };
 
     const sanitizeOutput = (data: Entity, { action = ACTIONS.read }: { action?: string } = {}) => {
@@ -95,7 +75,7 @@ const createPermissionChecker =
     };
 
     const sanitizedQuery = (query: Query, action: { action?: string } = {}) => {
-      return async.pipe(
+      return pipeAsync(
         (q: Query) => sanitizeQuery(q, action),
         (q: Query) => buildPermissionQuery(q, action)
       )(query);
@@ -132,6 +112,6 @@ const createPermissionChecker =
     };
   };
 
-export default ({ strapi }: { strapi: Core.Strapi }) => ({
+export default ({ strapi }: { strapi: Strapi }) => ({
   create: createPermissionChecker(strapi),
 });

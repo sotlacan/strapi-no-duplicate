@@ -9,8 +9,6 @@ const write = jest.fn((_chunk, _encoding, callback) => {
   callback();
 });
 
-const uploadStream = jest.fn(() => null);
-
 const createWriteStreamMock = jest.fn(() => {
   return new Writable({
     objectMode: true,
@@ -26,40 +24,22 @@ const transaction = jest.fn(async (cb) => {
   await cb({ trx, rollback });
 });
 
-const createStrapi = getStrapiFactory({
+const strapiFactory = getStrapiFactory({
   dirs: {
     static: {
       public: 'static/public/assets',
     },
   },
-  db: {
-    transaction,
-    query() {
-      return {};
-    },
-    lifecycles: {
-      enable: jest.fn(),
-      disable: jest.fn(),
-    },
-  },
+  db: { transaction },
   config: {
-    get(service: string) {
-      if (service === 'plugin::upload') {
+    get(service) {
+      if (service === 'plugin.upload') {
         return {
           provider: 'local',
         };
       }
       return {};
     },
-  },
-  plugin(plugin: string) {
-    if (plugin === 'upload') {
-      return {
-        provider: {
-          uploadStream,
-        },
-      };
-    }
   },
 });
 
@@ -77,7 +57,7 @@ describe('Local Strapi Destination Provider - Get Assets Stream', () => {
 
   test('Returns a stream when assets restore is true', async () => {
     const provider = createLocalStrapiDestinationProvider({
-      getStrapi: () => createStrapi(),
+      getStrapi: () => strapiFactory(),
       strategy: 'restore',
       restore: {
         assets: true,
@@ -92,7 +72,7 @@ describe('Local Strapi Destination Provider - Get Assets Stream', () => {
 
   test('Throw an error if attempting to create stream while restore assets is false', async () => {
     const provider = createLocalStrapiDestinationProvider({
-      getStrapi: () => createStrapi(),
+      getStrapi: () => strapiFactory(),
       strategy: 'restore',
       restore: {
         assets: false,
@@ -105,7 +85,7 @@ describe('Local Strapi Destination Provider - Get Assets Stream', () => {
     );
   });
 
-  test('uploading file to strapi fails incase file ID is not found', async () => {
+  test('Writes on the strapi assets path', async () => {
     (fse.createWriteStream as jest.Mock).mockImplementationOnce(createWriteStreamMock);
     const assetsDirectory = 'static/public/assets';
     const file: IAsset = {
@@ -113,32 +93,13 @@ describe('Local Strapi Destination Provider - Get Assets Stream', () => {
       filepath: 'strapi-import-folder/assets',
       stats: { size: 200 },
       stream: Readable.from(['test', 'test-2']),
-      metadata: {
-        hash: 'hash',
-        name: 'test-photo',
-        id: 1,
-        url: 'test-photo.jpg',
-        size: 200,
-        mime: 'test-photo.jpg',
-      },
     };
-    const mockFindOne = jest.fn().mockResolvedValue({ ...file.metadata });
-    const mockUpdate = jest.fn().mockResolvedValue(null);
-    const mockQuery = jest.fn(() => ({ findOne: mockFindOne, update: mockUpdate }));
     const provider = createLocalStrapiDestinationProvider({
       getStrapi: () =>
-        createStrapi({
+        strapiFactory({
           dirs: {
             static: {
               public: assetsDirectory,
-            },
-          },
-          db: {
-            transaction,
-            query: mockQuery,
-            lifecycles: {
-              enable: jest.fn(),
-              disable: jest.fn(),
             },
           },
         }),
@@ -150,18 +111,16 @@ describe('Local Strapi Destination Provider - Get Assets Stream', () => {
 
     await provider.bootstrap();
     const stream = await provider.createAssetsWriteStream();
-    await new Promise<void>((resolve, reject) => {
-      stream.on('error', reject);
-      stream.write(file, (err) => {
-        if (err) {
-          reject(err);
-        } else {
-          resolve();
-        }
-      });
-    }).catch((error) => {
-      expect(error).toBeInstanceOf(Error);
-      expect(error.message).toBe('File ID not found for ID: 1'); // Customize as needed
+
+    const error = await new Promise<Error | null | undefined>((resolve) => {
+      stream.write(file, resolve);
     });
+
+    expect(error).not.toBeInstanceOf(Error);
+
+    expect(write).toHaveBeenCalled();
+    expect(createWriteStreamMock).toHaveBeenCalledWith(
+      `${assetsDirectory}/uploads/${file.filename}`
+    );
   });
 });

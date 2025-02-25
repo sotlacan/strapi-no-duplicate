@@ -35,7 +35,7 @@ describe('Permissions', () => {
 
     COLLECTION_TYPES.forEach((type) =>
       expect(
-        screen.getByRole('checkbox', { name: `Select all ${capitalise(type)} permissions` })
+        screen.getByRole('checkbox', { name: `Select all ${type} permissions` })
       ).toBeInTheDocument()
     );
 
@@ -73,7 +73,7 @@ describe('Permissions', () => {
       });
     });
 
-    await user.click(screen.getByRole('button', { name: 'repeat_req_min' }));
+    await user.click(screen.getByRole('button', { name: 'Repeat_req_min' }));
 
     COLUMN_HEADERS.filter((head) => head !== 'Publish' && head !== 'Delete').forEach((head) => {
       expect(
@@ -99,15 +99,11 @@ describe('Permissions', () => {
 
     expect(screen.getByRole('tabpanel', { name: 'Settings' })).toBeInTheDocument();
 
-    [
-      'Email email settings',
-      'Media library media library settings',
-      'Internationalization Internationalization settings',
-    ].forEach((setting) => {
+    ['Email', 'Media library media library settings', 'Internationalization'].forEach((setting) => {
       expect(screen.getByRole('button', { name: setting })).toBeInTheDocument();
     });
 
-    await user.click(screen.getByRole('button', { name: 'Email email settings' }));
+    await user.click(screen.getByRole('button', { name: 'Email' }));
 
     expect(screen.getByRole('checkbox', { name: 'Select all' })).toBeInTheDocument();
 

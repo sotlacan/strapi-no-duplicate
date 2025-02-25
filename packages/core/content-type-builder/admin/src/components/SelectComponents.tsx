@@ -1,4 +1,4 @@
-import { Field, MultiSelectNested } from '@strapi/design-system';
+import { MultiSelectNested } from '@strapi/design-system';
 import { useIntl } from 'react-intl';
 
 import { useDataManager } from '../hooks/useDataManager';
@@ -50,22 +50,19 @@ export const SelectComponents = ({
     },
     {} as Record<string, Component[]>
   );
-  const options = Object.entries(filteredComponentsGroupedByCategory).reduce(
-    (acc, current) => {
-      const [categoryName, components] = current;
-      const section = {
-        label: categoryName,
-        children: components.map(({ uid, schema: { displayName } }) => {
-          return { label: displayName, value: uid };
-        }),
-      };
+  const options = Object.entries(filteredComponentsGroupedByCategory).reduce((acc, current) => {
+    const [categoryName, components] = current;
+    const section = {
+      label: categoryName,
+      children: components.map(({ uid, schema: { displayName } }) => {
+        return { label: displayName, value: uid };
+      }),
+    };
 
-      acc.push(section);
+    acc.push(section);
 
-      return acc;
-    },
-    [] as Array<{ label: string; children: Array<{ label: string; value: string }> }>
-  );
+    return acc;
+  }, [] as Array<{ label: string; children: Array<{ label: string; value: string }> }>);
 
   const displayedValue = formatMessage(
     {
@@ -77,17 +74,16 @@ export const SelectComponents = ({
   );
 
   return (
-    <Field.Root name={name}>
-      <Field.Label>{formatMessage(intlLabel)}</Field.Label>
-      <MultiSelectNested
-        id="select1"
-        customizeContent={() => displayedValue}
-        onChange={(values) => {
-          onChange({ target: { name, value: values, type: 'select-components' } });
-        }}
-        options={options}
-        value={value || []}
-      />
-    </Field.Root>
+    <MultiSelectNested
+      id="select1"
+      label={formatMessage(intlLabel)}
+      customizeContent={() => displayedValue}
+      name={name}
+      onChange={(values) => {
+        onChange({ target: { name, value: values, type: 'select-components' } });
+      }}
+      options={options}
+      value={value || []}
+    />
   );
 };

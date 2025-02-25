@@ -1,6 +1,6 @@
 import { extendType } from 'nexus';
 import type * as Nexus from 'nexus';
-import type { Struct } from '@strapi/types';
+import type { Schema } from '@strapi/types';
 import type { Context } from '../../types';
 
 export default ({ strapi }: Context) => {
@@ -8,10 +8,11 @@ export default ({ strapi }: Context) => {
 
   const { naming } = getService('utils');
   const { transformArgs, getContentTypeArgs } = getService('builders').utils;
+  const { toEntityResponse } = getService('format').returnTypes;
 
-  const { getFindOneQueryName, getTypeName } = naming;
+  const { getFindOneQueryName, getEntityResponseName } = naming;
 
-  const buildSingleTypeQueries = (contentType: Struct.SingleTypeSchema) => {
+  const buildSingleTypeQueries = (contentType: Schema.SingleType) => {
     const findQueryName = `Query.${getFindOneQueryName(contentType)}`;
 
     const extension = getService('extension');
@@ -43,30 +44,29 @@ export default ({ strapi }: Context) => {
 
   const addFindQuery = (
     t: Nexus.blocks.ObjectDefinitionBlock<string>,
-    contentType: Struct.SingleTypeSchema
+    contentType: Schema.SingleType
   ) => {
+    const { uid } = contentType;
+
     const findQueryName = getFindOneQueryName(contentType);
-    const typeName = getTypeName(contentType);
+    const responseTypeName = getEntityResponseName(contentType);
 
     t.field(findQueryName, {
-      type: typeName,
-
-      extensions: {
-        strapi: {
-          contentType,
-        },
-      },
+      type: responseTypeName,
 
       args: getContentTypeArgs(contentType),
 
       async resolve(parent, args, ctx) {
         const transformedArgs = transformArgs(args, { contentType });
 
-        const { findFirst } = getService('builders')
+        const queriesResolvers = getService('builders')
           .get('content-api')
           .buildQueriesResolvers({ contentType });
 
-        return findFirst(parent, transformedArgs, ctx);
+        // queryResolvers will sanitize params
+        const value = queriesResolvers.find(parent, transformedArgs, ctx);
+
+        return toEntityResponse(value, { args: transformedArgs, resourceUID: uid });
       },
     });
   };

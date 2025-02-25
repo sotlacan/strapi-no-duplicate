@@ -1,92 +1,51 @@
 import * as React from 'react';
 
-import { Box, Button, Flex, Main, Typography, Link } from '@strapi/design-system';
+import { Box, Button, Flex, Main, TextInput, Typography } from '@strapi/design-system';
+import { Link } from '@strapi/design-system/v2';
+import { Form, translatedErrors, useAPIErrorHandler, useQuery } from '@strapi/helper-plugin';
+import { Eye, EyeStriked } from '@strapi/icons';
+import { Formik } from 'formik';
 import { useIntl } from 'react-intl';
-import { NavLink, useNavigate, Navigate, useLocation } from 'react-router-dom';
+import { NavLink, Redirect, useHistory } from 'react-router-dom';
+import styled from 'styled-components';
 import * as yup from 'yup';
 
 import { ResetPassword } from '../../../../../shared/contracts/authentication';
-import { Form } from '../../../components/Form';
-import { InputRenderer } from '../../../components/FormInputs/Renderer';
 import { Logo } from '../../../components/UnauthenticatedLogo';
-import { useTypedDispatch } from '../../../core/store/hooks';
-import { useAPIErrorHandler } from '../../../hooks/useAPIErrorHandler';
+import { useAuth } from '../../../features/Auth';
 import {
   Column,
   LayoutContent,
   UnauthenticatedLayout,
 } from '../../../layouts/UnauthenticatedLayout';
-import { login } from '../../../reducer';
 import { useResetPasswordMutation } from '../../../services/auth';
 import { isBaseQueryError } from '../../../utils/baseQuery';
-import { getByteSize } from '../../../utils/strings';
-import { translatedErrors } from '../../../utils/translatedErrors';
+
+import { FieldActionWrapper } from './FieldActionWrapper';
 
 const RESET_PASSWORD_SCHEMA = yup.object().shape({
   password: yup
     .string()
-    .min(8, {
-      id: translatedErrors.minLength.id,
-      defaultMessage: 'Password must be at least 8 characters',
-      values: { min: 8 },
-    })
-    // bcrypt has a max length of 72 bytes (not characters!)
-    .test(
-      'required-byte-size',
-      {
-        id: 'components.Input.error.contain.maxBytes',
-        defaultMessage: 'Password must be less than 73 bytes',
-      },
-      function (value) {
-        if (!value || typeof value !== 'string') return true; // validated elsewhere
-
-        const byteSize = getByteSize(value);
-        return byteSize <= 72;
-      }
-    )
-    .matches(/[a-z]/, {
-      message: {
-        id: 'components.Input.error.contain.lowercase',
-        defaultMessage: 'Password must contain at least 1 lowercase letter',
-      },
-    })
-    .matches(/[A-Z]/, {
-      message: {
-        id: 'components.Input.error.contain.uppercase',
-        defaultMessage: 'Password must contain at least 1 uppercase letter',
-      },
-    })
-    .matches(/\d/, {
-      message: {
-        id: 'components.Input.error.contain.number',
-        defaultMessage: 'Password must contain at least 1 number',
-      },
-    })
-    .required({
-      id: translatedErrors.required.id,
-      defaultMessage: 'Password is required',
-    })
-    .nullable(),
+    .min(8, translatedErrors.minLength)
+    .matches(/[a-z]/, 'components.Input.error.contain.lowercase')
+    .matches(/[A-Z]/, 'components.Input.error.contain.uppercase')
+    .matches(/\d/, 'components.Input.error.contain.number')
+    .required(translatedErrors.required),
   confirmPassword: yup
     .string()
-    .required({
-      id: translatedErrors.required.id,
-      defaultMessage: 'Confirm password is required',
-    })
-    .oneOf([yup.ref('password'), null], {
-      id: 'components.Input.error.password.noMatch',
-      defaultMessage: 'Passwords must match',
-    })
-    .nullable(),
+    .oneOf([yup.ref('password'), null], 'components.Input.error.password.noMatch')
+    .required(translatedErrors.required),
 });
 
 const ResetPassword = () => {
+  const [passwordShown, setPasswordShown] = React.useState(false);
+  const [confirmPasswordShown, setConfirmPasswordShown] = React.useState(false);
   const { formatMessage } = useIntl();
-  const dispatch = useTypedDispatch();
-  const navigate = useNavigate();
-  const { search: searchString } = useLocation();
-  const query = React.useMemo(() => new URLSearchParams(searchString), [searchString]);
+  const { push } = useHistory();
+  const query = useQuery();
   const { _unstableFormatAPIError: formatAPIError } = useAPIErrorHandler();
+
+  const { setToken } = useAuth('ResetPassword');
 
   const [resetPassword, { error }] = useResetPasswordMutation();
 
@@ -94,8 +53,8 @@ const ResetPassword = () => {
     const res = await resetPassword(body);
 
     if ('data' in res) {
-      dispatch(login({ token: res.data.token }));
-      navigate('/');
+      setToken(res.data.token);
+      push('/');
     }
   };
   /**
@@ -103,7 +62,7 @@ const ResetPassword = () => {
    * then they should just be redirected back to the login page.
    */
   if (!query.get('code')) {
-    return <Navigate to="/auth/login" />;
+    return <Redirect to="/auth/login" />;
   }
 
   return (
@@ -113,7 +72,7 @@ const ResetPassword = () => {
           <Column>
             <Logo />
             <Box paddingTop={6} paddingBottom={7}>
-              <Typography tag="h1" variant="alpha">
+              <Typography as="h1" variant="alpha">
                 {formatMessage({
                   id: 'global.reset-password',
                   defaultMessage: 'Reset password',
@@ -131,8 +90,8 @@ const ResetPassword = () => {
               </Typography>
             ) : null}
           </Column>
-          <Form
-            method="POST"
+          <Formik
+            enableReinitialize
             initialValues={{
               password: '',
               confirmPassword: '',
@@ -142,47 +101,116 @@ const ResetPassword = () => {
               handleSubmit({ password: values.password, resetPasswordToken: query.get('code')! });
             }}
             validationSchema={RESET_PASSWORD_SCHEMA}
+            validateOnChange={false}
           >
-            <Flex direction="column" alignItems="stretch" gap={6}>
-              {[
-                {
-                  hint: formatMessage({
-                    id: 'Auth.form.password.hint',
-                    defaultMessage:
-                      'Password must contain at least 8 characters, 1 uppercase, 1 lowercase and 1 number',
-                  }),
-                  label: formatMessage({
-                    id: 'global.password',
-                    defaultMessage: 'Password',
-                  }),
-                  name: 'password',
-                  required: true,
-                  type: 'password' as const,
-                },
-                {
-                  label: formatMessage({
-                    id: 'Auth.form.confirmPassword.label',
-                    defaultMessage: 'Confirm Password',
-                  }),
-                  name: 'confirmPassword',
-                  required: true,
-                  type: 'password' as const,
-                },
-              ].map((field) => (
-                <InputRenderer key={field.name} {...field} />
-              ))}
-              <Button fullWidth type="submit">
-                {formatMessage({
-                  id: 'global.change-password',
-                  defaultMessage: 'Change password',
-                })}
-              </Button>
-            </Flex>
-          </Form>
+            {({ values, errors, handleChange }) => (
+              <Form>
+                <Flex direction="column" alignItems="stretch" gap={6}>
+                  <PasswordInput
+                    name="password"
+                    onChange={handleChange}
+                    value={values.password}
+                    error={
+                      errors.password
+                        ? formatMessage(
+                            {
+                              id: errors.password,
+                              defaultMessage: 'This field is required.',
+                            },
+                            {
+                              min: 8,
+                            }
+                          )
+                        : undefined
+                    }
+                    endAction={
+                      <FieldActionWrapper
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setPasswordShown((prev) => !prev);
+                        }}
+                        label={formatMessage(
+                          passwordShown
+                            ? {
+                                id: 'Auth.form.password.show-password',
+                                defaultMessage: 'Show password',
+                              }
+                            : {
+                                id: 'Auth.form.password.hide-password',
+                                defaultMessage: 'Hide password',
+                              }
+                        )}
+                      >
+                        {passwordShown ? <Eye /> : <EyeStriked />}
+                      </FieldActionWrapper>
+                    }
+                    hint={formatMessage({
+                      id: 'Auth.form.password.hint',
+                      defaultMessage:
+                        'Password must contain at least 8 characters, 1 uppercase, 1 lowercase and 1 number',
+                    })}
+                    required
+                    label={formatMessage({
+                      id: 'global.password',
+                      defaultMessage: 'Password',
+                    })}
+                    type={passwordShown ? 'text' : 'password'}
+                  />
+                  <PasswordInput
+                    name="confirmPassword"
+                    onChange={handleChange}
+                    value={values.confirmPassword}
+                    error={
+                      errors.confirmPassword
+                        ? formatMessage({
+                            id: errors.confirmPassword,
+                            defaultMessage: 'This value is required.',
+                          })
+                        : undefined
+                    }
+                    endAction={
+                      <FieldActionWrapper
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setConfirmPasswordShown((prev) => !prev);
+                        }}
+                        label={formatMessage(
+                          passwordShown
+                            ? {
+                                id: 'Auth.form.password.show-password',
+                                defaultMessage: 'Show password',
+                              }
+                            : {
+                                id: 'Auth.form.password.hide-password',
+                                defaultMessage: 'Hide password',
+                              }
+                        )}
+                      >
+                        {confirmPasswordShown ? <Eye /> : <EyeStriked />}
+                      </FieldActionWrapper>
+                    }
+                    required
+                    label={formatMessage({
+                      id: 'Auth.form.confirmPassword.label',
+                      defaultMessage: 'Confirm Password',
+                    })}
+                    type={confirmPasswordShown ? 'text' : 'password'}
+                  />
+                  <Button fullWidth type="submit">
+                    {formatMessage({
+                      id: 'global.change-password',
+                      defaultMessage: 'Change password',
+                    })}
+                  </Button>
+                </Flex>
+              </Form>
+            )}
+          </Formik>
         </LayoutContent>
         <Flex justifyContent="center">
           <Box paddingTop={4}>
-            <Link tag={NavLink} to="/auth/login">
+            {/* @ts-expect-error – error with inferring the props from the as component */}
+            <Link as={NavLink} to="/auth/login">
               {formatMessage({ id: 'Auth.link.ready', defaultMessage: 'Ready to sign in?' })}
             </Link>
           </Box>
@@ -191,5 +219,11 @@ const ResetPassword = () => {
     </UnauthenticatedLayout>
   );
 };
+
+const PasswordInput = styled(TextInput)`
+  ::-ms-reveal {
+    display: none;
+  }
+`;
 
 export { ResetPassword };

@@ -11,8 +11,8 @@ const handleYupError = (error: yup.ValidationError, errorMessage?: string) => {
 const defaultValidationParam = { strict: true, abortEarly: false };
 
 const validateYupSchema =
-  <TSchema extends yup.AnySchema>(schema: TSchema, options = {}) =>
-  async (body: unknown, errorMessage?: string): Promise<yup.InferType<TSchema>> => {
+  (schema: yup.AnySchema, options = {}) =>
+  async (body: unknown, errorMessage?: string) => {
     try {
       const optionsWithDefaults = defaults(defaultValidationParam, options);
       const result = await schema.validate(body, optionsWithDefaults);
@@ -27,8 +27,8 @@ const validateYupSchema =
   };
 
 const validateYupSchemaSync =
-  <TSchema extends yup.AnySchema>(schema: yup.AnySchema, options = {}) =>
-  (body: unknown, errorMessage?: string): yup.InferType<TSchema> => {
+  (schema: yup.AnySchema, options = {}) =>
+  (body: unknown, errorMessage?: string) => {
     try {
       const optionsWithDefaults = defaults(defaultValidationParam, options);
       return schema.validateSync(body, optionsWithDefaults);

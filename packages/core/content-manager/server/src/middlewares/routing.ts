@@ -1,8 +1,8 @@
-import type { UID, Core, Struct } from '@strapi/types';
+import { UID, Common, Schema } from '@strapi/types';
 import type { Context, Next } from 'koa';
 import isNil from 'lodash/isNil';
 
-interface ContentType extends Struct.ContentTypeSchema {
+interface ContentType extends Schema.ContentType {
   plugin?: string;
 }
 
@@ -15,14 +15,14 @@ export default async (ctx: Context, next: Next) => {
     return ctx.send({ error: 'contentType.notFound' }, 404);
   }
 
-  let controllers;
+  let target;
   if (!ct.plugin || ct.plugin === 'admin') {
-    controllers = strapi.admin.controllers;
+    target = strapi.admin;
   } else {
-    controllers = strapi.plugin(ct.plugin).controllers;
+    target = strapi.plugin(ct.plugin);
   }
 
-  const { route }: { route: Core.Route } = ctx.state;
+  const { route }: { route: Common.Route } = ctx.state;
 
   if (typeof route.handler !== 'string') {
     return next();
@@ -30,18 +30,20 @@ export default async (ctx: Context, next: Next) => {
 
   const [, action] = route.handler.split('.');
 
-  let actionConfig: any;
-  if (!ct.plugin || ct.plugin === 'admin') {
-    actionConfig = strapi.config.get(`admin.layout.${ct.modelName}.actions.${action}`);
-  } else {
-    actionConfig = strapi.plugin(ct.plugin).config(`layout.${ct.modelName}.actions.${action}`);
-  }
+  const configPath =
+    ct.plugin === 'admin'
+      ? ['admin.layout', ct.modelName, 'actions', action]
+      : ['plugin', ct.plugin, 'layout', ct.modelName, 'actions', action];
+
+  // TODO
+  // @ts-expect-error check input for strapi.config.get
+  const actionConfig: string | undefined = strapi.config.get(configPath);
 
   if (!isNil(actionConfig)) {
     const [controller, action] = actionConfig.split('.');
 
     if (controller && action) {
-      return controllers[controller.toLowerCase()][action](ctx, next);
+      return target.controllers[controller.toLowerCase()][action](ctx, next);
     }
   }
 

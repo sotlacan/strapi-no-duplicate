@@ -1,7 +1,7 @@
-import type { Data } from '@strapi/types';
+import { Entity as StrapiEntity } from '@strapi/types';
 
 export interface Entity {
-  id: Data.ID;
+  id: StrapiEntity.ID;
   createdAt: string;
   updatedAt: string;
 }

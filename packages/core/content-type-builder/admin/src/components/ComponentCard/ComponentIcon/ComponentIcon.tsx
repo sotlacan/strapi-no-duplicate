@@ -1,4 +1,4 @@
-import { Flex } from '@strapi/design-system';
+import { Flex, Icon } from '@strapi/design-system';
 
 import { COMPONENT_ICONS } from '../../IconPicker/constants';
 
@@ -7,9 +7,7 @@ interface ComponentIconProps {
   icon?: keyof typeof COMPONENT_ICONS;
 }
 
-export const ComponentIcon = ({ isActive = false, icon = 'dashboard' }: ComponentIconProps) => {
-  const Icon = COMPONENT_ICONS[icon] || COMPONENT_ICONS.dashboard;
-
+export const ComponentIcon = ({ isActive = false, icon = 'cube' }: ComponentIconProps) => {
   return (
     <Flex
       alignItems="center"
@@ -19,7 +17,7 @@ export const ComponentIcon = ({ isActive = false, icon = 'dashboard' }: Componen
       width={8}
       borderRadius="50%"
     >
-      <Icon height="2rem" width="2rem" />
+      <Icon as={COMPONENT_ICONS[icon] || COMPONENT_ICONS.cube} height={5} width={5} />
     </Flex>
   );
 };

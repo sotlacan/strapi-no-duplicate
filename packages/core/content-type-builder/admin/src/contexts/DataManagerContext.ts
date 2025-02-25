@@ -2,43 +2,36 @@
 import { createContext } from 'react';
 
 import type { SchemaType, Component } from '../types';
-import type { Internal } from '@strapi/types';
-
+import type { UID } from '@strapi/types';
 // TODO V5 Convert this any types to real types
 export interface CustomFieldAttributeParams {
   attributeToSet: Record<string, any>;
   forTarget: SchemaType;
-  targetUid: Internal.UID.Schema;
+  targetUid: UID.Any;
   initialAttribute: Record<string, any>;
 }
 export interface DataManagerContextValue {
   addAttribute: (
     attributeToSet: Record<string, any>,
     forTarget: SchemaType,
-    targetUid: Internal.UID.Schema,
+    targetUid: UID.Any,
     isEditing?: boolean,
     initialAttribute?: Record<string, any>,
     shouldAddComponentToData?: boolean
   ) => void;
   addCustomFieldAttribute: (params: CustomFieldAttributeParams) => void;
   editCustomFieldAttribute: (params: CustomFieldAttributeParams) => void;
-  addCreatedComponentToDynamicZone: (
-    dynamicZoneTarget: string,
-    componentsToAdd: Internal.UID.Component[]
-  ) => void;
+  addCreatedComponentToDynamicZone: (dynamicZoneTarget: string, componentsToAdd: string[]) => void;
   createSchema: (
     data: Record<string, any>,
     schemaType: SchemaType,
-    uid: Internal.UID.Schema,
+    uid: UID.Any,
     componentCategory?: string,
     shouldAddComponentToData?: boolean
   ) => void;
-  changeDynamicZoneComponents: (
-    dynamicZoneTarget: string,
-    newComponents: Internal.UID.Component[]
-  ) => void;
+  changeDynamicZoneComponents: (dynamicZoneTarget: string, newComponents: string[]) => void;
   removeAttribute: (
-    mainDataKey: 'contentType' | 'component' | 'contentTypes' | 'components',
+    mainDataKey: string,
     attributeToRemoveName: string,
     componentUid?: string
   ) => void;
@@ -49,12 +42,8 @@ export interface DataManagerContextValue {
   setModifiedData: () => void;
   sortedContentTypesList: any[]; // Define the actual type
   submitData: (additionalContentTypeData?: Record<string, any>) => Promise<void>;
-  updateSchema: (
-    data: Record<string, any>,
-    schemaType: 'contentType' | 'component',
-    componentUID: Internal.UID.Component
-  ) => void;
-  components: Record<Internal.UID.Component, Component>;
+  updateSchema: (data: Record<string, any>, schemaType: SchemaType, componentUID: UID.Any) => void;
+  components: Record<UID.Component, Component>;
   componentsGroupedByCategory: Record<string, Component[]>;
   componentsThatHaveOtherComponentInTheirAttributes: any[]; // Define the actual type
   contentTypes: Record<string, any>;

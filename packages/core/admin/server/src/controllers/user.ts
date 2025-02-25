@@ -1,6 +1,6 @@
 import type { Context } from 'koa';
 
-import * as _ from 'lodash';
+import _ = require('lodash');
 import { errors } from '@strapi/utils';
 import {
   validateUserCreationInput,
@@ -58,7 +58,7 @@ export default {
   async find(ctx: Context) {
     const userService = getService('user');
 
-    const permissionsManager = strapi.service('admin::permission').createPermissionsManager({
+    const permissionsManager = strapi.admin.services.permission.createPermissionsManager({
       ability: ctx.state.userAbility,
       model: 'admin::user',
     });

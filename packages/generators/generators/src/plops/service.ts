@@ -1,4 +1,4 @@
-import type { NodePlopAPI } from 'plop';
+import { NodePlopAPI } from 'plop';
 import tsUtils from '@strapi/typescript-utils';
 
 import getDestinationPrompts from './prompts/get-destination-prompts';

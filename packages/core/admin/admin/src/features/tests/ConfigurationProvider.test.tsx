@@ -1,4 +1,4 @@
-import { render, waitFor, screen } from '@tests/utils';
+import { render } from '@tests/utils';
 
 import { useConfiguration, ConfigurationProvider } from '../Configuration';
 
@@ -36,38 +36,48 @@ describe('ConfigurationProvider', () => {
   });
 
   it('should not crash', async () => {
-    render(
+    const { getByText, findByText } = render(
       <ConfigurationProvider
-        defaultAuthLogo={'strapi.jpg'}
-        defaultMenuLogo={'strapi.jpg'}
+        authLogo={{
+          default: 'strapi.jpg',
+        }}
+        menuLogo={{
+          default: 'strapi.jpg',
+        }}
         showReleaseNotification={false}
+        showTutorials={false}
       >
         <TestComponent />
       </ConfigurationProvider>
     );
 
-    await waitFor(() => expect(screen.queryByText('Loading content.')).not.toBeInTheDocument());
+    expect(getByText('strapi.jpg')).toBeInTheDocument();
 
-    await screen.findByText('http://localhost:1337/uploads/michka.svg');
+    await findByText('http://localhost:1337/uploads/michka.svg');
   });
 
-  it.skip('should use the default logo and update customMenuLogo with setCustomMenuLogo', async () => {
-    const { user } = render(
+  it('should use the default logo and update customMenuLogo with setCustomMenuLogo', async () => {
+    const { user, getByRole, findByText, getByText } = render(
       <ConfigurationProvider
-        defaultAuthLogo={'strapi.jpg'}
-        defaultMenuLogo={'strapi.jpg'}
+        authLogo={{
+          default: 'strapi.jpg',
+        }}
+        menuLogo={{
+          default: 'strapi.jpg',
+        }}
         showReleaseNotification={false}
+        showTutorials={false}
       >
         <TestComponent />
       </ConfigurationProvider>
     );
 
-    await waitFor(() => expect(screen.queryByText('Loading content.')).not.toBeInTheDocument());
+    expect(getByText('strapi.jpg')).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Change logo' }));
+    await user.click(getByRole('button', { name: 'Change logo' }));
 
-    await screen.findByText('Saved');
+    await findByText('Saved');
 
-    expect(screen.getByText('http://localhost:1337/uploads/michka.svg')).toBeInTheDocument();
+    expect(getByText('http://localhost:1337/uploads/michka.svg')).toBeInTheDocument();
   });
 });

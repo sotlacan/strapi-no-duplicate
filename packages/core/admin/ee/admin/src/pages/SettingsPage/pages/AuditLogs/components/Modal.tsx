@@ -6,17 +6,15 @@ import {
   Grid,
   JSONInput,
   Loader,
-  Modal as DSModal,
+  ModalBody,
+  ModalHeader,
+  ModalLayout,
   Typography,
-  Breadcrumbs,
-  Crumb,
-  Field,
 } from '@strapi/design-system';
+import { Breadcrumbs, Crumb } from '@strapi/design-system/v2';
+import { useNotification, useAPIErrorHandler } from '@strapi/helper-plugin';
 import { useIntl } from 'react-intl';
-import { styled } from 'styled-components';
 
-import { useNotification } from '../../../../../../../../admin/src/features/Notifications';
-import { useAPIErrorHandler } from '../../../../../../../../admin/src/hooks/useAPIErrorHandler';
 import { AuditLog } from '../../../../../../../../shared/contracts/audit-logs';
 import { useGetAuditLogQuery } from '../../../../../services/auditLogs';
 import { useFormatTimeStamp } from '../hooks/useFormatTimeStamp';
@@ -28,7 +26,7 @@ interface ModalProps {
 }
 
 export const Modal = ({ handleClose, logId }: ModalProps) => {
-  const { toggleNotification } = useNotification();
+  const toggleNotification = useNotification();
   const { _unstableFormatAPIError: formatAPIError } = useAPIErrorHandler();
 
   const { data, error, isLoading } = useGetAuditLogQuery(logId);
@@ -36,7 +34,7 @@ export const Modal = ({ handleClose, logId }: ModalProps) => {
   React.useEffect(() => {
     if (error) {
       toggleNotification({
-        type: 'danger',
+        type: 'warning',
         message: formatAPIError(error),
       });
       handleClose();
@@ -47,21 +45,19 @@ export const Modal = ({ handleClose, logId }: ModalProps) => {
   const formattedDate = data && 'date' in data ? formatTimeStamp(data.date) : '';
 
   return (
-    <DSModal.Root defaultOpen onOpenChange={handleClose}>
-      <DSModal.Content>
-        <DSModal.Header>
-          {/**
-           * TODO: this is not semantically correct and should be amended.
-           */}
-          <Breadcrumbs label={formattedDate} id="title">
-            <Crumb isCurrent>{formattedDate}</Crumb>
-          </Breadcrumbs>
-        </DSModal.Header>
-        <DSModal.Body>
-          <ActionBody isLoading={isLoading} data={data as AuditLog} formattedDate={formattedDate} />
-        </DSModal.Body>
-      </DSModal.Content>
-    </DSModal.Root>
+    <ModalLayout onClose={handleClose} labelledBy="title">
+      <ModalHeader>
+        {/**
+         * TODO: this is not semantically correct and should be amended.
+         */}
+        <Breadcrumbs label={formattedDate} id="title">
+          <Crumb isCurrent>{formattedDate}</Crumb>
+        </Breadcrumbs>
+      </ModalHeader>
+      <ModalBody>
+        <ActionBody isLoading={isLoading} data={data as AuditLog} formattedDate={formattedDate} />
+      </ModalBody>
+    </ModalLayout>
   );
 };
 
@@ -97,7 +93,7 @@ const ActionBody = ({ isLoading, data, formattedDate }: ActionBodyProps) => {
           })}
         </Typography>
       </Box>
-      <Grid.Root
+      <Grid
         gap={4}
         gridCols={2}
         paddingTop={4}
@@ -143,24 +139,18 @@ const ActionBody = ({ isLoading, data, formattedDate }: ActionBodyProps) => {
           })}
           actionName={user?.id.toString() || '-'}
         />
-      </Grid.Root>
-      <Field.Root>
-        <Field.Label>
-          {formatMessage({
-            id: 'Settings.permissions.auditLogs.payload',
-            defaultMessage: 'Payload',
-          })}
-        </Field.Label>
-        <Payload value={JSON.stringify(payload, null, 2)} disabled />
-      </Field.Root>
+      </Grid>
+      <JSONInput
+        value={JSON.stringify(payload, null, 2)}
+        disabled
+        label={formatMessage({
+          id: 'Settings.permissions.auditLogs.payload',
+          defaultMessage: 'Payload',
+        })}
+      />
     </>
   );
 };
-
-const Payload = styled(JSONInput)`
-  max-width: 100%;
-  overflow: scroll;
-`;
 
 interface ActionItemProps {
   actionLabel: string;

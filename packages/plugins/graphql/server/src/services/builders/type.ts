@@ -1,7 +1,7 @@
 import { isArray, isString, isUndefined, constant } from 'lodash/fp';
-import { nonNull, list, objectType } from 'nexus';
+import { objectType } from 'nexus';
 import { contentTypes } from '@strapi/utils';
-import type { Struct } from '@strapi/types';
+import type { Schema } from '@strapi/types';
 
 import type { Context } from '../types';
 
@@ -64,10 +64,7 @@ export default (context: Context) => {
       strapi,
     });
 
-    const args = getContentTypeArgs(targetComponent, {
-      multiple: !!attribute.repeatable,
-      isNested: true,
-    });
+    const args = getContentTypeArgs(targetComponent, { multiple: !!attribute.repeatable });
 
     localBuilder.field(attributeName, { type, resolve, args });
   };
@@ -146,37 +143,12 @@ export default (context: Context) => {
       strapi,
     });
 
-    const args = attribute.multiple
-      ? getContentTypeArgs(fileContentType, { isNested: true })
-      : undefined;
+    const args = attribute.multiple ? getContentTypeArgs(fileContentType) : undefined;
+    const type = attribute.multiple
+      ? naming.getRelationResponseCollectionName(fileContentType)
+      : naming.getEntityResponseName(fileContentType);
 
-    const typeName = naming.getTypeName(fileContentType);
-
-    if (attribute.multiple) {
-      builder.field(`${attributeName}_connection`, {
-        type: naming.getRelationResponseCollectionName(fileContentType),
-        resolve,
-        args,
-      });
-
-      builder.field(attributeName, {
-        type: nonNull(list(typeName)),
-        async resolve(...args: unknown[]) {
-          const res = await resolve(...args);
-          return res.nodes ?? [];
-        },
-        args,
-      });
-    } else {
-      builder.field(attributeName, {
-        type: typeName,
-        async resolve(...args: unknown[]) {
-          const res = await resolve(...args);
-          return res.value;
-        },
-        args,
-      });
-    }
+    builder.field(attributeName, { type, resolve, args });
   };
 
   /**
@@ -247,53 +219,25 @@ export default (context: Context) => {
 
     const targetContentType = strapi.getModel(attribute.target);
 
-    const typeName = naming.getTypeName(targetContentType);
+    const type = isToManyRelation
+      ? naming.getRelationResponseCollectionName(targetContentType)
+      : naming.getEntityResponseName(targetContentType);
 
-    const args = isToManyRelation
-      ? getContentTypeArgs(targetContentType, { isNested: true })
-      : undefined;
+    const args = isToManyRelation ? getContentTypeArgs(targetContentType) : undefined;
 
-    const resolverScope = `${targetContentType.uid}.find`;
     const resolverPath = `${naming.getTypeName(contentType)}.${attributeName}`;
+    const resolverScope = `${targetContentType.uid}.find`;
 
     extension.use({ resolversConfig: { [resolverPath]: { auth: { scope: [resolverScope] } } } });
 
-    if (isToManyRelation) {
-      builder.field(`${attributeName}_connection`, {
-        type: naming.getRelationResponseCollectionName(targetContentType),
-        resolve,
-        args,
-      });
-
-      extension.use({
-        resolversConfig: { [`${resolverPath}_connection`]: { auth: { scope: [resolverScope] } } },
-      });
-
-      builder.field(attributeName, {
-        type: nonNull(list(typeName)),
-        async resolve(...args: unknown[]) {
-          const res = await resolve(...args);
-          return res.nodes ?? [];
-        },
-        args,
-      });
-    } else {
-      builder.field(attributeName, {
-        type: typeName,
-        async resolve(...args: unknown[]) {
-          const res = await resolve(...args);
-          return res.value;
-        },
-        args,
-      });
-    }
+    builder.field(attributeName, { type, resolve, args });
   };
 
-  const isNotPrivate = (contentType: Struct.Schema) => (attributeName: string) => {
+  const isNotPrivate = (contentType: Schema.Any) => (attributeName: string) => {
     return !contentTypes.isPrivateAttribute(contentType, attributeName);
   };
 
-  const isNotDisabled = (contentType: Struct.Schema) => (attributeName: string) => {
+  const isNotDisabled = (contentType: Schema.Any) => (attributeName: string) => {
     return extension.shadowCRUD(contentType.uid).field(attributeName).hasOutputEnabled();
   };
 
@@ -303,7 +247,7 @@ export default (context: Context) => {
      * @param contentType - The content type used to created the definition
      * @return {NexusObjectTypeDef}
      */
-    buildTypeDefinition(contentType: Struct.Schema) {
+    buildTypeDefinition(contentType: Schema.Any) {
       const utils = getGraphQLService('utils');
 
       const { getComponentName, getTypeName } = utils.naming;
@@ -328,38 +272,10 @@ export default (context: Context) => {
 
       return objectType({
         name,
-        definition(t) {
-          // add back the old id attribute on contentType if v4 compat is enabled
-          if (
-            modelType !== 'component' &&
-            isNotDisabled(contentType)('id') &&
-            strapi.plugin('graphql').config('v4CompatibilityMode', false)
-          ) {
-            t.nonNull.id('id', {
-              deprecation: 'Use `documentId` instead',
-            });
-          }
 
+        definition(t) {
           if (modelType === 'component' && isNotDisabled(contentType)('id')) {
             t.nonNull.id('id');
-          }
-
-          if (modelType !== 'component' && isNotDisabled(contentType)('documentId')) {
-            t.nonNull.id('documentId');
-          }
-
-          if (strapi.plugin('graphql').config('v4CompatibilityMode', false)) {
-            t.nonNull.field('attributes', {
-              deprecation: 'Use root level fields instead',
-              type: name,
-              resolve: (parent) => parent,
-            });
-
-            t.nonNull.field('data', {
-              deprecation: 'Use root level fields instead',
-              type: name,
-              resolve: (parent) => parent,
-            });
           }
 
           /** Attributes

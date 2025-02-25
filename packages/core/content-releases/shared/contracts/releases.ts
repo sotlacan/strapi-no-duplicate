@@ -31,7 +31,7 @@ export interface ReleaseForContentTypeEntryDataResponse extends Omit<Release, 'a
 }
 
 /**
- * GET /content-releases/ - Get releases paginated
+ * GET /content-releases/ - Get all releases
  */
 export declare namespace GetReleases {
   export interface Request {
@@ -52,17 +52,16 @@ export declare namespace GetReleases {
 }
 
 /**
- * GET /content-releases/findByDocumentAttached - Get releases paginated
+ * GET /content-releases/ - Get all releases for a given entry
  */
-export declare namespace GetReleasesByDocumentAttached {
+export declare namespace GetContentTypeEntryReleases {
   export interface Request {
     state: {
       userAbility: {};
     };
     query: {
-      contentType: string;
-      entryDocumentId: ReleaseAction['entry']['entryDocumentId'];
-      locale?: string;
+      contentTypeUid: ReleaseAction['contentType'];
+      entryId: ReleaseAction['entry']['id'];
       hasEntryAttached?: boolean;
     };
   }
@@ -80,14 +79,13 @@ export declare namespace MapEntriesToReleases {
   export interface Request {
     query: {
       contentTypeUid: ReleaseAction['contentType'];
-      documentIds: ReleaseAction['entryDocumentId'][];
-      locale?: ReleaseAction['locale'];
+      entriesIds: ReleaseAction['entry']['id'][];
     };
   }
 
   export interface Response {
     data: {
-      [documentId: ReleaseAction['entryDocumentId']]: Pick<Release, 'id' | 'name'>[];
+      [entryId: ReleaseAction['entry']['id']]: Pick<Release, 'id' | 'name'>[];
     };
   }
 }

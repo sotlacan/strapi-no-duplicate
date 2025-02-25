@@ -1,4 +1,4 @@
-import type { Attribute } from '../../../../schema';
+import type { Attribute } from '../../../../types';
 
 export type BooleanValue = boolean | 'true' | 'false' | 't' | 'f' | '1' | '0' | 1 | 0;
 

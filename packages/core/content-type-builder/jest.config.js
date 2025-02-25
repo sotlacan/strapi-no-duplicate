@@ -5,7 +5,7 @@ module.exports = {
   transform: {
     '^.+\\.ts$': ['@swc/jest'],
   },
-  testMatch: ['<rootDir>/**/__tests__/*.test.ts'],
+  testMatch: ['<rootDir>/**/*.test.ts'],
   displayName: 'Core content-type-builder',
   testEnvironment: 'jsdom',
 };

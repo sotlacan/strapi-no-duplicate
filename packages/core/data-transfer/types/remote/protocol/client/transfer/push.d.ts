@@ -6,7 +6,7 @@ export type TransferPushMessage = CreateTransferMessage<
   | TransferStepCommands<'entities', IEntity[]>
   | TransferStepCommands<'links', ILink[]>
   | TransferStepCommands<'configuration', IConfiguration[]>
-  | TransferStepCommands<'assets', TransferAssetFlow[]>
+  | TransferStepCommands<'assets', TransferAssetFlow[] | null>
 >;
 
 export type GetTransferPushStreamData<T extends TransferPushStep> = {
@@ -15,9 +15,7 @@ export type GetTransferPushStreamData<T extends TransferPushStep> = {
     step: key;
   } & TransferPushMessage;
 }[T] extends { data: infer U }
-  ? U extends any[] // Check if U is already an array
-    ? U // If U is an array, keep it as-is
-    : U[] // Otherwise, wrap it in an array
+  ? U
   : never;
 
 export type TransferPushStep = TransferPushMessage['step'];
@@ -25,5 +23,3 @@ export type TransferPushStep = TransferPushMessage['step'];
 type TransferStepCommands<T extends string, U> = { step: T } & TransferStepFlow<U>;
 
 type TransferStepFlow<U> = { action: 'start' } | { action: 'stream'; data: U } | { action: 'end' };
-
-export type Stats = { started: number; finished: number };

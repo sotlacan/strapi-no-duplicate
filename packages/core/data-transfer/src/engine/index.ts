@@ -3,11 +3,10 @@ import { extname } from 'path';
 import { EOL } from 'os';
 import type Chain from 'stream-chain';
 import { chain } from 'stream-chain';
-import { isEmpty, uniq, last, isNumber, set, pick } from 'lodash/fp';
+import { isEmpty, uniq, last, isNumber, difference, set, omit } from 'lodash/fp';
 import { diff as semverDiff } from 'semver';
 
-import type { Struct, Utils } from '@strapi/types';
-
+import type { Schema, Utils } from '@strapi/types';
 import type {
   IAsset,
   IDestinationProvider,
@@ -41,7 +40,7 @@ import {
   createDiagnosticReporter,
   IDiagnosticReporter,
   ErrorDiagnosticSeverity,
-} from '../utils/diagnostic';
+} from './diagnostic';
 import { DataTransferError } from '../errors';
 import * as utils from '../utils';
 import { ProviderTransferError } from '../errors/providers';
@@ -84,11 +83,11 @@ export const TransferGroupPresets: TransferGroupFilter = {
 export const DEFAULT_VERSION_STRATEGY = 'ignore';
 export const DEFAULT_SCHEMA_STRATEGY = 'strict';
 
-type SchemaMap = Utils.String.Dict<Struct.Schema>;
+type SchemaMap = Utils.String.Dict<Schema.Schema>;
 
 class TransferEngine<
   S extends ISourceProvider = ISourceProvider,
-  D extends IDestinationProvider = IDestinationProvider,
+  D extends IDestinationProvider = IDestinationProvider
 > implements ITransferEngine
 {
   sourceProvider: ISourceProvider;
@@ -200,7 +199,7 @@ class TransferEngine<
   reportInfo(message: string, params?: unknown) {
     this.diagnostics.report({
       kind: 'info',
-      details: { createdAt: new Date(), message, params, origin: 'engine' },
+      details: { createdAt: new Date(), message, params },
     });
   }
 
@@ -422,7 +421,7 @@ class TransferEngine<
       const schemaDiffs = compareSchemas(sourceSchema, destinationSchema, strategy);
 
       if (schemaDiffs.length) {
-        diffs[key] = schemaDiffs as Diff<Struct.Schema>[];
+        diffs[key] = schemaDiffs as Diff<Schema.Schema>[];
       }
     });
 
@@ -604,8 +603,8 @@ class TransferEngine<
    */
   async bootstrap(): Promise<void> {
     const results = await Promise.allSettled([
-      this.sourceProvider.bootstrap?.(this.diagnostics),
-      this.destinationProvider.bootstrap?.(this.diagnostics),
+      this.sourceProvider.bootstrap?.(),
+      this.destinationProvider.bootstrap?.(),
     ]);
 
     results.forEach((result) => {
@@ -802,7 +801,7 @@ class TransferEngine<
 
     const transform = this.#createStageTransformStream(stage);
     const tracker = this.#progressTracker(stage, {
-      key: (value: Struct.Schema) => value.modelType,
+      key: (value: Schema.Schema) => value.modelType,
     });
 
     await this.#transferStage({ stage, source, destination, transform, tracker });
@@ -840,8 +839,9 @@ class TransferEngine<
 
           const { type, data } = entity;
           const attributes = schemas[type].attributes;
-          const attributesToKeep = Object.keys(attributes).concat('documentId');
-          const updatedEntity = set('data', pick(attributesToKeep, data), entity);
+
+          const attributesToRemove = difference(Object.keys(data), Object.keys(attributes));
+          const updatedEntity = set('data', omit(attributesToRemove, data), entity);
 
           callback(null, updatedEntity);
         },

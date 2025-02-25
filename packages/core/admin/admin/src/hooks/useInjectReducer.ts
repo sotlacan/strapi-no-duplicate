@@ -5,17 +5,14 @@ import { Reducer } from '@reduxjs/toolkit';
 import { useTypedStore } from '../core/store/hooks';
 
 /**
- * @public
- * @description Inject a new reducer into the global redux-store.
- * @example
- * ```tsx
- * import { reducer } from './local-store';
+ * Inject a new reducer into the global redux-store.
  *
- * const MyPlugin = () => {
- *  useInjectReducer("plugin", reducer);
- * }
- * ```
+ * @export
+ * @param {string} namespace - Store namespace of the injected reducer
+ * @param {Function} reducer - Reducer function
+ * @return void
  */
+
 export function useInjectReducer(namespace: string, reducer: Reducer) {
   const store = useTypedStore();
 

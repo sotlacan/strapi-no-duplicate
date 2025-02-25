@@ -1,41 +1,41 @@
-import { useStrapiApp } from '@strapi/admin/strapi-admin';
-import { DesignSystemProvider } from '@strapi/design-system';
-import { render, screen } from '@testing-library/react';
-import { userEvent } from '@testing-library/user-event';
+import { lightTheme, ThemeProvider } from '@strapi/design-system';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { createMemoryHistory } from 'history';
 import { IntlProvider } from 'react-intl';
-import { MemoryRouter } from 'react-router-dom';
+import { Router } from 'react-router-dom';
 
 import { FormModalNavigationProvider } from '../../FormModalNavigationProvider/FormModalNavigationProvider';
 import { AttributeOptions } from '../AttributeOptions';
 
 import type { IconByType } from '../../AttributeIcon';
 
-jest.mock('@strapi/admin/strapi-admin', () => ({
-  ...jest.requireActual('@strapi/admin/strapi-admin'),
-  useStrapiApp: jest.fn((_name, getter) =>
-    getter({
-      customFields: {
-        get: jest.fn().mockReturnValueOnce({
-          name: 'color',
-          pluginId: 'mycustomfields',
-          type: 'text',
-          icon: jest.fn(),
-          intlLabel: {
-            id: 'mycustomfields.color.label',
-            defaultMessage: 'Color',
-          },
-          intlDescription: {
-            id: 'mycustomfields.color.description',
-            defaultMessage: 'Select any color',
-          },
-          components: {
-            Input: jest.fn(),
-          },
-        }),
-        getAll: jest.fn(),
-      },
-    })
-  ),
+const mockCustomField = {
+  'plugin::mycustomfields.test': {
+    name: 'color',
+    pluginId: 'mycustomfields',
+    type: 'text',
+    icon: jest.fn(),
+    intlLabel: {
+      id: 'mycustomfields.color.label',
+      defaultMessage: 'Color',
+    },
+    intlDescription: {
+      id: 'mycustomfields.color.description',
+      defaultMessage: 'Select any color',
+    },
+    components: {
+      Input: jest.fn(),
+    },
+  },
+};
+
+const getAll = jest.fn().mockReturnValue({});
+jest.mock('@strapi/helper-plugin', () => ({
+  ...jest.requireActual('@strapi/helper-plugin'),
+  useCustomFields: () => ({
+    get: jest.fn().mockReturnValue(mockCustomField),
+    getAll,
+  }),
 }));
 
 const mockAttributes: IconByType[][] = [
@@ -57,10 +57,12 @@ const mockAttributes: IconByType[][] = [
 ];
 
 const makeApp = () => {
+  const history = createMemoryHistory();
+
   return (
     <IntlProvider locale="en" messages={{}} textComponent="span">
-      <DesignSystemProvider>
-        <MemoryRouter>
+      <ThemeProvider theme={lightTheme}>
+        <Router history={history}>
           <FormModalNavigationProvider>
             <AttributeOptions
               attributes={mockAttributes}
@@ -68,8 +70,8 @@ const makeApp = () => {
               kind="collectionType"
             />
           </FormModalNavigationProvider>
-        </MemoryRouter>
-      </DesignSystemProvider>
+        </Router>
+      </ThemeProvider>
     </IntlProvider>
   );
 };
@@ -102,68 +104,33 @@ describe('<AttributeOptions />', () => {
     expect(comingSoonText).not.toBeInTheDocument();
   });
 
-  it('switches to the custom tab without custom fields', async () => {
+  it('switches to the custom tab without custom fields', () => {
     const App = makeApp();
     render(App);
 
-    jest.mocked(useStrapiApp).mockImplementation((_name, getter) =>
-      // @ts-expect-error - mocking purposes
-      getter({
-        customFields: {
-          customFields: {},
-          get: jest.fn(),
-          getAll: jest.fn().mockReturnValue({}),
-          register: jest.fn(),
-        },
-      })
-    );
+    getAll.mockReturnValueOnce({});
 
-    const user = userEvent.setup();
+    const customTab = screen.getByRole('tab', { selected: false, name: 'Custom' });
+    fireEvent.click(customTab);
+    const customTabSelected = screen.getByRole('tab', { selected: true, name: 'Custom' });
+    const comingSoonText = screen.getByText('Nothing in here yet.');
 
-    await user.click(screen.getByRole('tab', { name: 'Custom' }));
-    await screen.findByText('Nothing in here yet.');
+    expect(customTabSelected).toBeVisible();
+    expect(comingSoonText).toBeVisible();
   });
 
-  it('switches to the custom tab with custom fields', async () => {
-    jest.mocked(useStrapiApp).mockImplementation((_name, getter) =>
-      // @ts-expect-error - mocking purposes
-      getter({
-        customFields: {
-          customFields: {},
-          get: jest.fn(),
-          getAll: jest.fn().mockReturnValue({
-            'plugin::mycustomfields.test': {
-              name: 'color',
-              pluginId: 'mycustomfields',
-              type: 'text',
-              icon: jest.fn(),
-              intlLabel: {
-                id: 'mycustomfields.color.label',
-                defaultMessage: 'Color',
-              },
-              intlDescription: {
-                id: 'mycustomfields.color.description',
-                defaultMessage: 'Select any color',
-              },
-              components: {
-                Input: jest.fn(),
-              },
-            },
-          }),
-          register: jest.fn(),
-        },
-      })
-    );
-
+  it('switches to the custom tab with custom fields', () => {
+    getAll.mockReturnValue(mockCustomField);
     const App = makeApp();
     render(App);
 
-    const user = userEvent.setup();
-
-    await user.click(screen.getByRole('tab', { name: 'Custom' }));
+    const customTab = screen.getByRole('tab', { selected: false, name: 'Custom' });
+    fireEvent.click(customTab);
+    const customTabSelected = screen.getByRole('tab', { selected: true, name: 'Custom' });
     const customFieldText = screen.getByText('Color');
     const howToAddLink = screen.getByRole('link', { name: 'How to add custom fields' });
 
+    expect(customTabSelected).toBeVisible();
     expect(customFieldText).toBeVisible();
     expect(howToAddLink).toBeVisible();
   });

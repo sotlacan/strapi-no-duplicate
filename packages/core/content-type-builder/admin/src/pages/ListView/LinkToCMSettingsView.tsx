@@ -1,12 +1,12 @@
 import { memo } from 'react';
 
-import { type Permission, useRBAC } from '@strapi/admin/strapi-admin';
 import { Button } from '@strapi/design-system';
-import { ListPlus } from '@strapi/icons';
+import { CheckPermissions } from '@strapi/helper-plugin';
+import { Layer } from '@strapi/icons';
 import { useIntl } from 'react-intl';
-import { useNavigate } from 'react-router-dom';
+import { useHistory } from 'react-router-dom';
 
-const cmPermissions: Record<string, Permission[]> = {
+const cmPermissions = {
   collectionTypesConfigurations: [
     {
       action: 'plugin::content-manager.collection-types.configure-view',
@@ -27,77 +27,65 @@ const cmPermissions: Record<string, Permission[]> = {
   ],
 };
 
-const getPermission = ({
-  isInContentTypeView,
-  contentTypeKind,
-}: {
-  isInContentTypeView: boolean;
-  contentTypeKind: string;
-}) => {
-  if (isInContentTypeView) {
-    if (contentTypeKind === 'singleType') {
-      return cmPermissions.singleTypesConfigurations;
-    }
-
-    return cmPermissions.collectionTypesConfigurations;
-  }
-
-  return cmPermissions.componentsConfigurations;
-};
-
 interface LinkToCMSettingsViewProps {
   disabled: boolean;
   contentTypeKind?: string;
   isInContentTypeView?: boolean;
+  isTemporary?: boolean;
   targetUid?: string;
 }
 
 export const LinkToCMSettingsView = memo(
   ({
     disabled,
+    isTemporary = false,
     isInContentTypeView = true,
     contentTypeKind = 'collectionType',
     targetUid = '',
   }: LinkToCMSettingsViewProps) => {
     const { formatMessage } = useIntl();
-    const navigate = useNavigate();
-    const permissionsToApply = getPermission({ isInContentTypeView, contentTypeKind });
-
+    const { push } = useHistory();
+    const { collectionTypesConfigurations, componentsConfigurations, singleTypesConfigurations } =
+      cmPermissions;
     const label = formatMessage({
       id: 'content-type-builder.form.button.configure-view',
       defaultMessage: 'Configure the view',
     });
+    let permissionsToApply = collectionTypesConfigurations;
 
     const handleClick = () => {
-      if (disabled) {
+      if (isTemporary) {
         return false;
       }
 
       if (isInContentTypeView) {
-        navigate(`/content-manager/collection-types/${targetUid}/configurations/edit`);
+        push(`/content-manager/collection-types/${targetUid}/configurations/edit`);
       } else {
-        navigate(`/content-manager/components/${targetUid}/configurations/edit`);
+        push(`/content-manager/components/${targetUid}/configurations/edit`);
       }
 
       return false;
     };
 
-    const { isLoading, allowedActions } = useRBAC({
-      viewConfig: permissionsToApply,
-    });
-
-    if (isLoading) {
-      return null;
+    if (isInContentTypeView && contentTypeKind === 'singleType') {
+      permissionsToApply = singleTypesConfigurations;
     }
 
-    if (!allowedActions.canConfigureView && !allowedActions.canConfigureLayout) {
-      return null;
+    if (!isInContentTypeView) {
+      permissionsToApply = componentsConfigurations;
     }
 
     return (
-      <Button startIcon={<ListPlus />} variant="tertiary" onClick={handleClick} disabled={disabled}>
-        {label}
-      </Button>
+      <CheckPermissions permissions={permissionsToApply}>
+        <Button
+          startIcon={<Layer />}
+          variant="tertiary"
+          onClick={handleClick}
+          disabled={isTemporary || disabled}
+        >
+          {label}
+        </Button>
+      </CheckPermissions>
     );
   }
 );

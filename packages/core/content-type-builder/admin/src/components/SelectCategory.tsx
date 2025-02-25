@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-import { ComboboxOption, Combobox, Field } from '@strapi/design-system';
+import { ComboboxOption, CreatableCombobox } from '@strapi/design-system';
 import { useIntl } from 'react-intl';
 
 import { useDataManager } from '../hooks/useDataManager';
@@ -15,8 +15,6 @@ interface SelectCategoryProps {
   name: string;
   onChange: (value: { target: { name: string; value: any; type: string } }) => void;
   value?: string;
-  isCreating?: boolean;
-  dynamicZoneTarget?: string | null;
 }
 
 export const SelectCategory = ({
@@ -25,8 +23,6 @@ export const SelectCategory = ({
   name,
   onChange,
   value = undefined,
-  isCreating,
-  dynamicZoneTarget,
 }: SelectCategoryProps) => {
   const { formatMessage } = useIntl();
   const { allComponentsCategories } = useDataManager();
@@ -45,24 +41,20 @@ export const SelectCategory = ({
   };
 
   return (
-    <Field.Root error={errorMessage} name={name}>
-      <Field.Label>{label}</Field.Label>
-      <Combobox
-        // TODO: re-enable category edits, renaming categories of already existing components currently breaks other functionality
-        // See https://github.com/strapi/strapi/issues/20356
-        disabled={!isCreating && !dynamicZoneTarget}
-        onChange={handleChange}
-        onCreateOption={handleCreateOption}
-        value={value}
-        creatable
-      >
-        {categories.map((category) => (
-          <ComboboxOption key={category} value={category}>
-            {category}
-          </ComboboxOption>
-        ))}
-      </Combobox>
-      <Field.Error />
-    </Field.Root>
+    <CreatableCombobox
+      error={errorMessage}
+      id={name}
+      label={label}
+      name={name}
+      onChange={handleChange}
+      onCreateOption={handleCreateOption}
+      value={value}
+    >
+      {categories.map((category) => (
+        <ComboboxOption key={category} value={category}>
+          {category}
+        </ComboboxOption>
+      ))}
+    </CreatableCombobox>
   );
 };

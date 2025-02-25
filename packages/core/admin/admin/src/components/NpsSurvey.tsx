@@ -9,22 +9,22 @@ import {
   Textarea,
   Portal,
   Field,
+  FieldLabel,
+  FieldInput,
   VisuallyHidden,
 } from '@strapi/design-system';
+import { useNotification, useAppInfo, usePersistentState } from '@strapi/helper-plugin';
 import { Cross } from '@strapi/icons';
 import { Formik, Form } from 'formik';
 import { useIntl } from 'react-intl';
-import { styled } from 'styled-components';
+import styled, { useTheme } from 'styled-components';
 import * as yup from 'yup';
 
-import { useAppInfo } from '../features/AppInfo';
 import { useAuth } from '../features/Auth';
-import { useNotification } from '../features/Notifications';
-import { usePersistentState } from '../hooks/usePersistentState';
 
-const FieldWrapper = styled(Field.Root)`
-  height: 3.2rem;
-  width: 3.2rem;
+const FieldWrapper = styled(Field)`
+  height: ${32 / 16}rem;
+  width: ${32 / 16}rem;
 
   > label,
   ~ input {
@@ -130,12 +130,12 @@ const checkIfShouldShowSurvey = (settings: NpsSurveySettings) => {
 };
 
 const NpsSurvey = () => {
+  const theme = useTheme();
   const { formatMessage } = useIntl();
   const { npsSurveySettings, setNpsSurveySettings } = useNpsSurveySettings();
   const [isFeedbackResponse, setIsFeedbackResponse] = React.useState(false);
-  const { toggleNotification } = useNotification();
-  const currentEnvironment = useAppInfo('NpsSurvey', (state) => state.currentEnvironment);
-  const strapiVersion = useAppInfo('NpsSurvey', (state) => state.strapiVersion);
+  const toggleNotification = useNotification();
+  const { currentEnvironment, strapiVersion } = useAppInfo();
 
   interface NpsSurveyMutationBody {
     email: string;
@@ -164,7 +164,7 @@ const NpsSurvey = () => {
     };
   }, []);
 
-  const { user } = useAuth('NpsSurvey', (auth) => auth);
+  const { user } = useAuth('NpsSurvey');
 
   if (!displaySurvey) {
     return null;
@@ -189,7 +189,6 @@ const NpsSurvey = () => {
         environment: currentEnvironment,
         version: strapiVersion ?? undefined,
         license: window.strapi.projectType,
-        isHostedOnStrapiCloud: process.env.STRAPI_HOSTING === 'strapi.cloud',
       };
       const res = await fetch('https://analytics.strapi.io/submit-nps', {
         method: 'POST',
@@ -216,7 +215,7 @@ const NpsSurvey = () => {
       }, 3000);
     } catch (err) {
       toggleNotification({
-        type: 'danger',
+        type: 'warning',
         message: formatMessage({ id: 'notification.error', defaultMessage: 'An error occurred' }),
       });
     }
@@ -266,7 +265,7 @@ const NpsSurvey = () => {
               bottom={0}
               left="50%"
               transform="translateX(-50%)"
-              zIndex="200"
+              zIndex={theme.zIndices[2]}
               width="50%"
             >
               {isFeedbackResponse ? (
@@ -277,10 +276,10 @@ const NpsSurvey = () => {
                   })}
                 </Typography>
               ) : (
-                <Box tag="fieldset" width="100%" borderWidth={0}>
+                <Box as="fieldset" width="100%">
                   <Flex justifyContent="space-between" width="100%">
                     <Box marginLeft="auto" marginRight="auto">
-                      <Typography fontWeight="semiBold" tag="legend">
+                      <Typography fontWeight="semiBold" as="legend">
                         {formatMessage({
                           id: 'app.components.NpsSurvey.banner-title',
                           defaultMessage:
@@ -290,14 +289,12 @@ const NpsSurvey = () => {
                     </Box>
                     <IconButton
                       onClick={handleDismiss}
-                      withTooltip={false}
-                      label={formatMessage({
+                      aria-label={formatMessage({
                         id: 'app.components.NpsSurvey.dismiss-survey-label',
                         defaultMessage: 'Dismiss survey',
                       })}
-                    >
-                      <Cross />
-                    </IconButton>
+                      icon={<Cross />}
+                    />
                   </Flex>
                   <Flex gap={2} marginTop={2} marginBottom={2} justifyContent="center">
                     <Typography variant="pi" textColor="neutral600">
@@ -310,7 +307,6 @@ const NpsSurvey = () => {
                       return (
                         <FieldWrapper
                           key={number}
-                          name="npsSurveyRating"
                           className={values.npsSurveyRating === number ? 'selected' : undefined} // "selected" class added when child radio button is checked
                           hasRadius
                           background="primary100"
@@ -319,10 +315,12 @@ const NpsSurvey = () => {
                           position="relative"
                           cursor="pointer"
                         >
-                          <Field.Label>
+                          <FieldLabel htmlFor={`nps-survey-rating-${number}-input`}>
                             <VisuallyHidden>
-                              <Field.Input
+                              <FieldInput
                                 type="radio"
+                                id={`nps-survey-rating-${number}-input`}
+                                name="npsSurveyRating"
                                 checked={values.npsSurveyRating === number}
                                 onChange={(e) =>
                                   setFieldValue('npsSurveyRating', parseInt(e.target.value, 10))
@@ -331,7 +329,7 @@ const NpsSurvey = () => {
                               />
                             </VisuallyHidden>
                             {number}
-                          </Field.Label>
+                          </FieldLabel>
                         </FieldWrapper>
                       );
                     })}
@@ -345,20 +343,21 @@ const NpsSurvey = () => {
                   {values.npsSurveyRating !== null && (
                     <Flex direction="column">
                       <Box marginTop={2}>
-                        <Field.Label fontWeight="semiBold" fontSize={2}>
+                        <FieldLabel htmlFor="npsSurveyFeedback" fontWeight="semiBold" fontSize={2}>
                           {formatMessage({
                             id: 'app.components.NpsSurvey.feedback-question',
                             defaultMessage: 'Do you have any suggestion for improvements?',
                           })}
-                        </Field.Label>
+                        </FieldLabel>
                       </Box>
                       <Box width="62%" marginTop={3} marginBottom={4}>
                         <Textarea
                           id="npsSurveyFeedback" // formik element attribute "id" should be same as the values key to work
                           width="100%"
                           onChange={handleChange}
-                          value={values.npsSurveyFeedback}
-                        />
+                        >
+                          {values.npsSurveyFeedback}
+                        </Textarea>
                       </Box>
                       <Button marginBottom={2} type="submit" loading={isSubmitting}>
                         {formatMessage({

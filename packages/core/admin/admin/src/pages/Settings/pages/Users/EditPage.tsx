@@ -1,46 +1,55 @@
 import * as React from 'react';
 
-import { Box, Button, Flex, Grid, Typography } from '@strapi/design-system';
-import { Check } from '@strapi/icons';
+import {
+  Box,
+  Button,
+  ContentLayout,
+  Flex,
+  Grid,
+  GridItem,
+  HeaderLayout,
+  Main,
+  Typography,
+} from '@strapi/design-system';
+import { Link } from '@strapi/design-system/v2';
+import {
+  Form,
+  GenericInput,
+  LoadingIndicatorPage,
+  SettingsPageTitle,
+  translatedErrors,
+  useAPIErrorHandler,
+  useFocusWhenNavigate,
+  useNotification,
+  useOverlayBlocker,
+  useRBAC,
+} from '@strapi/helper-plugin';
+import { ArrowLeft, Check } from '@strapi/icons';
+import { Formik, FormikHelpers } from 'formik';
+import omit from 'lodash/omit';
 import pick from 'lodash/pick';
 import { useIntl } from 'react-intl';
-import { useMatch, useNavigate } from 'react-router-dom';
+import { NavLink, Redirect, useHistory, useLocation, useRouteMatch } from 'react-router-dom';
 import * as yup from 'yup';
 
 import { Update } from '../../../../../../shared/contracts/user';
-import { Form, FormHelpers } from '../../../../components/Form';
-import { InputRenderer } from '../../../../components/FormInputs/Renderer';
-import { Layouts } from '../../../../components/Layouts/Layout';
-import { Page } from '../../../../components/PageHelpers';
 import { useTypedSelector } from '../../../../core/store/hooks';
-import { BackButton } from '../../../../features/BackButton';
-import { useNotification } from '../../../../features/Notifications';
-import { useAPIErrorHandler } from '../../../../hooks/useAPIErrorHandler';
 import { useEnterprise } from '../../../../hooks/useEnterprise';
-import { useRBAC } from '../../../../hooks/useRBAC';
 import { selectAdminPermissions } from '../../../../selectors';
 import { useAdminUsers, useUpdateUserMutation } from '../../../../services/users';
 import { isBaseQueryError } from '../../../../utils/baseQuery';
-import { translatedErrors } from '../../../../utils/translatedErrors';
-import { getDisplayName } from '../../../../utils/users';
+import { getFullName } from '../../../../utils/getFullName';
 
 import { MagicLinkCE } from './components/MagicLinkCE';
 import { SelectRoles } from './components/SelectRoles';
 import { COMMON_USER_SCHEMA } from './utils/validation';
 
+import type { FormLayout } from '../../../../types/form';
+
 const EDIT_VALIDATION_SCHEMA = yup.object().shape({
   ...COMMON_USER_SCHEMA,
   isActive: yup.bool(),
-  roles: yup
-    .array()
-    .min(1, {
-      id: translatedErrors.required.id,
-      defaultMessage: 'This field is required',
-    })
-    .required({
-      id: translatedErrors.required.id,
-      defaultMessage: 'This field is required',
-    }),
+  roles: yup.array().min(1, translatedErrors.required).required(translatedErrors.required),
 });
 
 const fieldsToPick = ['email', 'firstname', 'lastname', 'username', 'isActive', 'roles'] as const;
@@ -51,10 +60,11 @@ const fieldsToPick = ['email', 'firstname', 'lastname', 'username', 'isActive', 
 
 const EditPage = () => {
   const { formatMessage } = useIntl();
-  const match = useMatch('/settings/users/:id');
+  const match = useRouteMatch<{ id: string }>('/settings/users/:id');
   const id = match?.params?.id ?? '';
-  const navigate = useNavigate();
-  const { toggleNotification } = useNotification();
+  const { push } = useHistory();
+  const toggleNotification = useNotification();
+  const { lockApp, unlockApp } = useOverlayBlocker();
   const MagicLink = useEnterprise(
     MagicLinkCE,
     async () =>
@@ -81,6 +91,8 @@ const EditPage = () => {
 
   const [updateUser] = useUpdateUserMutation();
 
+  useFocusWhenNavigate();
+
   const {
     data,
     error,
@@ -96,30 +108,61 @@ const EditPage = () => {
 
   React.useEffect(() => {
     if (error) {
-      // Redirect the user to the homepage if is not allowed to read
+      // Redirect the use to the homepage if is not allowed to read
       if (error.name === 'UnauthorizedError') {
         toggleNotification({
           type: 'info',
-          message: formatMessage({
+          message: {
             id: 'notification.permission.not-allowed-read',
             defaultMessage: 'You are not allowed to see this document',
-          }),
+          },
         });
 
-        navigate('/');
+        push('/');
       } else {
         toggleNotification({
-          type: 'danger',
-          message: formatAPIError(error),
+          type: 'warning',
+          message: { id: 'notification.error', defaultMessage: formatAPIError(error) },
         });
       }
     }
-  }, [error, formatAPIError, formatMessage, navigate, toggleNotification]);
+  }, [error, formatAPIError, push, toggleNotification]);
 
   const isLoading = isLoadingAdminUsers || !MagicLink || isLoadingRBAC;
 
   if (isLoading) {
-    return <Page.Loading />;
+    return (
+      <Main aria-busy="true">
+        <SettingsPageTitle name="Users" />
+        <HeaderLayout
+          primaryAction={
+            <Button disabled startIcon={<Check />} type="button" size="L">
+              {formatMessage({ id: 'global.save', defaultMessage: 'Save' })}
+            </Button>
+          }
+          title={formatMessage({
+            id: 'app.containers.Users.EditPage.header.label-loading',
+            defaultMessage: 'Edit user',
+          })}
+          navigationAction={
+            <Link
+              as={NavLink}
+              startIcon={<ArrowLeft />}
+              // @ts-expect-error – as component props are not inferred correctly.
+              to="/settings/users?pageSize=10&page=1&sort=firstname"
+            >
+              {formatMessage({
+                id: 'global.back',
+                defaultMessage: 'Back',
+              })}
+            </Link>
+          }
+        />
+        <ContentLayout>
+          <LoadingIndicatorPage />
+        </ContentLayout>
+      </Main>
+    );
   }
 
   type InitialData = Pick<Update.Request['body'], (typeof fieldsToPick)[number]> & {
@@ -134,12 +177,20 @@ const EditPage = () => {
     confirmPassword: '',
   } satisfies InitialData;
 
-  const handleSubmit = async (body: InitialData, actions: FormHelpers<InitialData>) => {
-    const { confirmPassword: _confirmPassword, ...bodyRest } = body;
+  /**
+   * TODO: Convert this to react-query.
+   */
+  const handleSubmit = async (body: InitialData, actions: FormikHelpers<InitialData>) => {
+    lockApp?.();
+
+    const { confirmPassword, password, ...bodyRest } = body;
 
     const res = await updateUser({
       id,
       ...bodyRest,
+      // The password should not be sent if it wasn't changed,
+      // it leads to a validation error if the string is empty
+      password: password === '' ? undefined : password,
     });
 
     if ('error' in res && isBaseQueryError(res.error)) {
@@ -148,7 +199,7 @@ const EditPage = () => {
       }
 
       toggleNotification({
-        type: 'danger',
+        type: 'warning',
         message: formatAPIError(res.error),
       });
     } else {
@@ -163,34 +214,30 @@ const EditPage = () => {
         confirmPassword: '',
       });
     }
+
+    unlockApp?.();
   };
 
   return (
-    <Page.Main>
-      <Page.Title>
-        {formatMessage(
-          { id: 'Settings.PageTitle', defaultMessage: 'Settings - {name}' },
-          {
-            name: 'Users',
-          }
-        )}
-      </Page.Title>
-      <Form
-        method="PUT"
+    <Main>
+      <SettingsPageTitle name="Users" />
+      <Formik
         onSubmit={handleSubmit}
         initialValues={initialData}
+        validateOnChange={false}
         validationSchema={EDIT_VALIDATION_SCHEMA}
       >
-        {({ isSubmitting, modified }) => {
+        {({ errors, values, handleChange, isSubmitting, dirty }) => {
           return (
-            <>
-              <Layouts.Header
+            <Form>
+              <HeaderLayout
                 primaryAction={
                   <Button
-                    disabled={isSubmitting || !canUpdate || !modified}
+                    disabled={isSubmitting || !canUpdate ? true : !dirty}
                     startIcon={<Check />}
                     loading={isSubmitting}
                     type="submit"
+                    size="L"
                   >
                     {formatMessage({ id: 'global.save', defaultMessage: 'Save' })}
                   </Button>
@@ -201,13 +248,26 @@ const EditPage = () => {
                     defaultMessage: 'Edit {name}',
                   },
                   {
-                    // @ts-expect-error – issues with the Entity ID type, still.
-                    name: getDisplayName(initialData),
+                    name:
+                      initialData.username ||
+                      getFullName(initialData?.firstname ?? '', initialData.lastname),
                   }
                 )}
-                navigationAction={<BackButton fallback="../users" />}
+                navigationAction={
+                  <Link
+                    as={NavLink}
+                    startIcon={<ArrowLeft />}
+                    // @ts-expect-error – as component props are not inferred correctly.
+                    to="/settings/users?pageSize=10&page=1&sort=firstname"
+                  >
+                    {formatMessage({
+                      id: 'global.back',
+                      defaultMessage: 'Back',
+                    })}
+                  </Link>
+                }
               />
-              <Layouts.Content>
+              <ContentLayout>
                 {user?.registrationToken && (
                   <Box paddingBottom={6}>
                     <MagicLink registrationToken={user.registrationToken} />
@@ -224,37 +284,30 @@ const EditPage = () => {
                     paddingRight={7}
                   >
                     <Flex direction="column" alignItems="stretch" gap={4}>
-                      <Typography variant="delta" tag="h2">
+                      <Typography variant="delta" as="h2">
                         {formatMessage({
                           id: 'app.components.Users.ModalCreateBody.block-title.details',
                           defaultMessage: 'Details',
                         })}
                       </Typography>
-                      <Grid.Root gap={5}>
+                      <Grid gap={5}>
                         {LAYOUT.map((row) =>
-                          row.map(({ size, label, ...field }) => {
+                          row.map((input) => {
                             return (
-                              <Grid.Item
-                                key={field.name}
-                                col={size}
-                                direction="column"
-                                alignItems="stretch"
-                              >
-                                <InputRenderer
-                                  {...field}
+                              <GridItem key={input.name} {...input.size}>
+                                <GenericInput
+                                  {...input}
                                   disabled={!canUpdate}
-                                  label={formatMessage(label)}
-                                  placeholder={
-                                    'placeholder' in field
-                                      ? formatMessage(field.placeholder)
-                                      : undefined
-                                  }
+                                  // TODO: remove this coercion.
+                                  error={errors[input.name as keyof typeof errors] as string}
+                                  onChange={handleChange}
+                                  value={values[input.name as keyof typeof values]}
                                 />
-                              </Grid.Item>
+                              </GridItem>
                             );
                           })
                         )}
-                      </Grid.Root>
+                      </Grid>
                     </Flex>
                   </Box>
                   <Box
@@ -267,26 +320,31 @@ const EditPage = () => {
                     paddingRight={7}
                   >
                     <Flex direction="column" alignItems="stretch" gap={4}>
-                      <Typography variant="delta" tag="h2">
+                      <Typography variant="delta" as="h2">
                         {formatMessage({
                           id: 'global.roles',
                           defaultMessage: "User's role",
                         })}
                       </Typography>
-                      <Grid.Root gap={5}>
-                        <Grid.Item col={6} xs={12} direction="column" alignItems="stretch">
-                          <SelectRoles disabled={!canUpdate} />
-                        </Grid.Item>
-                      </Grid.Root>
+                      <Grid gap={5}>
+                        <GridItem col={6} xs={12}>
+                          <SelectRoles
+                            disabled={!canUpdate}
+                            error={errors.roles as string}
+                            onChange={handleChange}
+                            value={values.roles}
+                          />
+                        </GridItem>
+                      </Grid>
                     </Flex>
                   </Box>
                 </Flex>
-              </Layouts.Content>
-            </>
+              </ContentLayout>
+            </Form>
           );
         }}
-      </Form>
-    </Page.Main>
+      </Formik>
+    </Main>
   );
 };
 
@@ -297,7 +355,7 @@ const EditPage = () => {
 const LAYOUT = [
   [
     {
-      label: {
+      intlLabel: {
         id: 'Auth.form.firstname.label',
         defaultMessage: 'First name',
       },
@@ -306,12 +364,15 @@ const LAYOUT = [
         id: 'Auth.form.firstname.placeholder',
         defaultMessage: 'e.g. Kai',
       },
-      type: 'string' as const,
-      size: 6,
+      type: 'text',
+      size: {
+        col: 6,
+        xs: 12,
+      },
       required: true,
     },
     {
-      label: {
+      intlLabel: {
         id: 'Auth.form.lastname.label',
         defaultMessage: 'Last name',
       },
@@ -320,13 +381,16 @@ const LAYOUT = [
         id: 'Auth.form.lastname.placeholder',
         defaultMessage: 'e.g. Doe',
       },
-      type: 'string' as const,
-      size: 6,
+      type: 'text',
+      size: {
+        col: 6,
+        xs: 12,
+      },
     },
   ],
   [
     {
-      label: {
+      intlLabel: {
         id: 'Auth.form.email.label',
         defaultMessage: 'Email',
       },
@@ -335,12 +399,15 @@ const LAYOUT = [
         id: 'Auth.form.email.placeholder',
         defaultMessage: 'e.g. kai.doe@strapi.io',
       },
-      type: 'email' as const,
-      size: 6,
+      type: 'email',
+      size: {
+        col: 6,
+        xs: 12,
+      },
       required: true,
     },
     {
-      label: {
+      intlLabel: {
         id: 'Auth.form.username.label',
         defaultMessage: 'Username',
       },
@@ -349,53 +416,94 @@ const LAYOUT = [
         id: 'Auth.form.username.placeholder',
         defaultMessage: 'e.g. Kai_Doe',
       },
-      type: 'string' as const,
-      size: 6,
+      type: 'text',
+      size: {
+        col: 6,
+        xs: 12,
+      },
     },
   ],
   [
     {
-      autoComplete: 'new-password',
-      label: {
+      intlLabel: {
         id: 'global.password',
         defaultMessage: 'Password',
       },
       name: 'password',
-      type: 'password' as const,
-      size: 6,
+      type: 'password',
+      size: {
+        col: 6,
+        xs: 12,
+      },
+      autoComplete: 'new-password',
     },
     {
-      autoComplete: 'new-password',
-      label: {
+      intlLabel: {
         id: 'Auth.form.confirmPassword.label',
         defaultMessage: 'Password confirmation',
       },
       name: 'confirmPassword',
-      type: 'password' as const,
-      size: 6,
+      type: 'password',
+      size: {
+        col: 6,
+        xs: 12,
+      },
+      autoComplete: 'new-password',
     },
   ],
   [
     {
-      label: {
+      intlLabel: {
         id: 'Auth.form.active.label',
         defaultMessage: 'Active',
       },
       name: 'isActive',
-      type: 'boolean' as const,
-      size: 6,
+      type: 'bool',
+      size: {
+        col: 6,
+        xs: 12,
+      },
     },
   ],
-];
+] satisfies FormLayout[][];
 
 const ProtectedEditPage = () => {
-  const permissions = useTypedSelector((state) => state.admin_app.permissions.settings?.users.read);
+  const toggleNotification = useNotification();
+  const permissions = useTypedSelector(selectAdminPermissions);
 
-  return (
-    <Page.Protect permissions={permissions}>
-      <EditPage />
-    </Page.Protect>
-  );
+  const {
+    isLoading,
+    allowedActions: { canRead, canUpdate },
+  } = useRBAC({
+    read: permissions.settings?.users.read ?? [],
+    update: permissions.settings?.users.update ?? [],
+  });
+  const { state } = useLocation<{ from: string }>();
+  const from = state?.from ?? '/';
+
+  React.useEffect(() => {
+    if (!isLoading) {
+      if (!canRead && !canUpdate) {
+        toggleNotification({
+          type: 'info',
+          message: {
+            id: 'notification.permission.not-allowed-read',
+            defaultMessage: 'You are not allowed to see this document',
+          },
+        });
+      }
+    }
+  }, [isLoading, canRead, canUpdate, toggleNotification]);
+
+  if (isLoading) {
+    return <LoadingIndicatorPage />;
+  }
+
+  if (!canRead && !canUpdate) {
+    return <Redirect to={from} />;
+  }
+
+  return <EditPage />;
 };
 
 export { EditPage, ProtectedEditPage };

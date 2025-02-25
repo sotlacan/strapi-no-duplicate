@@ -4,9 +4,9 @@
  *
  */
 
-import * as React from 'react';
+import React from 'react';
 
-import { DesignSystemProvider } from '@strapi/design-system';
+import { lightTheme, ThemeProvider } from '@strapi/design-system';
 import { render } from '@testing-library/react';
 import { IntlProvider } from 'react-intl';
 
@@ -17,7 +17,7 @@ const messages = {};
 const makeApp = (layout = { forms: [], schema: {} }, isOpen = false) => {
   return (
     <IntlProvider locale="en" messages={messages} textComponent="span">
-      <DesignSystemProvider>
+      <ThemeProvider theme={lightTheme}>
         <FormModal
           layout={layout}
           isOpen={isOpen}
@@ -28,7 +28,7 @@ const makeApp = (layout = { forms: [], schema: {} }, isOpen = false) => {
           initialData={{}}
           providerToEditName="test"
         />
-      </DesignSystemProvider>
+      </ThemeProvider>
     </IntlProvider>
   );
 };
@@ -42,6 +42,7 @@ describe('<FormModal />', () => {
     expect(firstChild).toMatchInlineSnapshot(`
       .c0 {
         border: 0;
+        -webkit-clip: rect(0 0 0 0);
         clip: rect(0 0 0 0);
         height: 1px;
         margin: -1px;
@@ -51,7 +52,7 @@ describe('<FormModal />', () => {
         width: 1px;
       }
 
-      <span
+      <div
         class="c0"
       >
         <p
@@ -72,7 +73,7 @@ describe('<FormModal />', () => {
           id="live-region-alert"
           role="alert"
         />
-      </span>
+      </div>
     `);
   });
 
@@ -97,6 +98,7 @@ describe('<FormModal />', () => {
       )
     );
 
-    expect(getByLabelText('Enabled')).toBeInTheDocument();
+    // expect(container).toMatchSnapshot();
+    expect(getByLabelText('enabled')).toBeInTheDocument();
   });
 });

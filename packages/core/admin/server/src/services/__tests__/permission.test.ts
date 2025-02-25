@@ -27,10 +27,8 @@ describe('Permission Service', () => {
     test('Find calls the right db query', async () => {
       const findMany = jest.fn(() => Promise.resolve([]));
       global.strapi = merge(global.strapi, {
-        db: {
-          query() {
-            return { findMany };
-          },
+        query() {
+          return { findMany };
         },
       });
 
@@ -45,10 +43,8 @@ describe('Permission Service', () => {
       const findMany = jest.fn(() => Promise.resolve([]));
 
       global.strapi = merge(global.strapi, {
-        db: {
-          query() {
-            return { findMany };
-          },
+        query() {
+          return { findMany };
         },
       });
 
@@ -126,7 +122,7 @@ describe('Permission Service', () => {
           action: 'action-1',
           actionParameters: {},
           subject: 'country',
-          properties: { fields: [] },
+          properties: { fields: null },
         },
       ];
 
@@ -149,7 +145,7 @@ describe('Permission Service', () => {
       registeredPerms.set('action-3', { subjects: ['country'] });
 
       global.strapi = merge(global.strapi, {
-        db: { query: () => ({ findMany, delete: dbDelete, update, count }) },
+        query: () => ({ findMany, delete: dbDelete, update, count }),
         admin: {
           services: {
             'content-type': { cleanPermissionFields },

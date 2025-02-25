@@ -1,4 +1,4 @@
-import type { Struct } from '@strapi/types';
+import { Schema } from '@strapi/types';
 import { errors } from '@strapi/utils';
 import { ComponentConfiguration } from './components';
 
@@ -23,7 +23,6 @@ export type Metadatas = {
     };
     list: {
       label?: string;
-      mainField?: string;
       searchable?: boolean;
       sortable?: boolean;
     };
@@ -40,10 +39,9 @@ export type Configuration = {
   settings: Settings;
   metadatas: Metadatas;
   layouts: Layouts;
-  options?: object;
 };
 
-export interface ContentType extends Struct.ContentTypeSchema {
+export interface ContentType extends Schema.ContentType {
   isDisplayed: boolean;
   apiID: string;
 }

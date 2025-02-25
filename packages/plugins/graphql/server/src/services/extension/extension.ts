@@ -1,6 +1,6 @@
 import * as nexus from 'nexus';
 import { merge } from 'lodash/fp';
-import type { Core } from '@strapi/types';
+import type { Strapi } from '@strapi/types';
 import type * as Nexus from 'nexus';
 
 import createShadowCRUDManager from './shadow-crud-manager';
@@ -14,7 +14,7 @@ export type Configuration = {
 };
 
 export type ConfigurationFactory = (options: {
-  strapi: Core.Strapi;
+  strapi: Strapi;
   nexus: typeof nexus;
   typeRegistry: object;
 }) => Configuration;
@@ -35,7 +35,7 @@ const getDefaultState = (): Extension => ({
   plugins: [],
 });
 
-const createExtension = ({ strapi }: { strapi: Core.Strapi }) => {
+const createExtension = ({ strapi }: { strapi: Strapi }) => {
   const configs: Array<Configuration | ConfigurationFactory> = [];
 
   return {

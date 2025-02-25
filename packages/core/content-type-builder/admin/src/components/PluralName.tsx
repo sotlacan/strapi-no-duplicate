@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 
-import { Field, TextInput } from '@strapi/design-system';
+import { TextInput } from '@strapi/design-system';
 import pluralize from 'pluralize';
 import { useIntl } from 'react-intl';
 
@@ -62,10 +62,14 @@ export const PluralName = ({
   const label = formatMessage(intlLabel);
 
   return (
-    <Field.Root error={errorMessage} hint={hint} name={name}>
-      <Field.Label>{label}</Field.Label>
-      <TextInput onChange={onChange} value={value || ''} />
-      <Field.Error />
-    </Field.Root>
+    <TextInput
+      error={errorMessage}
+      label={label}
+      id={name}
+      hint={hint}
+      name={name}
+      onChange={onChange}
+      value={value || ''}
+    />
   );
 };

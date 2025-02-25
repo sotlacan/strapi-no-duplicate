@@ -1,17 +1,15 @@
-import { Box, Main, EmptyStateLayout, LinkButton } from '@strapi/design-system';
-import { ExternalLink } from '@strapi/icons';
-import { EmptyPermissions } from '@strapi/icons/symbols';
+import { Box, Layout, Main, HeaderLayout, EmptyStateLayout } from '@strapi/design-system';
+import { LinkButton } from '@strapi/design-system/v2';
+import { ExternalLink, EmptyPermissions } from '@strapi/icons';
 import { useIntl } from 'react-intl';
-
-import { Layouts } from '../../../components/Layouts/Layout';
 
 const PurchaseSingleSignOn = () => {
   const { formatMessage } = useIntl();
 
   return (
-    <Layouts.Root>
+    <Layout>
       <Main>
-        <Layouts.Header
+        <HeaderLayout
           title={formatMessage({
             id: 'Settings.sso.title',
             defaultMessage: 'Single Sign-On',
@@ -23,7 +21,7 @@ const PurchaseSingleSignOn = () => {
         />
         <Box paddingLeft={10} paddingRight={10}>
           <EmptyStateLayout
-            icon={<EmptyPermissions width="16rem" />}
+            icon={<EmptyPermissions width="10rem" />}
             content={formatMessage({
               id: 'Settings.sso.not-available',
               defaultMessage:
@@ -33,7 +31,7 @@ const PurchaseSingleSignOn = () => {
               <LinkButton
                 variant="default"
                 endIcon={<ExternalLink />}
-                href="https://strapi.io/features/single-sign-on-sso?utm_campaign=In-Product-CTA&utm_source=Single-sign-on"
+                href="https://strp.cc/46Fk1BA"
                 isExternal
                 target="_blank"
               >
@@ -46,7 +44,7 @@ const PurchaseSingleSignOn = () => {
           />
         </Box>
       </Main>
-    </Layouts.Root>
+    </Layout>
   );
 };
 

@@ -1,20 +1,26 @@
 import * as React from 'react';
 
-import { EmptyStateLayout, LinkButton } from '@strapi/design-system';
+import { ContentLayout, HeaderLayout, LinkButton, Main } from '@strapi/design-system';
+import {
+  CheckPagePermissions,
+  NoContent,
+  NoPermissions,
+  SettingsPageTitle,
+  useAPIErrorHandler,
+  useFocusWhenNavigate,
+  useGuidedTour,
+  useNotification,
+  useRBAC,
+  useTracking,
+} from '@strapi/helper-plugin';
 import { Plus } from '@strapi/icons';
-import { EmptyDocuments } from '@strapi/icons/symbols';
-import * as qs from 'qs';
+import { Entity } from '@strapi/types';
+import qs from 'qs';
 import { useIntl } from 'react-intl';
-import { Link, useNavigate } from 'react-router-dom';
+import { useHistory } from 'react-router-dom';
 
-import { Layouts } from '../../../../components/Layouts/Layout';
-import { Page } from '../../../../components/PageHelpers';
 import { useTypedSelector } from '../../../../core/store/hooks';
-import { useNotification } from '../../../../features/Notifications';
-import { useTracking } from '../../../../features/Tracking';
-import { useAPIErrorHandler } from '../../../../hooks/useAPIErrorHandler';
 import { useOnce } from '../../../../hooks/useOnce';
-import { useRBAC } from '../../../../hooks/useRBAC';
 import {
   useDeleteTransferTokenMutation,
   useGetTransferTokensQuery,
@@ -22,40 +28,50 @@ import {
 import { TRANSFER_TOKEN_TYPE } from '../../components/Tokens/constants';
 import { Table } from '../../components/Tokens/Table';
 
-import type { Data } from '@strapi/types';
-
 const tableHeaders = [
   {
     name: 'name',
-    label: {
-      id: 'Settings.tokens.ListView.headers.name',
-      defaultMessage: 'Name',
+    key: 'name',
+    metadatas: {
+      label: {
+        id: 'Settings.tokens.ListView.headers.name',
+        defaultMessage: 'Name',
+      },
+      sortable: true,
     },
-    sortable: true,
   },
   {
     name: 'description',
-    label: {
-      id: 'Settings.tokens.ListView.headers.description',
-      defaultMessage: 'Description',
+    key: 'description',
+    metadatas: {
+      label: {
+        id: 'Settings.tokens.ListView.headers.description',
+        defaultMessage: 'Description',
+      },
+      sortable: false,
     },
-    sortable: false,
   },
   {
     name: 'createdAt',
-    label: {
-      id: 'Settings.tokens.ListView.headers.createdAt',
-      defaultMessage: 'Created at',
+    key: 'createdAt',
+    metadatas: {
+      label: {
+        id: 'Settings.tokens.ListView.headers.createdAt',
+        defaultMessage: 'Created at',
+      },
+      sortable: false,
     },
-    sortable: false,
   },
   {
     name: 'lastUsedAt',
-    label: {
-      id: 'Settings.tokens.ListView.headers.lastUsedAt',
-      defaultMessage: 'Last used',
+    key: 'lastUsedAt',
+    metadatas: {
+      label: {
+        id: 'Settings.tokens.ListView.headers.lastUsedAt',
+        defaultMessage: 'Last used',
+      },
+      sortable: false,
     },
-    sortable: false,
   },
 ] as const;
 
@@ -64,8 +80,9 @@ const tableHeaders = [
  * -----------------------------------------------------------------------------------------------*/
 
 const ListView = () => {
+  useFocusWhenNavigate();
   const { formatMessage } = useIntl();
-  const { toggleNotification } = useNotification();
+  const toggleNotification = useNotification();
   const permissions = useTypedSelector(
     (state) => state.admin_app.permissions.settings?.['transfer-tokens']
   );
@@ -73,13 +90,13 @@ const ListView = () => {
     isLoading: isLoadingRBAC,
     allowedActions: { canCreate, canDelete, canUpdate, canRead },
   } = useRBAC(permissions);
-  const navigate = useNavigate();
+  const { push } = useHistory();
   const { trackUsage } = useTracking();
   const { _unstableFormatAPIError: formatAPIError } = useAPIErrorHandler();
 
   React.useEffect(() => {
-    navigate({ search: qs.stringify({ sort: 'name:ASC' }, { encode: false }) });
-  }, [navigate]);
+    push({ search: qs.stringify({ sort: 'name:ASC' }, { encode: false }) });
+  }, [push]);
 
   useOnce(() => {
     trackUsage('willAccessTokenList', {
@@ -89,7 +106,10 @@ const ListView = () => {
 
   const headers = tableHeaders.map((header) => ({
     ...header,
-    label: formatMessage(header.label),
+    metadatas: {
+      ...header.metadatas,
+      label: formatMessage(header.metadatas.label),
+    },
   }));
 
   const {
@@ -112,7 +132,7 @@ const ListView = () => {
   React.useEffect(() => {
     if (error) {
       toggleNotification({
-        type: 'danger',
+        type: 'warning',
         message: formatAPIError(error),
       });
     }
@@ -120,20 +140,20 @@ const ListView = () => {
 
   const [deleteToken] = useDeleteTransferTokenMutation();
 
-  const handleDelete = async (id: Data.ID) => {
+  const handleDelete = async (id: Entity.ID) => {
     try {
       const res = await deleteToken(id);
 
       if ('error' in res) {
         toggleNotification({
-          type: 'danger',
+          type: 'warning',
           message: formatAPIError(res.error),
         });
       }
     } catch {
       toggleNotification({
-        type: 'danger',
-        message: formatMessage({ id: 'notification.error', defaultMessage: 'An error occured' }),
+        type: 'warning',
+        message: { id: 'notification.error', defaultMessage: 'An error occured' },
       });
     }
   };
@@ -141,16 +161,9 @@ const ListView = () => {
   const isLoading = isLoadingTokens || isLoadingRBAC;
 
   return (
-    <>
-      <Page.Title>
-        {formatMessage(
-          { id: 'Settings.PageTitle', defaultMessage: 'Settings - {name}' },
-          {
-            name: 'Transfer Tokens',
-          }
-        )}
-      </Page.Title>
-      <Layouts.Header
+    <Main aria-busy={isLoading}>
+      <SettingsPageTitle name="Transfer Tokens" />
+      <HeaderLayout
         title={formatMessage({
           id: 'Settings.transferTokens.title',
           defaultMessage: 'Transfer Tokens',
@@ -162,8 +175,6 @@ const ListView = () => {
         primaryAction={
           canCreate ? (
             <LinkButton
-              role="button"
-              tag={Link}
               data-testid="create-transfer-token-button"
               startIcon={<Plus />}
               size="S"
@@ -182,56 +193,49 @@ const ListView = () => {
           ) : undefined
         }
       />
-      {!canRead ? (
-        <Page.NoPermissions />
-      ) : (
-        <Page.Main aria-busy={isLoading}>
-          <Layouts.Content>
-            {transferTokens.length > 0 && (
-              <Table
-                permissions={{ canRead, canDelete, canUpdate }}
-                headers={headers}
-                isLoading={isLoading}
-                onConfirmDelete={handleDelete}
-                tokens={transferTokens}
-                tokenType={TRANSFER_TOKEN_TYPE}
-              />
-            )}
-            {canCreate && transferTokens.length === 0 ? (
-              <EmptyStateLayout
-                action={
-                  <LinkButton
-                    tag={Link}
-                    variant="secondary"
-                    startIcon={<Plus />}
-                    to="/settings/transfer-tokens/create"
-                  >
-                    {formatMessage({
-                      id: 'Settings.transferTokens.addNewToken',
-                      defaultMessage: 'Add new Transfer Token',
-                    })}
-                  </LinkButton>
-                }
-                icon={<EmptyDocuments width="16rem" />}
-                content={formatMessage({
-                  id: 'Settings.transferTokens.addFirstToken',
-                  defaultMessage: 'Add your first Transfer Token',
+      <ContentLayout>
+        {!canRead && <NoPermissions />}
+        {canRead && transferTokens.length > 0 && (
+          <Table
+            permissions={{ canRead, canDelete, canUpdate }}
+            headers={headers}
+            contentType="trasfer-tokens"
+            isLoading={isLoading}
+            onConfirmDelete={handleDelete}
+            tokens={transferTokens}
+            tokenType={TRANSFER_TOKEN_TYPE}
+          />
+        )}
+        {canRead && canCreate && transferTokens.length === 0 && (
+          <NoContent
+            content={{
+              id: 'Settings.transferTokens.addFirstToken',
+              defaultMessage: 'Add your first Transfer Token',
+            }}
+            action={
+              <LinkButton
+                variant="secondary"
+                startIcon={<Plus />}
+                to="/settings/transfer-tokens/create"
+              >
+                {formatMessage({
+                  id: 'Settings.transferTokens.addNewToken',
+                  defaultMessage: 'Add new Transfer Token',
                 })}
-              />
-            ) : null}
-            {!canCreate && transferTokens.length === 0 ? (
-              <EmptyStateLayout
-                icon={<EmptyDocuments width="16rem" />}
-                content={formatMessage({
-                  id: 'Settings.transferTokens.emptyStateLayout',
-                  defaultMessage: 'You don’t have any content yet...',
-                })}
-              />
-            ) : null}
-          </Layouts.Content>
-        </Page.Main>
-      )}
-    </>
+              </LinkButton>
+            }
+          />
+        )}
+        {canRead && !canCreate && transferTokens.length === 0 && (
+          <NoContent
+            content={{
+              id: 'Settings.transferTokens.emptyStateLayout',
+              defaultMessage: 'You don’t have any content yet...',
+            }}
+          />
+        )}
+      </ContentLayout>
+    </Main>
   );
 };
 
@@ -245,9 +249,9 @@ const ProtectedListView = () => {
   );
 
   return (
-    <Page.Protect permissions={permissions}>
+    <CheckPagePermissions permissions={permissions}>
       <ListView />
-    </Page.Protect>
+    </CheckPagePermissions>
   );
 };
 

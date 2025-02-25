@@ -21,10 +21,6 @@ jest.mock('../settings', () => {
 });
 
 describe('Configuration settings service', () => {
-  global.strapi = {
-    getModel() {},
-  } as any;
-
   describe('createDefaultSettings', () => {
     test('Consistent defaults', async () => {
       const schema = {

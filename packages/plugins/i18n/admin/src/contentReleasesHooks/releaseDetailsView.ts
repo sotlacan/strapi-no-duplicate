@@ -1,11 +1,11 @@
-import type { Schema } from '@strapi/types';
+import { Attribute } from '@strapi/types';
 /* -------------------------------------------------------------------------------------------------
  * addLocaleToReleasesHook
  * -----------------------------------------------------------------------------------------------*/
 interface AddLocaleToReleasesHookArgs {
   displayedHeaders: {
     key: string;
-    fieldSchema: Schema.Attribute.Kind | 'custom';
+    fieldSchema: Attribute.Kind | 'custom';
     metadatas: {
       label: { id: string; defaultMessage: string };
       searchable: boolean;
@@ -21,9 +21,15 @@ const addLocaleToReleasesHook = ({ displayedHeaders = [] }: AddLocaleToReleasesH
     displayedHeaders: [
       ...displayedHeaders,
       {
-        label: {
-          id: 'content-releases.page.ReleaseDetails.table.header.label.locale',
-          defaultMessage: 'locale',
+        key: '__locale__',
+        fieldSchema: { type: 'string' },
+        metadatas: {
+          label: {
+            id: 'content-releases.page.ReleaseDetails.table.header.label.locale',
+            defaultMessage: 'locale',
+          },
+          searchable: false,
+          sortable: false,
         },
         name: 'locale',
       },

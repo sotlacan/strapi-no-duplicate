@@ -1,5 +1,5 @@
 import path from 'path';
-import type { Internal, Struct } from '@strapi/types';
+import type { UID, Schema } from '@strapi/types';
 import fse from 'fs-extra';
 import _ from 'lodash';
 
@@ -9,10 +9,10 @@ export type Infos = {
   category?: string;
   modelName?: string;
   plugin?: string;
-  uid?: Internal.UID.ContentType;
+  uid?: UID.ContentType;
   dir: string;
   filename: string;
-  schema?: Struct.ContentTypeSchema;
+  schema?: Schema.ContentType;
 };
 
 export default function createSchemaHandler(infos: Infos) {
@@ -31,7 +31,7 @@ export default function createSchemaHandler(infos: Infos) {
         info: {},
         options: {},
         attributes: {},
-      } as Struct.ContentTypeSchema),
+      } as Schema.ContentType),
   };
 
   const state = _.cloneDeep(initialState);
@@ -67,7 +67,7 @@ export default function createSchemaHandler(infos: Infos) {
       return _.get(state, 'plugin') !== 'admin';
     },
 
-    setUID(val: Internal.UID.ContentType) {
+    setUID(val: UID.ContentType) {
       modified = true;
 
       state.uid = val;
@@ -85,7 +85,7 @@ export default function createSchemaHandler(infos: Infos) {
       return _.cloneDeep(state.schema);
     },
 
-    setSchema(val: Struct.ContentTypeSchema) {
+    setSchema(val: Schema.ContentType) {
       modified = true;
 
       state.schema = _.cloneDeep(val);
@@ -135,7 +135,7 @@ export default function createSchemaHandler(infos: Infos) {
       return this.unset(['attributes', key]);
     },
 
-    setAttributes(newAttributes: Struct.SchemaAttributes) {
+    setAttributes(newAttributes: Schema.Attributes) {
       if (!this.schema) return this;
 
       // delete old configurable attributes
@@ -147,13 +147,13 @@ export default function createSchemaHandler(infos: Infos) {
 
       // set new Attributes
       for (const key of Object.keys(newAttributes)) {
-        this.setAttribute(key, newAttributes[key as keyof Struct.SchemaAttributes]);
+        this.setAttribute(key, newAttributes[key as keyof Schema.Attributes]);
       }
 
       return this;
     },
 
-    removeContentType(uid: Internal.UID.ContentType) {
+    removeContentType(uid: UID.ContentType) {
       if (!state.schema) return this;
 
       const attributes = state.schema.attributes as Record<string, any>;
@@ -170,7 +170,7 @@ export default function createSchemaHandler(infos: Infos) {
     },
 
     // utils
-    removeComponent(uid: Internal.UID.Component) {
+    removeComponent(uid: UID.Component) {
       if (!state.schema) return this;
 
       const attributes = state.schema.attributes as Record<string, any>;
@@ -197,7 +197,7 @@ export default function createSchemaHandler(infos: Infos) {
       return this;
     },
 
-    updateComponent(uid: Internal.UID.Component, newUID: Internal.UID.Component) {
+    updateComponent(uid: UID.Component, newUID: UID.Component) {
       if (!state.schema) return this;
 
       const attributes = state.schema.attributes as Record<string, any>;

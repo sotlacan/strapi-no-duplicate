@@ -1,20 +1,24 @@
 import * as React from 'react';
 
 import {
-  Button,
+  BaseButton,
   Box,
   Field,
+  FieldError,
+  FieldHint,
+  FieldInput,
+  FieldLabel,
   Flex,
+  FocusTrap,
   Popover,
   Typography,
-  useComposedRefs,
 } from '@strapi/design-system';
-import { CaretDown } from '@strapi/icons';
-import { type InputProps, useField } from '@strapi/strapi/admin';
+import { CarretDown } from '@strapi/icons';
 import { HexColorPicker } from 'react-colorful';
-import { useIntl } from 'react-intl';
-import { styled } from 'styled-components';
+import { useIntl, MessageDescriptor } from 'react-intl';
+import styled from 'styled-components';
 
+import { useComposedRefs } from '../hooks/useComposeRefs';
 import { getTrad } from '../utils/getTrad';
 
 const ColorPreview = styled.div`
@@ -49,13 +53,10 @@ const ColorPicker = styled(HexColorPicker)`
   }
 `;
 
-const ColorPickerToggle = styled(Button)`
-  & > span {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    width: 100%;
-  }
+const ColorPickerToggle = styled(BaseButton)`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 
   svg {
     width: ${({ theme }) => theme.spaces[2]};
@@ -68,90 +69,140 @@ const ColorPickerToggle = styled(Button)`
   }
 `;
 
-const ColorPickerPopover = styled(Popover.Content)`
+const ColorPickerPopover = styled(Popover)`
   padding: ${({ theme }) => theme.spaces[2]};
   min-height: 270px;
 `;
 
-type ColorPickerInputProps = InputProps & {
+/**
+ * TODO: A lot of these props should extend `FieldProps`
+ */
+interface ColorPickerInputProps {
+  intlLabel: MessageDescriptor;
+  /**
+   * TODO: this should be extended from `FieldInputProps['onChange']
+   * but that conflicts with it's secondary usage in `HexColorPicker`
+   */
+  onChange: (event: { target: { name: string; value: string; type: string } }) => void;
+  attribute: { type: string; [key: string]: unknown };
+  name: string;
+  description?: MessageDescriptor;
+  disabled?: boolean;
+  error?: string;
   labelAction?: React.ReactNode;
-};
+  required?: boolean;
+  value?: string;
+}
 
 export const ColorPickerInput = React.forwardRef<HTMLButtonElement, ColorPickerInputProps>(
-  ({ hint, disabled, labelAction, label, name, required, ...props }, forwardedRef) => {
+  (
+    {
+      attribute,
+      description,
+      disabled = false,
+      error,
+      intlLabel,
+      labelAction,
+      name,
+      onChange,
+      required = false,
+      value = '',
+    },
+    forwardedRef
+  ) => {
     const [showColorPicker, setShowColorPicker] = React.useState(false);
     const colorPickerButtonRef = React.useRef<HTMLButtonElement>(null!);
     const { formatMessage } = useIntl();
-    const field = useField(name);
-    const color = field.value ?? '#000000';
+    const color = value || '#000000';
+
+    const handleBlur: React.FocusEventHandler<HTMLDivElement> = (e) => {
+      e.preventDefault();
+
+      if (!e.currentTarget.contains(e.relatedTarget)) {
+        setShowColorPicker(false);
+      }
+    };
 
     const composedRefs = useComposedRefs(forwardedRef, colorPickerButtonRef);
 
     return (
-      <Field.Root name={name} id={name} error={field.error} hint={hint} required={required}>
+      <Field
+        name={name}
+        id={name}
+        // GenericInput calls formatMessage and returns a string for the error
+        error={error}
+        hint={description && formatMessage(description)}
+        required={required}
+      >
         <Flex direction="column" alignItems="stretch" gap={1}>
-          <Field.Label action={labelAction}>{label}</Field.Label>
-          <Popover.Root onOpenChange={setShowColorPicker}>
-            <Popover.Trigger>
-              <ColorPickerToggle
-                ref={composedRefs}
-                aria-label={formatMessage({
-                  id: getTrad('color-picker.toggle.aria-label'),
-                  defaultMessage: 'Color picker toggle',
-                })}
-                aria-controls="color-picker-value"
-                aria-haspopup="dialog"
-                aria-expanded={showColorPicker}
-                aria-disabled={disabled}
-                disabled={disabled}
-                variant="tertiary"
-                size="L"
+          <FieldLabel action={labelAction}>{formatMessage(intlLabel)}</FieldLabel>
+          <ColorPickerToggle
+            ref={composedRefs}
+            aria-label={formatMessage({
+              id: getTrad('color-picker.toggle.aria-label'),
+              defaultMessage: 'Color picker toggle',
+            })}
+            aria-controls="color-picker-value"
+            aria-haspopup="dialog"
+            aria-expanded={showColorPicker}
+            aria-disabled={disabled}
+            disabled={disabled}
+            onClick={() => setShowColorPicker(!showColorPicker)}
+          >
+            <Flex>
+              <ColorPreview color={color} />
+              <Typography
+                style={{ textTransform: 'uppercase' }}
+                textColor={value ? undefined : 'neutral600'}
+                variant="omega"
               >
-                <Flex>
-                  <ColorPreview color={color} />
-                  <Typography
-                    style={{ textTransform: 'uppercase' }}
-                    textColor={field.value ? undefined : 'neutral600'}
-                    variant="omega"
-                  >
-                    {color}
-                  </Typography>
-                </Flex>
-                <CaretDown aria-hidden />
-              </ColorPickerToggle>
-            </Popover.Trigger>
-            <ColorPickerPopover sideOffset={4}>
-              <ColorPicker color={color} onChange={(hexValue) => field.onChange(name, hexValue)} />
-              <Flex paddingTop={3} paddingLeft={4} justifyContent="flex-end">
-                <Box paddingRight={2}>
-                  <Typography variant="omega" tag="label" textColor="neutral600">
-                    {formatMessage({
-                      id: getTrad('color-picker.input.format'),
-                      defaultMessage: 'HEX',
-                    })}
-                  </Typography>
-                </Box>
-                <Field.Root>
-                  <Field.Input
+                {color}
+              </Typography>
+            </Flex>
+            <CarretDown aria-hidden />
+          </ColorPickerToggle>
+          {showColorPicker && (
+            <ColorPickerPopover
+              onBlur={handleBlur}
+              role="dialog"
+              source={colorPickerButtonRef}
+              spacing={4}
+            >
+              <FocusTrap onEscape={() => setShowColorPicker(false)}>
+                <ColorPicker
+                  color={color}
+                  onChange={(hexValue) =>
+                    onChange({ target: { name, value: hexValue, type: attribute.type } })
+                  }
+                />
+                <Flex paddingTop={3} paddingLeft={4} justifyContent="flex-end">
+                  <Box paddingRight={2}>
+                    <Typography variant="omega" as="label" textColor="neutral600">
+                      {formatMessage({
+                        id: getTrad('color-picker.input.format'),
+                        defaultMessage: 'HEX',
+                      })}
+                    </Typography>
+                  </Box>
+                  <FieldInput
+                    id="color-picker-value"
                     aria-label={formatMessage({
                       id: getTrad('color-picker.input.aria-label'),
                       defaultMessage: 'Color picker input',
                     })}
                     style={{ textTransform: 'uppercase' }}
-                    name={name}
-                    defaultValue={color}
+                    value={value}
                     placeholder="#000000"
-                    onChange={field.onChange}
-                    {...props}
+                    onChange={onChange}
                   />
-                </Field.Root>
-              </Flex>
+                </Flex>
+              </FocusTrap>
             </ColorPickerPopover>
-          </Popover.Root>
-          <Field.Hint />
-          <Field.Error />
+          )}
+          <FieldHint />
+          <FieldError />
         </Flex>
-      </Field.Root>
+      </Field>
     );
   }
 );

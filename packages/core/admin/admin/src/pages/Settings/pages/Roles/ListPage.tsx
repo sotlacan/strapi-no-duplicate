@@ -1,8 +1,11 @@
 import * as React from 'react';
 
 import {
+  ActionLayout,
   Button,
-  Dialog,
+  ContentLayout,
+  HeaderLayout,
+  Main,
   Table,
   Tbody,
   TFooter,
@@ -12,32 +15,37 @@ import {
   Typography,
   VisuallyHidden,
 } from '@strapi/design-system';
+import {
+  ConfirmDialog,
+  getFetchClient,
+  LoadingIndicatorPage,
+  SearchURLQuery,
+  SettingsPageTitle,
+  useAPIErrorHandler,
+  useFocusWhenNavigate,
+  useQueryParams,
+  useNotification,
+  useRBAC,
+  CheckPagePermissions,
+} from '@strapi/helper-plugin';
 import { Duplicate, Pencil, Plus, Trash } from '@strapi/icons';
-import { produce } from 'immer';
+import { AxiosError } from 'axios';
+import produce from 'immer';
 import { useIntl } from 'react-intl';
-import { useNavigate } from 'react-router-dom';
+import { useHistory } from 'react-router-dom';
 
-import { ConfirmDialog } from '../../../../components/ConfirmDialog';
-import { Layouts } from '../../../../components/Layouts/Layout';
-import { Page } from '../../../../components/PageHelpers';
-import { SearchInput } from '../../../../components/SearchInput';
 import { useTypedSelector } from '../../../../core/store/hooks';
-import { useNotification } from '../../../../features/Notifications';
 import { useAdminRoles, AdminRole } from '../../../../hooks/useAdminRoles';
-import { useAPIErrorHandler } from '../../../../hooks/useAPIErrorHandler';
-import { useFetchClient } from '../../../../hooks/useFetchClient';
-import { useQueryParams } from '../../../../hooks/useQueryParams';
-import { useRBAC } from '../../../../hooks/useRBAC';
 import { selectAdminPermissions } from '../../../../selectors';
-import { isFetchError } from '../../../../utils/getFetchClient';
 
 import { RoleRow, RoleRowProps } from './components/RoleRow';
 
 const ListPage = () => {
   const { formatMessage } = useIntl();
+  useFocusWhenNavigate();
   const permissions = useTypedSelector(selectAdminPermissions);
   const { formatAPIError } = useAPIErrorHandler();
-  const { toggleNotification } = useNotification();
+  const toggleNotification = useNotification();
   const [isWarningDeleteAllOpened, setIsWarningDeleteAllOpenend] = React.useState(false);
   const [{ query }] = useQueryParams<{ _q?: string }>();
   const {
@@ -53,9 +61,13 @@ const ListPage = () => {
     }
   );
 
-  const navigate = useNavigate();
-  const [{ roleToDelete }, dispatch] = React.useReducer(reducer, initialState);
-  const { post } = useFetchClient();
+  const { push } = useHistory();
+  const [{ showModalConfirmButtonLoading, roleToDelete }, dispatch] = React.useReducer(
+    reducer,
+    initialState
+  );
+
+  const { post } = getFetchClient();
 
   const handleDeleteData = async () => {
     try {
@@ -73,16 +85,17 @@ const ListPage = () => {
         type: 'RESET_DATA_TO_DELETE',
       });
     } catch (error) {
-      if (isFetchError(error)) {
+      if (error instanceof AxiosError) {
         toggleNotification({
-          type: 'danger',
+          type: 'warning',
           message: formatAPIError(error),
         });
       }
     }
+    handleToggleModal();
   };
 
-  const handleNewRoleClick = () => navigate('new');
+  const handleNewRoleClick = () => push('/settings/roles/new');
 
   const handleToggleModal = () => setIsWarningDeleteAllOpenend((prev) => !prev);
 
@@ -93,7 +106,7 @@ const ListPage = () => {
     if (role.usersCount) {
       toggleNotification({
         type: 'info',
-        message: formatMessage({ id: 'Roles.ListPage.notification.delete-not-allowed' }),
+        message: { id: 'Roles.ListPage.notification.delete-not-allowed' },
       });
     } else {
       dispatch({
@@ -109,27 +122,24 @@ const ListPage = () => {
     e.preventDefault();
     e.stopPropagation();
 
-    navigate(`duplicate/${role.id}`);
+    push(`/settings/roles/duplicate/${role.id}`);
   };
 
   const rowCount = roles.length + 1;
   const colCount = 6;
 
   if (isLoadingForPermissions) {
-    return <Page.Loading />;
+    return (
+      <Main>
+        <LoadingIndicatorPage />
+      </Main>
+    );
   }
 
   return (
-    <Page.Main>
-      <Page.Title>
-        {formatMessage(
-          { id: 'Settings.PageTitle', defaultMessage: 'Settings - {name}' },
-          {
-            name: 'Roles',
-          }
-        )}
-      </Page.Title>
-      <Layouts.Header
+    <Main>
+      <SettingsPageTitle name="Roles" />
+      <HeaderLayout
         primaryAction={
           canCreate ? (
             <Button onClick={handleNewRoleClick} startIcon={<Plus />} size="S">
@@ -148,11 +158,12 @@ const ListPage = () => {
           id: 'Settings.roles.list.description',
           defaultMessage: 'List of roles',
         })}
+        as="h2"
       />
       {canRead && (
-        <Layouts.Action
+        <ActionLayout
           startActions={
-            <SearchInput
+            <SearchURLQuery
               label={formatMessage(
                 { id: 'app.component.search.label', defaultMessage: 'Search for {target}' },
                 {
@@ -167,13 +178,13 @@ const ListPage = () => {
         />
       )}
       {canRead && (
-        <Layouts.Content>
+        <ContentLayout>
           <Table
             colCount={colCount}
             rowCount={rowCount}
             footer={
               canCreate ? (
-                <TFooter cursor="pointer" onClick={handleNewRoleClick} icon={<Plus />}>
+                <TFooter onClick={handleNewRoleClick} icon={<Plus />}>
                   {formatMessage({
                     id: 'Settings.roles.list.button.add',
                     defaultMessage: 'Add new role',
@@ -221,7 +232,6 @@ const ListPage = () => {
             <Tbody>
               {roles?.map((role, index) => (
                 <RoleRow
-                  cursor="pointer"
                   key={role.id}
                   id={role.id}
                   name={role.name}
@@ -236,19 +246,19 @@ const ListPage = () => {
                             id: 'app.utils.duplicate',
                             defaultMessage: 'Duplicate',
                           }),
-                          children: <Duplicate />,
+                          icon: <Duplicate />,
                         } satisfies RoleRowProps['icons'][number]),
                       canUpdate &&
                         ({
-                          onClick: () => navigate(role.id.toString()),
+                          onClick: () => push(`/settings/roles/${role.id}`),
                           label: formatMessage({ id: 'app.utils.edit', defaultMessage: 'Edit' }),
-                          children: <Pencil />,
+                          icon: <Pencil />,
                         } satisfies RoleRowProps['icons'][number]),
                       canDelete &&
                         ({
                           onClick: handleClickDelete(role),
                           label: formatMessage({ id: 'global.delete', defaultMessage: 'Delete' }),
-                          children: <Trash />,
+                          icon: <Trash />,
                         } satisfies RoleRowProps['icons'][number]),
                     ].filter(Boolean) as RoleRowProps['icons']
                   }
@@ -258,12 +268,15 @@ const ListPage = () => {
               ))}
             </Tbody>
           </Table>
-        </Layouts.Content>
+        </ContentLayout>
       )}
-      <Dialog.Root open={isWarningDeleteAllOpened} onOpenChange={handleToggleModal}>
-        <ConfirmDialog onConfirm={handleDeleteData} />
-      </Dialog.Root>
-    </Page.Main>
+      <ConfirmDialog
+        isOpen={isWarningDeleteAllOpened}
+        onConfirm={handleDeleteData}
+        isConfirmButtonLoading={showModalConfirmButtonLoading}
+        onToggleDialog={handleToggleModal}
+      />
+    </Main>
   );
 };
 
@@ -342,12 +355,12 @@ const reducer = (state: State, action: Action) =>
  * -----------------------------------------------------------------------------------------------*/
 
 const ProtectedListPage = () => {
-  const permissions = useTypedSelector((state) => state.admin_app.permissions.settings?.roles.read);
+  const permissions = useTypedSelector(selectAdminPermissions);
 
   return (
-    <Page.Protect permissions={permissions}>
+    <CheckPagePermissions permissions={permissions.settings?.roles.main}>
       <ListPage />
-    </Page.Protect>
+    </CheckPagePermissions>
   );
 };
 

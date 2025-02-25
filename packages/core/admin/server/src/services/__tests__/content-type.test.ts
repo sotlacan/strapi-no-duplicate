@@ -390,18 +390,18 @@ describe('Content-Type', () => {
 
     // @ts-expect-error
     test.each(tests)('requiredOnly : %p -> %p', (fields, expectedFields) => {
-      // @ts-expect-error testing invalid fields type
-      const permissions = toPermission([
+      const res = cleanPermissionFields(
+        toPermission([
+          {
+            action: 'foo',
+            subject: 'user',
+            properties: { fields },
+          },
+        ]),
         {
-          action: 'foo',
-          subject: 'user',
-          properties: { fields },
-        },
-      ]);
-
-      const res = cleanPermissionFields(permissions, {
-        requiredOnly: true,
-      });
+          requiredOnly: true,
+        }
+      );
       expect(res).toEqual([
         {
           action: 'foo',

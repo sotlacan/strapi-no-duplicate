@@ -1,5 +1,5 @@
 import { propEq } from 'lodash/fp';
-import type { Schema } from '@strapi/types';
+import type { Attribute } from '@strapi/types';
 import type { Context } from '../types';
 
 export default ({ strapi }: Context) => {
@@ -8,7 +8,7 @@ export default ({ strapi }: Context) => {
    * @param {object} attribute
    * @return {boolean}
    */
-  const isStrapiScalar = (attribute: Schema.Attribute.AnyAttribute) => {
+  const isStrapiScalar = (attribute: Attribute.Any) => {
     return strapi.plugin('graphql').service('constants').STRAPI_SCALARS.includes(attribute.type);
   };
 
@@ -17,7 +17,7 @@ export default ({ strapi }: Context) => {
    * @param {object} attribute
    * @return {boolean}
    */
-  const isGraphQLScalar = (attribute: Schema.Attribute.AnyAttribute) => {
+  const isGraphQLScalar = (attribute: Attribute.Any) => {
     return strapi.plugin('graphql').service('constants').GRAPHQL_SCALARS.includes(attribute.type);
   };
 
@@ -26,7 +26,7 @@ export default ({ strapi }: Context) => {
    * @param {object} attribute
    * @return {boolean}
    */
-  const isMorphRelation = (attribute: Schema.Attribute.AnyAttribute) => {
+  const isMorphRelation = (attribute: Attribute.Any) => {
     return attribute.type === 'relation' && attribute.relation.includes('morph');
   };
 

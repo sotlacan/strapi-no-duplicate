@@ -15,7 +15,7 @@ import {
   isObject,
 } from 'lodash/fp';
 
-import { contentTypes, traverseEntity, traverse, validate, async, errors } from '@strapi/utils';
+import { contentTypes, traverseEntity, traverse, validate, pipeAsync, errors } from '@strapi/utils';
 import { ADMIN_USER_ALLOWED_FIELDS } from '../../../domain/user';
 
 const { ValidationError } = errors;
@@ -25,7 +25,6 @@ const { constants, isScalarAttribute, getNonVisibleAttributes, getWritableAttrib
   contentTypes;
 const {
   ID_ATTRIBUTE,
-  DOC_ID_ATTRIBUTE,
   CREATED_AT_ATTRIBUTE,
   UPDATED_AT_ATTRIBUTE,
   PUBLISHED_AT_ATTRIBUTE,
@@ -35,21 +34,14 @@ const {
 
 const COMPONENT_FIELDS = ['__component'];
 
-const STATIC_FIELDS = [ID_ATTRIBUTE, DOC_ID_ATTRIBUTE];
+const STATIC_FIELDS = [ID_ATTRIBUTE];
 
-const throwInvalidKey = ({ key, path }: { key: string; path?: string | null }) => {
-  const msg = path && path !== key ? `Invalid key ${key} at ${path}` : `Invalid key ${key}`;
-
-  throw new ValidationError(msg);
+const throwInvalidParam = ({ key }: any) => {
+  throw new ValidationError(`Invalid parameter ${key}`);
 };
 
 export default ({ action, ability, model }: any) => {
   const schema = strapi.getModel(model);
-
-  const ctx = {
-    schema,
-    getModel: strapi.getModel.bind(strapi),
-  };
 
   const createValidateQuery = (options = {} as any) => {
     const { fields } = options;
@@ -57,38 +49,37 @@ export default ({ action, ability, model }: any) => {
     // TODO: validate relations to admin users in all validators
     const permittedFields = fields.shouldIncludeAll ? null : getQueryFields(fields.permitted);
 
-    const validateFilters = async.pipe(
-      traverse.traverseQueryFilters(throwDisallowedFields(permittedFields), ctx),
-      traverse.traverseQueryFilters(throwDisallowedAdminUserFields, ctx),
-      traverse.traverseQueryFilters(throwPassword, ctx),
-      traverse.traverseQueryFilters(({ key, value, path }) => {
-        if (isObject(value) && isEmpty(value)) {
-          throwInvalidKey({ key, path: path.attribute });
-        }
-      }, ctx)
+    const validateFilters = pipeAsync(
+      traverse.traverseQueryFilters(throwDisallowedFields(permittedFields), { schema }),
+      traverse.traverseQueryFilters(throwDisallowedAdminUserFields, { schema }),
+      traverse.traverseQueryFilters(throwPassword, { schema }),
+      traverse.traverseQueryFilters(
+        ({ key, value }) => {
+          if (isObject(value) && isEmpty(value)) {
+            throwInvalidParam({ key });
+          }
+        },
+        { schema }
+      )
     );
 
-    const validateSort = async.pipe(
-      traverse.traverseQuerySort(throwDisallowedFields(permittedFields), ctx),
-      traverse.traverseQuerySort(throwDisallowedAdminUserFields, ctx),
-      traverse.traverseQuerySort(throwPassword, ctx),
-      traverse.traverseQuerySort(({ key, attribute, value, path }) => {
-        if (!isScalarAttribute(attribute) && isEmpty(value)) {
-          throwInvalidKey({ key, path: path.attribute });
-        }
-      }, ctx)
+    const validateSort = pipeAsync(
+      traverse.traverseQuerySort(throwDisallowedFields(permittedFields), { schema }),
+      traverse.traverseQuerySort(throwDisallowedAdminUserFields, { schema }),
+      traverse.traverseQuerySort(throwPassword, { schema }),
+      traverse.traverseQuerySort(
+        ({ key, attribute, value }) => {
+          if (!isScalarAttribute(attribute) && isEmpty(value)) {
+            throwInvalidParam({ key });
+          }
+        },
+        { schema }
+      )
     );
 
-    const validateFields = async.pipe(
-      traverse.traverseQueryFields(throwDisallowedFields(permittedFields), ctx),
-      traverse.traverseQueryFields(throwPassword, ctx)
-    );
-
-    const validatePopulate = async.pipe(
-      traverse.traverseQueryPopulate(throwDisallowedFields(permittedFields), ctx),
-      traverse.traverseQueryPopulate(throwDisallowedAdminUserFields, ctx),
-      traverse.traverseQueryPopulate(throwHiddenFields, ctx),
-      traverse.traverseQueryPopulate(throwPassword, ctx)
+    const validateFields = pipeAsync(
+      traverse.traverseQueryFields(throwDisallowedFields(permittedFields), { schema }),
+      traverse.traverseQueryFields(throwPassword, { schema })
     );
 
     return async (query: any) => {
@@ -104,11 +95,6 @@ export default ({ action, ability, model }: any) => {
         await validateFields(query.fields);
       }
 
-      // a wildcard is always valid; its conversion will be handled by the entity service and can be optimized with sanitizer
-      if (query.populate && query.populate !== '*') {
-        await validatePopulate(query.populate);
-      }
-
       return true;
     };
   };
@@ -118,11 +104,12 @@ export default ({ action, ability, model }: any) => {
 
     const permittedFields = fields.shouldIncludeAll ? null : getInputFields(fields.permitted);
 
-    return async.pipe(
+    return pipeAsync(
       // Remove fields hidden from the admin
-      traverseEntity(throwHiddenFields, ctx),
+      traverseEntity(throwHiddenFields, { schema }),
       // Remove not allowed fields (RBAC)
-      traverseEntity(throwDisallowedFields(permittedFields), ctx),
+      // @ts-expect-error lodash types
+      traverseEntity(throwDisallowedFields(permittedFields), { schema }),
       // Remove roles from createdBy & updatedBy fields
       omitCreatorRoles
     );
@@ -177,20 +164,20 @@ export default ({ action, ability, model }: any) => {
   /**
    * Visitor used to remove hidden fields from the admin API responses
    */
-  const throwHiddenFields = ({ key, schema, path }: any) => {
+  const throwHiddenFields = ({ key, schema }: any) => {
     const isHidden = getOr(false, ['config', 'attributes', key, 'hidden'], schema);
 
     if (isHidden) {
-      throwInvalidKey({ key, path: path.attribute });
+      throwInvalidParam({ key });
     }
   };
 
   /**
    * Visitor used to omit disallowed fields from the admin users entities & avoid leaking sensitive information
    */
-  const throwDisallowedAdminUserFields = ({ key, attribute, schema, path }: any) => {
+  const throwDisallowedAdminUserFields = ({ key, attribute, schema }: any) => {
     if (schema.uid === 'admin::user' && attribute && !ADMIN_USER_ALLOWED_FIELDS.includes(key)) {
-      throwInvalidKey({ key, path: path.attribute });
+      throwInvalidParam({ key });
     }
   };
 

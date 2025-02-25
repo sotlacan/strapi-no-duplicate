@@ -47,9 +47,7 @@ export const formsAPI: any = {
   extendContentType({ validator, form: { advanced, base } }: any) {
     const { contentType } = this.types;
 
-    if (validator) {
-      contentType.validators.push(validator);
-    }
+    contentType.validators.push(validator);
     contentType.form.advanced.push(advanced);
     contentType.form.base.push(base);
   },
@@ -71,9 +69,7 @@ export const formsAPI: any = {
         };
       }
 
-      if (validator) {
-        formType[field].validators.push(validator);
-      }
+      formType[field].validators.push(validator);
       formType[field].form.advanced.push(advanced);
       formType[field].form.base.push(base);
     });

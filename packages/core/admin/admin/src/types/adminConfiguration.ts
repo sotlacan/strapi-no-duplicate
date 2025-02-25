@@ -1,4 +1,4 @@
-import type { Schema, Struct } from '@strapi/types';
+import type { Attribute, Schema } from '@strapi/types';
 
 /* -------------------------------------------------------------------------------------------------
  * Configuration – This should be exported from the Content Manager plugin.
@@ -61,7 +61,7 @@ export interface Configuration {
  */
 export interface CMAdminConfiguration
   extends Omit<Configuration, 'layouts'>,
-    Omit<Struct.ContentTypeSchema, 'uid' | 'collectionName' | 'globalId' | 'modelName'> {
+    Omit<Schema.ContentType, 'uid' | 'collectionName' | 'globalId' | 'modelName'> {
   apiID: string;
   isDisplayed: boolean;
   layouts: {
@@ -71,10 +71,7 @@ export interface CMAdminConfiguration
 }
 
 export type NonRelationLayout = Layouts['edit'][number][number] & {
-  fieldSchema: Pick<
-    Exclude<Schema.Attribute.AnyAttribute, { type: 'relation' }>,
-    'pluginOptions' | 'type'
-  >;
+  fieldSchema: Pick<Exclude<Attribute.Any, { type: 'relation' }>, 'pluginOptions' | 'type'>;
   /**
    * why is this trying to beplural? You don't pluralize metadata.
    *
@@ -91,7 +88,7 @@ export type NonRelationLayout = Layouts['edit'][number][number] & {
 
 export interface RelationLayout extends Omit<NonRelationLayout, 'fieldSchema'> {
   fieldSchema: Pick<
-    Extract<Schema.Attribute.AnyAttribute, { type: 'relation' }>,
+    Extract<Attribute.Any, { type: 'relation' }>,
     'pluginOptions' | 'relation' | 'type'
   > & {
     mappedBy: string;

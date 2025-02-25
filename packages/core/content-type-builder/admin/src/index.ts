@@ -1,32 +1,37 @@
-import { Layout } from '@strapi/icons';
+import { prefixPluginTranslations } from '@strapi/helper-plugin';
 
+import pluginPkg from '../../package.json';
+
+import { PluginIcon } from './components/PluginIcon';
 import { PERMISSIONS } from './constants';
 import { pluginId } from './pluginId';
 import { reducers } from './reducers';
 import { formsAPI } from './utils/formAPI';
-import { prefixPluginTranslations } from './utils/prefixPluginTranslations';
 
-import type { StrapiApp } from '@strapi/admin/strapi-admin';
+const name = pluginPkg.strapi.name;
 
 // eslint-disable-next-line import/no-default-export
 export default {
-  register(app: StrapiApp) {
+  register(app: any) {
     app.addReducers(reducers);
     app.addMenuLink({
-      to: `plugins/${pluginId}`,
-      icon: Layout,
+      to: `/plugins/${pluginId}`,
+      icon: PluginIcon,
       intlLabel: {
         id: `${pluginId}.plugin.name`,
-        defaultMessage: 'Content-Type Builder',
+        defaultMessage: 'Content Types Builder',
       },
       permissions: PERMISSIONS.main,
-      Component: () => import('./pages/App'),
-      position: 5,
+      async Component() {
+        const component = await import('./pages/App');
+
+        return component;
+      },
     });
 
     app.registerPlugin({
       id: pluginId,
-      name: pluginId,
+      name,
       // Internal APIs exposed by the CTB for the other plugins to use
       apis: {
         forms: formsAPI,
@@ -56,5 +61,3 @@ export default {
     return Promise.resolve(importedTrads);
   },
 };
-
-export * from './exports';

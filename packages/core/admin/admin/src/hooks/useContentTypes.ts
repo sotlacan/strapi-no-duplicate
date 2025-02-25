@@ -1,33 +1,62 @@
 import * as React from 'react';
 
-import { useNotification } from '../features/Notifications';
-import { useAPIErrorHandler } from '../hooks/useAPIErrorHandler';
-import { useGetContentTypesQuery } from '../services/contentManager';
+import { useAPIErrorHandler, useNotification } from '@strapi/helper-plugin';
+import { Contracts } from '@strapi/plugin-content-manager/_internal/shared';
 
-import type { ContentType } from '../../../shared/contracts/content-types';
+import { useGetComponentsQuery, useGetContentTypesQuery } from '../services/contentManager';
 
 export function useContentTypes(): {
   isLoading: boolean;
-  collectionTypes: ContentType[];
-  singleTypes: ContentType[];
+  components: Contracts.Components.Component[];
+  collectionTypes: Contracts.ContentTypes.ContentType[];
+  singleTypes: Contracts.ContentTypes.ContentType[];
 } {
   const { _unstableFormatAPIError: formatAPIError } = useAPIErrorHandler();
-  const { toggleNotification } = useNotification();
+  const toggleNotification = useNotification();
 
-  const { data, isLoading, error } = useGetContentTypesQuery();
+  const components = useGetComponentsQuery();
+  const contentTypes = useGetContentTypesQuery();
 
   React.useEffect(() => {
-    if (error) {
+    if (contentTypes.error) {
       toggleNotification({
-        type: 'danger',
-        message: formatAPIError(error),
+        type: 'warning',
+        message: formatAPIError(contentTypes.error),
       });
     }
-  }, [error, formatAPIError, toggleNotification]);
+  }, [contentTypes.error, formatAPIError, toggleNotification]);
+
+  React.useEffect(() => {
+    if (components.error) {
+      toggleNotification({
+        type: 'warning',
+        message: formatAPIError(components.error),
+      });
+    }
+  }, [components.error, formatAPIError, toggleNotification]);
+
+  const isLoading = components.isLoading || contentTypes.isLoading;
+
+  // the return value needs to be memoized, because intantiating
+  // an empty array as default value would lead to an unstable return
+  // value, which later on triggers infinite loops if used in the
+  // dependency arrays of other hooks
+  const collectionTypes = React.useMemo(() => {
+    return (contentTypes?.data ?? []).filter(
+      (contentType) => contentType.kind === 'collectionType' && contentType.isDisplayed
+    );
+  }, [contentTypes?.data]);
+
+  const singleTypes = React.useMemo(() => {
+    return (contentTypes?.data ?? []).filter(
+      (contentType) => contentType.kind !== 'collectionType' && contentType.isDisplayed
+    );
+  }, [contentTypes?.data]);
 
   return {
     isLoading,
-    collectionTypes: data?.collectionType ?? [],
-    singleTypes: data?.singleType ?? [],
+    components: React.useMemo(() => components?.data ?? [], [components?.data]),
+    collectionTypes,
+    singleTypes,
   };
 }

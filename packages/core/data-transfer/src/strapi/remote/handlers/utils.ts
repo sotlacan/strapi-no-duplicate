@@ -1,4 +1,4 @@
-import type { IncomingMessage } from 'node:http';
+import type { IncomingMessage } from 'http';
 import { randomUUID } from 'crypto';
 import type { Context } from 'koa';
 import type { RawData, ServerOptions } from 'ws';
@@ -9,7 +9,6 @@ import type { Protocol } from '../../../../types';
 import { ProviderError, ProviderTransferError } from '../../../errors/providers';
 import { VALID_TRANSFER_COMMANDS, ValidTransferCommand } from './constants';
 import { TransferMethod } from '../constants';
-import { createDiagnosticReporter } from '../../../utils/diagnostic';
 
 type WSCallback = (client: WebSocket, request: IncomingMessage) => void;
 
@@ -126,8 +125,6 @@ export const handleWSUpgrade = (wss: WebSocketServer, ctx: Context, callback: WS
     }
 
     disableTimeouts();
-    strapi.db.lifecycles.disable();
-    strapi.log.info('[Data transfer] Disabling lifecycle hooks');
 
     // Create a connection between the client & the server
     wss.emit('connection', client, ctx.req);
@@ -152,7 +149,6 @@ export const handlerControllerFactory =
       const cb: WSCallback = (ws) => {
         const state: TransferState = { id: undefined };
         const messageUUIDs = new Set<string>();
-        const diagnostics = createDiagnosticReporter();
 
         const cannotRespondHandler = (err: unknown) => {
           strapi?.log?.error(
@@ -192,10 +188,6 @@ export const handlerControllerFactory =
 
           set response(response) {
             state.response = response;
-          },
-
-          get diagnostics() {
-            return diagnostics;
           },
 
           addUUID(uuid) {
@@ -264,6 +256,7 @@ export const handlerControllerFactory =
           send(message, cb) {
             ws.send(message, cb);
           },
+
           confirm(message) {
             return new Promise((resolve, reject) => {
               const uuid = randomUUID();
@@ -333,8 +326,6 @@ export const handlerControllerFactory =
           onMessage() {},
           onError() {},
           onClose() {},
-          onInfo() {},
-          onWarning() {},
         };
 
         const handler: Handler = Object.assign(Object.create(prototype), implementation(prototype));
@@ -349,8 +340,6 @@ export const handlerControllerFactory =
             cannotRespondHandler(err);
           } finally {
             resetTimeouts();
-            strapi.db.lifecycles.enable();
-            strapi.log.info('[Data transfer] Restoring lifecycle hooks');
           }
         });
         ws.on('error', async (...args) => {
@@ -370,16 +359,6 @@ export const handlerControllerFactory =
             strapi?.log?.error(err);
             cannotRespondHandler(err);
           }
-        });
-
-        diagnostics.onDiagnostic((diagnostic) => {
-          const uuid = randomUUID();
-          const payload = JSON.stringify({
-            diagnostic,
-            uuid,
-          });
-
-          handler.send(payload);
         });
       };
 

@@ -1,4 +1,4 @@
-import type { Core } from '@strapi/types';
+import type { Strapi } from '@strapi/types';
 import type { EmailConfig, SendOptions } from './types';
 
 interface EmailProvider {
@@ -43,8 +43,8 @@ const createProvider = (emailConfig: EmailConfig) => {
   return provider.init(emailConfig.providerOptions, emailConfig.settings);
 };
 
-export const bootstrap = async ({ strapi }: { strapi: Core.Strapi }) => {
-  const emailConfig: EmailConfig = strapi.config.get('plugin::email');
+export const bootstrap = async ({ strapi }: { strapi: Strapi }) => {
+  const emailConfig: EmailConfig = strapi.config.get('plugin.email');
   strapi.plugin('email').provider = createProvider(emailConfig);
 
   // Add permissions
@@ -58,5 +58,5 @@ export const bootstrap = async ({ strapi }: { strapi: Core.Strapi }) => {
     },
   ];
 
-  await strapi.service('admin::permission').actionProvider.registerMany(actions);
+  await strapi.admin!.services.permission.actionProvider.registerMany(actions);
 };

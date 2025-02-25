@@ -1,25 +1,19 @@
 /* eslint-disable check-file/filename-naming-convention */
-import * as React from 'react';
-
-import { immerable } from 'immer';
+import { Plugin as IPlugin } from '@strapi/helper-plugin';
 
 export interface PluginConfig
-  extends Partial<Pick<Plugin, 'apis' | 'initializer' | 'injectionZones' | 'isReady'>> {
+  extends Partial<Pick<IPlugin, 'apis' | 'initializer' | 'injectionZones' | 'isReady'>> {
   name: string;
   id: string;
 }
 
-export class Plugin {
-  [immerable] = true;
-
-  apis: Record<string, unknown>;
-  initializer: React.ComponentType<{ setPlugin(pluginId: string): void }> | null;
-  injectionZones: Record<
-    string,
-    Record<string, Array<{ name: string; Component: React.ComponentType }>>
-  >;
-  isReady: boolean;
-  name: string;
+export class Plugin implements IPlugin {
+  apis: IPlugin['apis'];
+  // @ts-expect-error - TS doesn't like the fact that this can be null
+  initializer: IPlugin['initializer'] | null;
+  injectionZones: IPlugin['injectionZones'];
+  isReady: IPlugin['isReady'];
+  name: IPlugin['name'];
   pluginId: PluginConfig['id'];
 
   constructor(pluginConf: PluginConfig) {
@@ -44,7 +38,7 @@ export class Plugin {
   injectComponent(
     containerName: string,
     blockName: string,
-    component: { name: string; Component: React.ComponentType }
+    component: ReturnType<IPlugin['getInjectedComponents']>[number]
   ) {
     try {
       this.injectionZones[containerName][blockName].push(component);

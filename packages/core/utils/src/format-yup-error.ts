@@ -5,7 +5,6 @@ const formatYupInnerError = (yupError: ValidationError) => ({
   path: toPath(yupError.path),
   message: yupError.message,
   name: yupError.name,
-  value: yupError.value,
 });
 
 const formatYupErrors = (yupError: ValidationError) => ({

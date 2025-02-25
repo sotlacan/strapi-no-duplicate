@@ -1,7 +1,6 @@
 import { useState, MouseEvent } from 'react';
 
-import { useTracking, useNotification } from '@strapi/admin/strapi-admin';
-import { useCollator, useFilter } from '@strapi/design-system';
+import { useCollator, useFilter, useNotification, useTracking } from '@strapi/helper-plugin';
 import isEqual from 'lodash/isEqual';
 import { useIntl } from 'react-intl';
 
@@ -10,7 +9,7 @@ import { useFormModalNavigation } from '../../hooks/useFormModalNavigation';
 import { pluginId } from '../../pluginId';
 import { getTrad } from '../../utils/getTrad';
 
-import type { Internal } from '@strapi/types';
+import type { UID } from '@strapi/types';
 
 export const useContentTypeBuilderMenu = () => {
   const {
@@ -22,10 +21,9 @@ export const useContentTypeBuilderMenu = () => {
     modifiedData,
     initialData,
   } = useDataManager();
-  const { toggleNotification } = useNotification();
-  const { formatMessage } = useIntl();
+  const toggleNotification = useNotification();
   const { trackUsage } = useTracking();
-  const [searchValue, setSearchValue] = useState('');
+  const [search, setSearch] = useState('');
   const { onOpenModalCreateSchema, onOpenModalEditCategory } = useFormModalNavigation();
   const { locale } = useIntl();
 
@@ -37,17 +35,15 @@ export const useContentTypeBuilderMenu = () => {
     sensitivity: 'base',
   });
 
-  // TODO: Allow creating mutliple schemas in parallel
   const canOpenModalCreateCTorComponent =
     !Object.keys(contentTypes).some((ct) => contentTypes[ct].isTemporary === true) &&
     !Object.keys(components).some(
-      (component) => components[component as Internal.UID.Component].isTemporary === true
+      (component) => components[component as UID.Component].isTemporary === true
     ) &&
     isEqual(modifiedData, initialData);
 
   const handleClickOpenModalCreateCollectionType = () => {
     if (canOpenModalCreateCTorComponent) {
-      // TODO: Review tracking with product
       trackUsage(`willCreateContentType`);
 
       const nextState = {
@@ -100,10 +96,10 @@ export const useContentTypeBuilderMenu = () => {
   const toggleNotificationCannotCreateSchema = () => {
     toggleNotification({
       type: 'info',
-      message: formatMessage({
+      message: {
         id: getTrad('notification.info.creating.notSaved'),
         defaultMessage: 'Please save your work before creating a new collection type or component',
-      }),
+      },
     });
   };
 
@@ -112,7 +108,6 @@ export const useContentTypeBuilderMenu = () => {
       name: category,
       title: category,
       isEditable: isInDevelopmentMode,
-      // TODO: re-add functionality to edit category name
       onClickEdit(e: MouseEvent, data: any) {
         e.stopPropagation();
 
@@ -178,21 +173,15 @@ export const useContentTypeBuilderMenu = () => {
     const hasChild = section.links.some((l) => Array.isArray(l.links));
 
     if (hasChild) {
-      let filteredLinksCount = 0;
-
       return {
         ...section,
         links: section.links
           .map((link) => {
-            const filteredLinks = link.links.filter((link: any) =>
-              startsWith(link.title, searchValue)
-            );
+            const filteredLinks = link.links.filter((link: any) => startsWith(link.title, search));
 
             if (filteredLinks.length === 0) {
               return null;
             }
-
-            filteredLinksCount += filteredLinks.length;
 
             return {
               ...link,
@@ -200,27 +189,20 @@ export const useContentTypeBuilderMenu = () => {
             };
           })
           .filter(Boolean),
-        linksCount: filteredLinksCount,
       };
     }
 
-    const filteredLinks = section.links
-      .filter((link) => startsWith(link.title, searchValue))
-      .sort((a, b) => formatter.compare(a.title, b.title));
-
     return {
       ...section,
-      links: filteredLinks,
-      linksCount: filteredLinks.length,
+      links: section.links
+        .filter((link) => startsWith(link.title, search))
+        .sort((a, b) => formatter.compare(a.title, b.title)),
     };
   });
 
   return {
     menu: data,
-    search: {
-      value: searchValue,
-      onChange: setSearchValue,
-      clear: () => setSearchValue(''),
-    },
+    searchValue: search,
+    onSearchChange: setSearch,
   };
 };

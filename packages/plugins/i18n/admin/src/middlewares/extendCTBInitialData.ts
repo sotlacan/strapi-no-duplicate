@@ -1,10 +1,8 @@
-import type { Middleware } from '@reduxjs/toolkit';
-import type { Store } from '@strapi/admin/strapi-admin';
+import { Middleware } from '@reduxjs/toolkit';
 
-const extendCTBInitialDataMiddleware: () => Middleware<
-  object,
-  ReturnType<Store['getState']>
-> = () => {
+import { RootState } from '../store/reducers';
+
+const extendCTBInitialDataMiddleware: () => Middleware<object, RootState> = () => {
   return () => (next) => (action) => {
     if (
       action.type === 'ContentTypeBuilder/FormModal/SET_DATA_TO_EDIT' &&

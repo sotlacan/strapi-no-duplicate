@@ -1,21 +1,21 @@
-import { pipe, map, reduce } from '../async';
+import { pipeAsync, mapAsync, reduceAsync } from '../async';
 
 describe('Async utils', () => {
-  describe('pipe', () => {
+  describe('pipeAsync', () => {
     test('Should pipe several functions', async () => {
       const circleAreaPipe = [(n) => n * n, (n) => Promise.resolve(n * Math.PI), Math.round];
 
-      const circleAreaFunc = pipe(...circleAreaPipe);
+      const circleAreaFunc = pipeAsync(...circleAreaPipe);
       const result = await circleAreaFunc(50);
 
       expect(result).toEqual(7854);
     });
   });
-  describe('map', () => {
+  describe('mapAsync', () => {
     test('Should return a simple array of numbers', async () => {
       const numberPromiseArray = [Promise.resolve(1), Promise.resolve(2)];
 
-      const mapFunc = map(numberPromiseArray);
+      const mapFunc = mapAsync(numberPromiseArray);
       const result = await mapFunc((number) => number + 1);
 
       expect(result).toEqual([2, 3]);
@@ -23,7 +23,7 @@ describe('Async utils', () => {
     test('Should work with mix of promises and values', async () => {
       const numberMixArray = [1, Promise.resolve(2)];
 
-      const mapFunc = map(numberMixArray);
+      const mapFunc = mapAsync(numberMixArray);
       const result = await mapFunc((number) => number + 1);
 
       expect(result).toEqual([2, 3]);
@@ -31,7 +31,7 @@ describe('Async utils', () => {
     test('Should throw an error', async () => {
       const numberPromiseArray = [Promise.resolve(1), Promise.resolve(2)];
 
-      const mapFunc = map(numberPromiseArray);
+      const mapFunc = mapAsync(numberPromiseArray);
 
       await expect(async () => {
         await mapFunc(() => {
@@ -42,7 +42,7 @@ describe('Async utils', () => {
     test('Should throw an error 2', async () => {
       const numberPromiseArray = [Promise.reject(new Error('input')), Promise.resolve(2)];
 
-      const mapFunc = map(numberPromiseArray);
+      const mapFunc = mapAsync(numberPromiseArray);
 
       await expect(async () => {
         await mapFunc(() => true);
@@ -57,7 +57,7 @@ describe('Async utils', () => {
       let maxOperations = 0;
       let operationsCounter = 0;
 
-      const mapFunc = map(numberPromiseArray);
+      const mapFunc = mapAsync(numberPromiseArray);
       const result = await mapFunc(
         async (value) => {
           operationsCounter += 1;
@@ -75,11 +75,11 @@ describe('Async utils', () => {
       expect(maxOperations).toEqual(2);
     });
   });
-  describe('reduce', () => {
+  describe('reduceAsync', () => {
     test('Should return an incremented number', async () => {
       const numberPromiseArray = [Promise.resolve(1), Promise.resolve(2)];
 
-      const reduceFunc = reduce(numberPromiseArray);
+      const reduceFunc = reduceAsync(numberPromiseArray);
       const result = await reduceFunc(
         (previousValue, currentValue) => previousValue + currentValue,
         10
@@ -90,7 +90,7 @@ describe('Async utils', () => {
     test('Should work without initial value', async () => {
       const numberPromiseArray = [Promise.resolve(1), Promise.resolve(2)];
 
-      const reduceFunc = reduce(numberPromiseArray);
+      const reduceFunc = reduceAsync(numberPromiseArray);
       const result = await reduceFunc(
         (previousValue, currentValue) => (previousValue || 10) + currentValue
       );
@@ -100,7 +100,7 @@ describe('Async utils', () => {
     test('Should work with mix of promises and values', async () => {
       const numberMixArray = [1, Promise.resolve(2)];
 
-      const reduceFunc = reduce(numberMixArray);
+      const reduceFunc = reduceAsync(numberMixArray);
       const result = await reduceFunc(
         (previousValue, currentValue) => previousValue + currentValue,
         10
@@ -111,7 +111,7 @@ describe('Async utils', () => {
     test('Should throw an error with proper message when the provided callback throws an error', async () => {
       const numberPromiseArray = [Promise.resolve(1), Promise.resolve(2)];
 
-      const reduceFunc = reduce(numberPromiseArray);
+      const reduceFunc = reduceAsync(numberPromiseArray);
 
       await expect(async () => {
         await reduceFunc(() => {
@@ -122,7 +122,7 @@ describe('Async utils', () => {
     test('Should throw an error with proper message when the input array contains a rejected Promise', async () => {
       const numberPromiseArray = [Promise.reject(new Error('input')), Promise.resolve(2)];
 
-      const reduceFunc = reduce(numberPromiseArray);
+      const reduceFunc = reduceAsync(numberPromiseArray);
 
       await expect(async () => {
         await reduceFunc(() => true, null);

@@ -1,59 +1,57 @@
-import { ComponentType, SVGProps } from 'react';
-
-import { useStrapiApp } from '@strapi/admin/strapi-admin';
 import { Box } from '@strapi/design-system';
+import { pxToRem, useCustomFields, CustomFieldUID } from '@strapi/helper-plugin';
 import {
-  BooleanField,
+  Boolean,
   CollectionType,
-  ComponentField,
-  DateField,
-  DynamicZoneField,
-  EmailField,
-  EnumerationField,
-  JsonField,
-  MediaField,
-  NumberField,
-  PasswordField,
-  RelationField,
-  MarkdownField,
+  Component,
+  Date,
+  DynamicZone,
+  Email,
+  Enumeration,
+  Json,
+  Media,
+  Number,
+  Password,
+  Relation,
+  RichText,
   SingleType,
-  TextField,
-  UidField,
-  BlocksField,
-} from '@strapi/icons/symbols';
-import { styled } from 'styled-components';
+  Text,
+  Uid,
+  Blocks,
+} from '@strapi/icons';
+import styled from 'styled-components';
 
-const iconByTypes: Record<string, ComponentType<SVGProps<SVGSVGElement>>> = {
-  biginteger: NumberField,
-  blocks: BlocksField,
-  boolean: BooleanField,
+const iconByTypes = {
+  biginteger: Number,
+  blocks: Blocks,
+  boolean: Boolean,
   collectionType: CollectionType,
-  component: ComponentField,
+  component: Component,
   contentType: CollectionType,
-  date: DateField,
-  datetime: DateField,
-  decimal: NumberField,
-  dynamiczone: DynamicZoneField,
-  email: EmailField,
-  enum: EnumerationField,
-  enumeration: EnumerationField,
-  file: MediaField,
-  files: MediaField,
-  float: NumberField,
-  integer: NumberField,
-  json: JsonField,
-  JSON: JsonField,
-  media: MediaField,
-  number: NumberField,
-  password: PasswordField,
-  relation: RelationField,
-  richtext: MarkdownField,
+  date: Date,
+  datetime: Date,
+  decimal: Number,
+  dynamiczone: DynamicZone,
+  email: Email,
+  enum: Enumeration,
+  enumeration: Enumeration,
+  file: Media,
+  files: Media,
+  float: Number,
+  integer: Number,
+  json: Json,
+  JSON: Json,
+  media: Media,
+  number: Number,
+  password: Password,
+  relation: Relation,
+  richtext: RichText,
   singleType: SingleType,
-  string: TextField,
-  text: TextField,
-  time: DateField,
-  timestamp: DateField,
-  uid: UidField,
+  string: Text,
+  text: Text,
+  time: Date,
+  timestamp: Date,
+  uid: Uid,
 };
 
 const IconBox = styled(Box)`
@@ -67,16 +65,16 @@ export type IconByType = keyof typeof iconByTypes;
 
 type AttributeIconProps = {
   type: IconByType;
-  customField?: string | null;
+  customField?: CustomFieldUID | null;
 };
 
 export const AttributeIcon = ({ type, customField = null, ...rest }: AttributeIconProps) => {
-  const getCustomField = useStrapiApp('AttributeIcon', (state) => state.customFields.get);
+  const customFieldsRegistry = useCustomFields();
 
   let Compo: any = iconByTypes[type];
 
   if (customField) {
-    const customFieldObject = getCustomField(customField);
+    const customFieldObject = customFieldsRegistry.get(customField);
     const icon = customFieldObject?.icon;
     if (icon) {
       Compo = icon;
@@ -88,8 +86,8 @@ export const AttributeIcon = ({ type, customField = null, ...rest }: AttributeIc
   }
 
   return (
-    <IconBox width="3.2rem" shrink={0} {...rest} aria-hidden>
-      <Box tag={Compo} />
+    <IconBox height={pxToRem(24)} width={pxToRem(32)} shrink={0} {...rest} aria-hidden>
+      <Box as={Compo} />
     </IconBox>
   );
 };

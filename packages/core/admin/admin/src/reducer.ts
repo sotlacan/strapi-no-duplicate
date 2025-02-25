@@ -16,27 +16,10 @@ interface AppState {
     currentTheme: ThemeName;
     availableThemes: string[];
   };
-  token?: string | null;
 }
-
-const STORAGE_KEYS = {
-  TOKEN: 'jwtToken',
-  USER: 'userInfo',
-};
 
 const THEME_LOCAL_STORAGE_KEY = 'STRAPI_THEME';
 const LANGUAGE_LOCAL_STORAGE_KEY = 'strapi-admin-language';
-
-export const getStoredToken = (): string | null => {
-  const token =
-    localStorage.getItem(STORAGE_KEYS.TOKEN) ?? sessionStorage.getItem(STORAGE_KEYS.TOKEN);
-
-  if (typeof token === 'string') {
-    return JSON.parse(token);
-  }
-
-  return null;
-};
 
 const adminSlice = createSlice({
   name: 'admin',
@@ -51,10 +34,12 @@ const adminSlice = createSlice({
         availableThemes: [],
         currentTheme: localStorage.getItem(THEME_LOCAL_STORAGE_KEY) || 'system',
       },
-      token: null,
     } as AppState;
   },
   reducers: {
+    setAdminPermissions(state, action: PayloadAction<Partial<PermissionMap>>) {
+      state.permissions = action.payload;
+    },
     setAppTheme(state, action: PayloadAction<ThemeName>) {
       state.theme.currentTheme = action.payload;
       window.localStorage.setItem(THEME_LOCAL_STORAGE_KEY, action.payload);
@@ -68,34 +53,20 @@ const adminSlice = createSlice({
       window.localStorage.setItem(LANGUAGE_LOCAL_STORAGE_KEY, action.payload);
       document.documentElement.setAttribute('lang', action.payload);
     },
-    setToken(state, action: PayloadAction<string | null>) {
-      state.token = action.payload;
-    },
-    login(state, action: PayloadAction<{ token: string; persist?: boolean }>) {
-      const { token, persist } = action.payload;
-
-      if (!persist) {
-        window.sessionStorage.setItem(STORAGE_KEYS.TOKEN, JSON.stringify(token));
-      } else {
-        window.localStorage.setItem(STORAGE_KEYS.TOKEN, JSON.stringify(token));
-      }
-
-      state.token = token;
-    },
-    logout(state) {
-      state.token = null;
-      window.localStorage.removeItem(STORAGE_KEYS.TOKEN);
-      window.localStorage.removeItem(STORAGE_KEYS.USER);
-      window.sessionStorage.removeItem(STORAGE_KEYS.TOKEN);
-      window.sessionStorage.removeItem(STORAGE_KEYS.USER);
-    },
   },
 });
 
 const reducer = adminSlice.reducer;
 
-export const { setAppTheme, setAvailableThemes, setLocale, setToken, logout, login } =
-  adminSlice.actions;
+const { setAdminPermissions, setAppTheme, setAvailableThemes, setLocale } = adminSlice.actions;
 
-export { reducer, THEME_LOCAL_STORAGE_KEY, LANGUAGE_LOCAL_STORAGE_KEY };
+export {
+  reducer,
+  setAdminPermissions,
+  setAppTheme,
+  setAvailableThemes,
+  setLocale,
+  THEME_LOCAL_STORAGE_KEY,
+  LANGUAGE_LOCAL_STORAGE_KEY,
+};
 export type { AppState, ThemeName };

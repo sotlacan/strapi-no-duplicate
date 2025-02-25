@@ -1,17 +1,15 @@
-import { Box, Main, EmptyStateLayout, LinkButton } from '@strapi/design-system';
-import { ExternalLink } from '@strapi/icons';
-import { EmptyPermissions } from '@strapi/icons/symbols';
+import { Box, Layout, Main, HeaderLayout, EmptyStateLayout } from '@strapi/design-system';
+import { LinkButton } from '@strapi/design-system/v2';
+import { ExternalLink, EmptyPermissions } from '@strapi/icons';
 import { useIntl } from 'react-intl';
-
-import { Layouts } from '../../../components/Layouts/Layout';
 
 const PurchaseAuditLogs = () => {
   const { formatMessage } = useIntl();
 
   return (
-    <Layouts.Root>
+    <Layout>
       <Main>
-        <Layouts.Header
+        <HeaderLayout
           title={formatMessage({ id: 'global.auditLogs', defaultMessage: 'Audit Logs' })}
           subtitle={formatMessage({
             id: 'Settings.permissions.auditLogs.listview.header.subtitle',
@@ -20,7 +18,7 @@ const PurchaseAuditLogs = () => {
         />
         <Box paddingLeft={10} paddingRight={10}>
           <EmptyStateLayout
-            icon={<EmptyPermissions width="16rem" />}
+            icon={<EmptyPermissions width="10rem" />}
             content={formatMessage({
               id: 'Settings.permissions.auditLogs.not-available',
               defaultMessage:
@@ -30,7 +28,7 @@ const PurchaseAuditLogs = () => {
               <LinkButton
                 variant="default"
                 endIcon={<ExternalLink />}
-                href="https://strapi.io/features/audit-logs?utm_campaign=In-Product-CTA&utm_source=Audit-Logs"
+                href="https://strp.cc/45mbAdF"
                 isExternal
                 target="_blank"
               >
@@ -43,7 +41,7 @@ const PurchaseAuditLogs = () => {
           />
         </Box>
       </Main>
-    </Layouts.Root>
+    </Layout>
   );
 };
 

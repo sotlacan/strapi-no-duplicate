@@ -11,6 +11,9 @@ const crypto = require('crypto');
 const _ = require('lodash');
 const { concat, compact, isArray } = require('lodash/fp');
 const utils = require('@strapi/utils');
+const {
+  contentTypes: { getNonWritableAttributes },
+} = require('@strapi/utils');
 const { getService } = require('../utils');
 const {
   validateCallbackBody,
@@ -22,16 +25,17 @@ const {
   validateChangePasswordBody,
 } = require('./validation/auth');
 
+const { getAbsoluteAdminUrl, getAbsoluteServerUrl, sanitize } = utils;
 const { ApplicationError, ValidationError, ForbiddenError } = utils.errors;
 
 const sanitizeUser = (user, ctx) => {
   const { auth } = ctx.state;
   const userSchema = strapi.getModel('plugin::users-permissions.user');
 
-  return strapi.contentAPI.sanitize.output(user, userSchema, { auth });
+  return sanitize.contentAPI.output(user, userSchema, { auth });
 };
 
-module.exports = ({ strapi }) => ({
+module.exports = {
   async callback(ctx) {
     const provider = ctx.params.provider || 'local';
     const params = ctx.request.body;
@@ -51,7 +55,7 @@ module.exports = ({ strapi }) => ({
       const { identifier } = params;
 
       // Check if the user exists.
-      const user = await strapi.db.query('plugin::users-permissions.user').findOne({
+      const user = await strapi.query('plugin::users-permissions.user').findOne({
         where: {
           provider,
           $or: [{ email: identifier.toLowerCase() }, { username: identifier }],
@@ -114,16 +118,12 @@ module.exports = ({ strapi }) => ({
       throw new ApplicationError('You must be authenticated to reset your password');
     }
 
-    const validations = strapi.config.get('plugin::users-permissions.validationRules');
+    const { currentPassword, password } = await validateChangePasswordBody(ctx.request.body);
 
-    const { currentPassword, password } = await validateChangePasswordBody(
-      ctx.request.body,
-      validations
+    const user = await strapi.entityService.findOne(
+      'plugin::users-permissions.user',
+      ctx.state.user.id
     );
-
-    const user = await strapi.db
-      .query('plugin::users-permissions.user')
-      .findOne({ where: { id: ctx.state.user.id } });
 
     const validPassword = await getService('user').validatePassword(currentPassword, user.password);
 
@@ -144,18 +144,15 @@ module.exports = ({ strapi }) => ({
   },
 
   async resetPassword(ctx) {
-    const validations = strapi.config.get('plugin::users-permissions.validationRules');
-
     const { password, passwordConfirmation, code } = await validateResetPasswordBody(
-      ctx.request.body,
-      validations
+      ctx.request.body
     );
 
     if (password !== passwordConfirmation) {
       throw new ValidationError('Passwords do not match');
     }
 
-    const user = await strapi.db
+    const user = await strapi
       .query('plugin::users-permissions.user')
       .findOne({ where: { resetPasswordToken: code } });
 
@@ -176,7 +173,7 @@ module.exports = ({ strapi }) => ({
   },
 
   async connect(ctx, next) {
-    const grant = require('grant').koa();
+    const grant = require('grant-koa');
 
     const providers = await strapi
       .store({ type: 'plugin', name: 'users-permissions', key: 'grant' })
@@ -240,7 +237,7 @@ module.exports = ({ strapi }) => ({
     const advancedSettings = await pluginStore.get({ key: 'advanced' });
 
     // Find the user by email.
-    const user = await strapi.db
+    const user = await strapi
       .query('plugin::users-permissions.user')
       .findOne({ where: { email: email.toLowerCase() } });
 
@@ -258,8 +255,8 @@ module.exports = ({ strapi }) => ({
       resetPasswordSettings.message,
       {
         URL: advancedSettings.email_reset_password,
-        SERVER_URL: strapi.config.get('server.absoluteUrl'),
-        ADMIN_URL: strapi.config.get('admin.absoluteUrl'),
+        SERVER_URL: getAbsoluteServerUrl(strapi.config),
+        ADMIN_URL: getAbsoluteAdminUrl(strapi.config),
         USER: userInfo,
         TOKEN: resetPasswordToken,
       }
@@ -302,32 +299,55 @@ module.exports = ({ strapi }) => ({
       throw new ApplicationError('Register action is currently disabled');
     }
 
-    const { register } = strapi.config.get('plugin::users-permissions');
+    const { register } = strapi.config.get('plugin.users-permissions');
     const alwaysAllowedKeys = ['username', 'password', 'email'];
+    const userModel = strapi.contentTypes['plugin::users-permissions.user'];
+    const { attributes } = userModel;
 
-    // Note that we intentionally do not filter allowedFields to allow a project to explicitly accept private or other Strapi field on registration
+    const nonWritable = getNonWritableAttributes(userModel);
+
     const allowedKeys = compact(
-      concat(alwaysAllowedKeys, isArray(register?.allowedFields) ? register.allowedFields : [])
+      concat(
+        alwaysAllowedKeys,
+        isArray(register?.allowedFields)
+          ? // Note that we do not filter allowedFields in case a user explicitly chooses to allow a private or otherwise omitted field on registration
+            register.allowedFields // if null or undefined, compact will remove it
+          : // to prevent breaking changes, if allowedFields is not set in config, we only remove private and known dangerous user schema fields
+            // TODO V5: allowedFields defaults to [] when undefined and remove this case
+            Object.keys(attributes).filter(
+              (key) =>
+                !nonWritable.includes(key) &&
+                !attributes[key].private &&
+                ![
+                  // many of these are included in nonWritable, but we'll list them again to be safe and since we're removing this code in v5 anyway
+                  // Strapi user schema fields
+                  'confirmed',
+                  'blocked',
+                  'confirmationToken',
+                  'resetPasswordToken',
+                  'provider',
+                  'id',
+                  'role',
+                  // other Strapi fields that might be added
+                  'createdAt',
+                  'updatedAt',
+                  'createdBy',
+                  'updatedBy',
+                  'publishedAt', // d&p
+                  'strapi_reviewWorkflows_stage', // review workflows
+                ].includes(key)
+            )
+      )
     );
-
-    // Check if there are any keys in requestBody that are not in allowedKeys
-    const invalidKeys = Object.keys(ctx.request.body).filter((key) => !allowedKeys.includes(key));
-
-    if (invalidKeys.length > 0) {
-      // If there are invalid keys, throw an error
-      throw new ValidationError(`Invalid parameters: ${invalidKeys.join(', ')}`);
-    }
 
     const params = {
       ..._.pick(ctx.request.body, allowedKeys),
       provider: 'local',
     };
 
-    const validations = strapi.config.get('plugin::users-permissions.validationRules');
+    await validateRegisterBody(params);
 
-    await validateRegisterBody(params, validations);
-
-    const role = await strapi.db
+    const role = await strapi
       .query('plugin::users-permissions.role')
       .findOne({ where: { type: settings.default_role } });
 
@@ -346,7 +366,7 @@ module.exports = ({ strapi }) => ({
       ],
     };
 
-    const conflictingUserCount = await strapi.db.query('plugin::users-permissions.user').count({
+    const conflictingUserCount = await strapi.query('plugin::users-permissions.user').count({
       where: { ...identifierFilter, provider },
     });
 
@@ -355,7 +375,7 @@ module.exports = ({ strapi }) => ({
     }
 
     if (settings.unique_email) {
-      const conflictingUserCount = await strapi.db.query('plugin::users-permissions.user').count({
+      const conflictingUserCount = await strapi.query('plugin::users-permissions.user').count({
         where: { ...identifierFilter },
       });
 
@@ -380,8 +400,7 @@ module.exports = ({ strapi }) => ({
       try {
         await getService('user').sendConfirmationEmail(sanitizedUser);
       } catch (err) {
-        strapi.log.error(err);
-        throw new ApplicationError('Error sending confirmation email');
+        throw new ApplicationError(err.message);
       }
 
       return ctx.send({ user: sanitizedUser });
@@ -426,7 +445,7 @@ module.exports = ({ strapi }) => ({
   async sendEmailConfirmation(ctx) {
     const { email } = await validateSendEmailConfirmationBody(ctx.request.body);
 
-    const user = await strapi.db.query('plugin::users-permissions.user').findOne({
+    const user = await strapi.query('plugin::users-permissions.user').findOne({
       where: { email: email.toLowerCase() },
     });
 
@@ -449,4 +468,4 @@ module.exports = ({ strapi }) => ({
       sent: true,
     });
   },
-});
+};

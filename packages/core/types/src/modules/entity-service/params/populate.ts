@@ -1,8 +1,4 @@
-import type * as Schema from '../../../schema';
-
-import type * as UID from '../../../uid';
-import type { Constants, Guard, If, And, DoesNotExtends, IsNotNever, XOR } from '../../../utils';
-
+import type { Attribute, Common, Utils } from '../../../types';
 import type { Params } from '..';
 
 /**
@@ -22,10 +18,10 @@ export type WildcardNotation = '*';
  * type D = 'populatableField'; // ✅
  * type E = '<random_string>'; // ❌
  */
-export type StringNotation<TSchemaUID extends UID.Schema> =
+export type StringNotation<TSchemaUID extends Common.UID.Schema> =
   | WildcardNotation
   // Populatable keys
-  | Guard.Never<Schema.PopulatableAttributeNames<TSchemaUID>, string>
+  | Utils.Guard.Never<Attribute.GetPopulatableKeys<TSchemaUID>, string>
   // Other string notations
   // Those are not computed as it would break the TS parser for schemas with lots of populatable attributes
   | `${string},${string}`
@@ -41,35 +37,33 @@ export type StringNotation<TSchemaUID extends UID.Schema> =
  * type D = ['<random_string>']; // ❌
  * type E = ['*']; // ❌
  */
-export type ArrayNotation<TSchemaUID extends UID.Schema> = Exclude<
+export type ArrayNotation<TSchemaUID extends Common.UID.Schema> = Exclude<
   StringNotation<TSchemaUID>,
   WildcardNotation
 >[];
 
-type GetPopulatableKeysWithTarget<TSchemaUID extends UID.Schema> = Extract<
-  Schema.PopulatableAttributeNames<TSchemaUID>,
-  Schema.AttributeNamesWithTarget<TSchemaUID>
+type GetPopulatableKeysWithTarget<TSchemaUID extends Common.UID.Schema> = Extract<
+  Attribute.GetPopulatableKeys<TSchemaUID>,
+  Attribute.GetKeysWithTarget<TSchemaUID>
 >;
 
-type GetPopulatableKeysWithoutTarget<TSchemaUID extends UID.Schema> = Exclude<
-  Schema.PopulatableAttributeNames<TSchemaUID>,
+type GetPopulatableKeysWithoutTarget<TSchemaUID extends Common.UID.Schema> = Exclude<
+  Attribute.GetPopulatableKeys<TSchemaUID>,
   GetPopulatableKeysWithTarget<TSchemaUID>
 >;
 
 /**
  * Fragment populate notation for polymorphic attributes
  */
-export type Fragment<TMaybeTargets extends UID.Schema> = {
-  on?: { [TKey in TMaybeTargets]?: boolean | NestedParams<TKey> };
+export type Fragment<TMaybeTargets extends Common.UID.Schema> = {
+  on?: { [TSchemaUID in TMaybeTargets]?: boolean | NestedParams<TSchemaUID> };
 };
 
 type PopulateClause<
-  TSchemaUID extends UID.Schema,
-  TKeys extends Schema.PopulatableAttributeNames<TSchemaUID>,
+  TSchemaUID extends Common.UID.Schema,
+  TKeys extends Attribute.GetPopulatableKeys<TSchemaUID>
 > = {
-  [TKey in TKeys]?:
-    | boolean
-    | NestedParams<Schema.Attribute.Target<Schema.AttributeByName<TSchemaUID, TKey>>>;
+  [TKey in TKeys]?: boolean | NestedParams<Attribute.GetTarget<TSchemaUID, TKey>>;
 };
 
 /**
@@ -81,52 +75,56 @@ type PopulateClause<
  * type C = { populatableField: { populate: { nestedPopulatableField: true } } }; // ✅
  * type D = { dynamic_zone: { on: { comp_A: { fields: ['name', 'price_a'] }, comp_B: { fields: ['name', 'price_b'] } } } }; // ✅
  */
-export type ObjectNotation<TSchemaUID extends UID.Schema> = [
+export type ObjectNotation<TSchemaUID extends Common.UID.Schema> = [
   GetPopulatableKeysWithTarget<TSchemaUID>,
-  GetPopulatableKeysWithoutTarget<TSchemaUID>,
+  GetPopulatableKeysWithoutTarget<TSchemaUID>
 ] extends [
-  infer TKeysWithTarget extends Schema.PopulatableAttributeNames<TSchemaUID>,
-  infer TKeysWithoutTarget extends Schema.PopulatableAttributeNames<TSchemaUID>,
+  infer TKeysWithTarget extends Attribute.GetPopulatableKeys<TSchemaUID>,
+  infer TKeysWithoutTarget extends Attribute.GetPopulatableKeys<TSchemaUID>
 ]
-  ? If<
-      And<
-        Constants.AreSchemaRegistriesExtended,
-        // If TSchemaUID === UID.Schema, then ignore it and move to loose types
-        // Note: Currently, this only ignores TSchemaUID when it is equal to UID.Schema, it won't work if UID.(ContentType|Component) is passed as parameter
-        DoesNotExtends<UID.Schema, TSchemaUID>
+  ? Utils.Expression.If<
+      Utils.Expression.And<
+        Common.AreSchemaRegistriesExtended,
+        // If TSchemaUID === Common.UID.Schema, then ignore it and move to loose types
+        // Note: Currently, this only ignores TSchemaUID when it is equal to Common.UID.Schema, it won't work if Common.UID.(ContentType|Component) is passed as parameter
+        Utils.Expression.DoesNotExtends<Common.UID.Schema, TSchemaUID>
       >,
       // Populatable keys with a target
-      | If<IsNotNever<TKeysWithTarget>, PopulateClause<TSchemaUID, TKeysWithTarget>>
+      | Utils.Expression.If<
+          Utils.Expression.IsNotNever<TKeysWithTarget>,
+          PopulateClause<TSchemaUID, TKeysWithTarget>
+        >
       // Populatable keys with either zero or multiple target(s)
-      | If<
-          IsNotNever<TKeysWithoutTarget>,
+      | Utils.Expression.If<
+          Utils.Expression.IsNotNever<TKeysWithoutTarget>,
           {
             [TKey in TKeysWithoutTarget]?:
               | boolean
               | Fragment<
-                  Guard.Never<
-                    Schema.Attribute.MorphTargets<Schema.AttributeByName<TSchemaUID, TKey>>,
-                    UID.Schema
-                  >
-                >;
+                  Utils.Guard.Never<Attribute.GetMorphTargets<TSchemaUID, TKey>, Common.UID.Schema>
+                >
+              // TODO: V5: Remove root-level nested params for morph data structures and only allow fragments
+              | NestedParams<Common.UID.Schema>;
           }
         >,
       // Loose fallback when registries are not extended
-      {
-        [key: string]:
-          | boolean
-          // We can't have both populate fragments and nested params, hence the xor
-          | XOR<NestedParams<UID.Schema>, Fragment<UID.Schema>>;
-      }
+      | { [TKey in string]?: boolean | NestedParams<Common.UID.Schema> }
+      | {
+          [TKey in string]?:
+            | boolean
+            | Fragment<Common.UID.Schema>
+            // TODO: V5: Remove root-level nested params for morph data structures and only allow fragments
+            | NestedParams<Common.UID.Schema>;
+        }
     >
   : never;
 
-export type NestedParams<TSchemaUID extends UID.Schema> = Params.Pick<
+export type NestedParams<TSchemaUID extends Common.UID.Schema> = Params.Pick<
   TSchemaUID,
-  'fields' | 'filters' | 'populate' | 'sort' | 'plugin'
+  'fields' | 'filters' | 'populate' | 'sort' | 'plugin' | 'publicationState'
 >;
 
-export type Any<TSchemaUID extends UID.Schema> =
+export type Any<TSchemaUID extends Common.UID.Schema> =
   | StringNotation<TSchemaUID>
   | ArrayNotation<TSchemaUID>
   | ObjectNotation<TSchemaUID>;

@@ -1,6 +1,5 @@
-import { PuzzlePiece } from '@strapi/icons';
-
-import { prefixPluginTranslations } from './utils/prefixPluginTranslations';
+import { prefixPluginTranslations } from '@strapi/helper-plugin';
+import PluginIcon from './components/PluginIcon';
 import pluginPkg from '../../package.json';
 import pluginId from './pluginId';
 
@@ -9,13 +8,17 @@ const name = pluginPkg.strapi.name;
 export default {
   register(app) {
     app.addMenuLink({
-      to: `plugins/${pluginId}`,
-      icon: PuzzlePiece,
+      to: `/plugins/${pluginId}`,
+      icon: PluginIcon,
       intlLabel: {
         id: `${pluginId}.plugin.name`,
         defaultMessage: 'My plugin',
       },
-      Component: () => import('./pages/App'),
+      Component: async () => {
+        const component = await import('./pages/App');
+
+        return component;
+      },
       permissions: [],
     });
 
@@ -58,7 +61,7 @@ export default {
           defaultMessage: `custom${upcasedType}`,
         },
         components: {
-          Input: PuzzlePiece,
+          Input: async () => import('./components/PluginIcon'),
         },
       };
 

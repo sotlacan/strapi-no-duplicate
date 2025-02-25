@@ -1,8 +1,8 @@
-import type { UID, Modules } from '@strapi/types';
+import { EntityService, Common } from '@strapi/types';
 
 import { errors } from '@strapi/utils';
 
-type Entity = Modules.EntityService.Result<UID.Schema>;
+type Entity = EntityService.Result<Common.UID.Schema>;
 
 /**
  * POST /uid/generate
@@ -14,9 +14,7 @@ export declare namespace GenerateUID {
       data: Entity;
       field: string;
     };
-    query: {
-      locale?: string | null;
-    };
+    query: {};
   }
   export interface Response {
     data: string;
@@ -34,9 +32,7 @@ export declare namespace CheckUIDAvailability {
       field: string;
       value: string;
     };
-    query: {
-      locale?: string | null;
-    };
+    query: {};
   }
   export type Response =
     | {

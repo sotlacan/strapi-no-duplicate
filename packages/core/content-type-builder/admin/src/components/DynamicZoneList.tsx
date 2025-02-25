@@ -1,9 +1,10 @@
 import { useState } from 'react';
 
 import { Box, Flex, Typography } from '@strapi/design-system';
+import { pxToRem } from '@strapi/helper-plugin';
 import { Plus } from '@strapi/icons';
 import { useIntl } from 'react-intl';
-import { styled } from 'styled-components';
+import styled from 'styled-components';
 
 import { useDataManager } from '../hooks/useDataManager';
 import { getTrad } from '../utils/getTrad';
@@ -12,21 +13,21 @@ import { ComponentCard } from './ComponentCard';
 import { ComponentList } from './ComponentList';
 import { Tr } from './Tr';
 
-import type { Internal } from '@strapi/types';
+import type { UID } from '@strapi/types';
 
 interface DynamicZoneListProps {
   addComponent: (name?: string) => void;
   components: Array<string>;
   customRowComponent?: () => void;
   name?: string;
-  targetUid: Internal.UID.Component;
+  targetUid: UID.Component;
 }
 
 const StyledAddIcon = styled(Plus)`
-  width: 3.2rem;
-  height: 3.2rem;
-  padding: 0.9rem;
-  border-radius: 6.4rem;
+  width: ${pxToRem(32)};
+  height: ${pxToRem(32)};
+  padding: ${pxToRem(9)};
+  border-radius: ${pxToRem(64)};
   background: ${({ theme }) => theme.colors.primary100};
   path {
     fill: ${({ theme }) => theme.colors.primary600};
@@ -34,7 +35,7 @@ const StyledAddIcon = styled(Plus)`
 `;
 
 const FixedBox = styled(Box)`
-  height: 9rem;
+  height: ${pxToRem(90)};
   position: absolute;
   width: 100%;
   top: 0;
@@ -47,13 +48,13 @@ const ScrollableStack = styled(Flex)`
 `;
 
 const ComponentContentBox = styled(Box)`
-  padding-top: 9rem;
+  padding-top: ${pxToRem(90)};
 `;
 
 const ComponentStack = styled(Flex)`
   flex-shrink: 0;
-  width: 14rem;
-  height: 8rem;
+  width: ${pxToRem(140)};
+  height: ${pxToRem(80)};
   justify-content: center;
   align-items: center;
 `;
@@ -80,7 +81,7 @@ export const DynamicZoneList = ({
   };
 
   return (
-    <Tr className="dynamiczone-row" $isFromDynamicZone>
+    <Tr className="dynamiczone-row" isFromDynamicZone>
       <td colSpan={12}>
         <FixedBox paddingLeft={8}>
           <ScrollableStack gap={2}>

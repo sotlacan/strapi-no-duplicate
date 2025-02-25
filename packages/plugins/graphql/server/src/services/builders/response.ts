@@ -12,14 +12,14 @@ export default ({ strapi }: Context) => {
      */
     buildResponseDefinition(contentType: Schema.ContentType) {
       const name = naming.getEntityResponseName(contentType);
-      const typeName = naming.getTypeName(contentType);
+      const entityName = naming.getEntityName(contentType);
 
       return objectType({
         name,
 
         definition(t) {
           t.field('data', {
-            type: typeName,
+            type: entityName,
 
             resolve: prop('value'),
           });

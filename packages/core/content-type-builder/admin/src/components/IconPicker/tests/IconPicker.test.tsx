@@ -1,4 +1,4 @@
-import { DesignSystemProvider } from '@strapi/design-system';
+import { lightTheme, ThemeProvider } from '@strapi/design-system';
 import { fireEvent, render } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { IntlProvider } from 'react-intl';
@@ -22,9 +22,9 @@ const setup = (props?: Partial<IconPickerProps>) => {
     ...render(<IconPicker {...defaultProps} {...props} />, {
       wrapper: ({ children }) => (
         <IntlProvider locale="en" defaultLocale="en">
-          <DesignSystemProvider>
+          <ThemeProvider theme={lightTheme}>
             <MemoryRouter>{children}</MemoryRouter>
-          </DesignSystemProvider>
+          </ThemeProvider>
         </IntlProvider>
       ),
     }),
@@ -70,9 +70,9 @@ describe('IconPicker', () => {
 
   it('should call onChange with an empty string when clicking on the delete button', async () => {
     const onChangeMock = jest.fn();
-    const { user, getByRole } = setup({ value: 'calendar', onChange: onChangeMock });
+    const { user, getByText } = setup({ value: 'calendar', onChange: onChangeMock });
 
-    await user.click(getByRole('button', { name: 'Remove the selected icon' }));
+    await user.click(getByText('Remove the selected icon button'));
 
     expect(onChangeMock).toHaveBeenCalledWith({
       target: { name: 'componentToCreate.icon', value: '' },

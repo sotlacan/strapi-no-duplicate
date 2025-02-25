@@ -18,9 +18,8 @@ export default class SqliteDialect extends Dialect {
     this.schemaInspector = new SqliteSchemaInspector(db);
   }
 
-  configure(conn?: Knex.Sqlite3ConnectionConfig) {
-    const connection =
-      conn || (this.db.config.connection.connection as Knex.Sqlite3ConnectionConfig);
+  configure() {
+    const connection = this.db.config.connection.connection as Knex.Sqlite3ConnectionConfig;
     if (typeof connection !== 'string') {
       connection.filename = path.resolve(connection.filename);
     }
@@ -34,8 +33,8 @@ export default class SqliteDialect extends Dialect {
     return true;
   }
 
-  async initialize(nativeConnection: unknown) {
-    await this.db.connection.raw('pragma foreign_keys = on').connection(nativeConnection);
+  async initialize() {
+    await this.db.connection.raw('pragma foreign_keys = on');
   }
 
   canAlterConstraints() {

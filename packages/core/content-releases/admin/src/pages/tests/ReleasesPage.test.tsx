@@ -8,6 +8,11 @@ import { ReleasesPage } from '../ReleasesPage';
 
 import { mockReleasesPageData } from './mockReleasesPageData';
 
+jest.mock('@strapi/helper-plugin', () => ({
+  ...jest.requireActual('@strapi/helper-plugin'),
+  CheckPermissions: jest.fn(({ children }: { children: ReactNode }) => children),
+}));
+
 jest.mock('@strapi/admin/strapi-admin', () => ({
   ...jest.requireActual('@strapi/admin/strapi-admin'),
   useLicenseLimits: jest.fn().mockReturnValue({
@@ -75,11 +80,11 @@ describe('Releases home page', () => {
     const nextPageButton = screen.getByRole('link', { name: /go to next page/i });
     await user.click(nextPageButton);
 
-    const lastEntry = await screen.findByRole('heading', { level: 3, name: 'entry 17' });
+    const lastEntry = screen.getByRole('heading', { level: 3, name: 'entry 17' });
     expect(lastEntry).toBeInTheDocument();
 
     // Check if you reached the maximum number of releases for license
-    const newReleaseButton = await screen.findByRole('button', { name: /new release/i });
+    const newReleaseButton = screen.queryByRole('button', { name: /new release/i });
     expect(newReleaseButton).toBeDisabled();
     const limitReachedMessage = screen.getByText(/you have reached the 3 pending releases limit/i);
     expect(limitReachedMessage).toBeInTheDocument();

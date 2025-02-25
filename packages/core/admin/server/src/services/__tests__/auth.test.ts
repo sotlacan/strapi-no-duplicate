@@ -11,10 +11,8 @@ describe('Auth', () => {
       const findOne = jest.fn(() => Promise.resolve());
 
       global.strapi = {
-        db: {
-          query() {
-            return { findOne };
-          },
+        query() {
+          return { findOne };
         },
       } as any;
 
@@ -37,10 +35,8 @@ describe('Auth', () => {
       const findOne = jest.fn(() => Promise.resolve(user));
 
       global.strapi = {
-        db: {
-          query() {
-            return { findOne };
-          },
+        query() {
+          return { findOne };
         },
       } as any;
 
@@ -64,10 +60,8 @@ describe('Auth', () => {
       const findOne = jest.fn(() => Promise.resolve(user));
 
       global.strapi = {
-        db: {
-          query() {
-            return { findOne };
-          },
+        query() {
+          return { findOne };
         },
       } as any;
 
@@ -91,10 +85,8 @@ describe('Auth', () => {
       const findOne = jest.fn(() => Promise.resolve(user));
 
       global.strapi = {
-        db: {
-          query() {
-            return { findOne };
-          },
+        query() {
+          return { findOne };
         },
       } as any;
 
@@ -130,10 +122,8 @@ describe('Auth', () => {
       const findOne = jest.fn(() => Promise.resolve());
 
       global.strapi = {
-        db: {
-          query() {
-            return { findOne };
-          },
+        query() {
+          return { findOne };
         },
       } as any;
 
@@ -148,10 +138,8 @@ describe('Auth', () => {
       const send = jest.fn(() => Promise.resolve());
 
       global.strapi = {
-        db: {
-          query() {
-            return { findOne };
-          },
+        query() {
+          return { findOne };
         },
         plugins: {
           email: {
@@ -195,10 +183,8 @@ describe('Auth', () => {
             return _.get(path, def);
           },
         },
-        db: {
-          query() {
-            return { findOne };
-          },
+        query() {
+          return { findOne };
         },
         admin: { services: { user: { updateById }, token: { createToken } } },
         plugins: { email: { services: { email: { send, sendTemplatedEmail: send } } } },
@@ -239,10 +225,8 @@ describe('Auth', () => {
             return _.get(path, def);
           },
         },
-        db: {
-          query() {
-            return { findOne };
-          },
+        query() {
+          return { findOne };
         },
         admin: {
           services: {
@@ -268,10 +252,8 @@ describe('Auth', () => {
       const findOne = jest.fn(() => Promise.resolve());
 
       global.strapi = {
-        db: {
-          query() {
-            return { findOne };
-          },
+        query() {
+          return { findOne };
         },
       } as any;
 
@@ -291,10 +273,8 @@ describe('Auth', () => {
       const findOne = jest.fn(() => Promise.resolve());
 
       global.strapi = {
-        db: {
-          query() {
-            return { findOne };
-          },
+        query() {
+          return { findOne };
         },
       } as any;
 
@@ -315,10 +295,8 @@ describe('Auth', () => {
       const updateById = jest.fn(() => Promise.resolve());
 
       global.strapi = {
-        db: {
-          query() {
-            return { findOne };
-          },
+        query() {
+          return { findOne };
         },
         admin: { services: { user: { updateById } } },
       } as any;

@@ -9,6 +9,7 @@
     "name": "Category"
   },
   "options": {
+    "reviewWorkflows": true,
     "draftAndPublish": true
   },
   "pluginOptions": {
@@ -40,7 +41,7 @@
     "datetime": {
       "pluginOptions": {
         "i18n": {
-          "localized": false
+          "localized": true
         }
       },
       "type": "datetime"
@@ -58,12 +59,6 @@
       "relation": "manyToMany",
       "target": "api::relation-locale.relation-locale",
       "mappedBy": "categories"
-    },
-    "relation": {
-      "type": "relation",
-      "relation": "oneToOne",
-      "target": "api::relation-locale.relation-locale",
-      "mappedBy": "category"
     }
   }
 }

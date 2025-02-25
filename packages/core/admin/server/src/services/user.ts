@@ -1,8 +1,8 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 import _ from 'lodash';
 import { defaults } from 'lodash/fp';
-import { arrays, errors } from '@strapi/utils';
-import type { Data } from '@strapi/types';
+import { stringIncludes, errors } from '@strapi/utils';
+import { Entity } from '@strapi/types';
 import { createUser, hasSuperAdminRole } from '../domain/user';
 import type {
   AdminUser,
@@ -53,9 +53,7 @@ const create = async (
 
   const user = createUser(userInfo);
 
-  const createdUser = await strapi.db
-    .query('admin::user')
-    .create({ data: user, populate: ['roles'] });
+  const createdUser = await strapi.query('admin::user').create({ data: user, populate: ['roles'] });
 
   getService('metrics').sendDidInviteUser();
 
@@ -70,14 +68,14 @@ const create = async (
  * @param attributes A partial user object
  */
 const updateById = async (
-  id: Data.ID,
+  id: Entity.ID,
   attributes: Partial<AdminUserUpdatePayload>
 ): Promise<AdminUser> => {
   // Check at least one super admin remains
   if (_.has(attributes, 'roles')) {
     const lastAdminUser = await isLastSuperAdminUser(id);
     const superAdminRole = await getService('role').getSuperAdminWithUsersCount();
-    const willRemoveSuperAdminRole = !arrays.includesString(attributes.roles!, superAdminRole.id);
+    const willRemoveSuperAdminRole = !stringIncludes(attributes.roles!, superAdminRole.id);
 
     if (lastAdminUser && willRemoveSuperAdminRole) {
       throw new ValidationError('You must have at least one user with super admin role.');
@@ -96,7 +94,7 @@ const updateById = async (
   if (_.has(attributes, 'password')) {
     const hashedPassword = await getService('auth').hashPassword(attributes.password!);
 
-    const updatedUser = await strapi.db.query('admin::user').update({
+    const updatedUser = await strapi.query('admin::user').update({
       where: { id },
       data: {
         ...attributes,
@@ -110,7 +108,7 @@ const updateById = async (
     return updatedUser;
   }
 
-  const updatedUser = await strapi.db.query('admin::user').update({
+  const updatedUser = await strapi.query('admin::user').update({
     where: { id },
     data: attributes,
     populate: ['roles'],
@@ -129,9 +127,7 @@ const updateById = async (
  * @param password - new password
  */
 const resetPasswordByEmail = async (email: string, password: string) => {
-  const user = await strapi.db
-    .query('admin::user')
-    .findOne({ where: { email }, populate: ['roles'] });
+  const user = await strapi.query('admin::user').findOne({ where: { email }, populate: ['roles'] });
 
   if (!user) {
     throw new Error(`User not found for email: ${email}`);
@@ -152,7 +148,7 @@ const resetPasswordByEmail = async (email: string, password: string) => {
  * Check if a user is the last super admin
  * @param userId user's id to look for
  */
-const isLastSuperAdminUser = async (userId: Data.ID): Promise<boolean> => {
+const isLastSuperAdminUser = async (userId: Entity.ID): Promise<boolean> => {
   const user = (await findOne(userId)) as AdminUser | null;
   if (!user) return false;
 
@@ -166,7 +162,7 @@ const isLastSuperAdminUser = async (userId: Data.ID): Promise<boolean> => {
  * @param attributes A partial user object
  */
 const exists = async (attributes = {} as unknown): Promise<boolean> => {
-  return (await strapi.db.query('admin::user').count({ where: attributes })) > 0;
+  return (await strapi.query('admin::user').count({ where: attributes })) > 0;
 };
 
 /**
@@ -177,7 +173,7 @@ const exists = async (attributes = {} as unknown): Promise<boolean> => {
 const findRegistrationInfo = async (
   registrationToken: string
 ): Promise<Pick<AdminUser, 'email' | 'firstname' | 'lastname'> | undefined> => {
-  const user = await strapi.db.query('admin::user').findOne({ where: { registrationToken } });
+  const user = await strapi.query('admin::user').findOne({ where: { registrationToken } });
 
   if (!user) {
     return undefined;
@@ -199,9 +195,7 @@ const register = async ({
   registrationToken: string;
   userInfo: Partial<AdminUser>;
 }) => {
-  const matchingUser = await strapi.db
-    .query('admin::user')
-    .findOne({ where: { registrationToken } });
+  const matchingUser = await strapi.query('admin::user').findOne({ where: { registrationToken } });
 
   if (!matchingUser) {
     throw new ValidationError('Invalid registration info');
@@ -219,8 +213,9 @@ const register = async ({
 /**
  * Find one user
  */
-const findOne = async (id: Data.ID, populate = ['roles']) => {
-  return strapi.db.query('admin::user').findOne({ where: { id }, populate });
+const findOne = async (id: Entity.ID, populate = ['roles']) => {
+  // @ts-ignore - Migrate id type to StrapiID
+  return strapi.entityService.findOne('admin::user', id, { populate });
 };
 
 /**
@@ -230,32 +225,30 @@ const findOne = async (id: Data.ID, populate = ['roles']) => {
  * @returns
  */
 const findOneByEmail = async (email: string, populate = []) => {
-  return strapi.db.query('admin::user').findOne({
+  return strapi.query('admin::user').findOne({
     where: { email: { $eqi: email } },
     populate,
   });
 };
 
 /** Find many users (paginated)
- * @param params
+ * @param query
  */
-const findPage = async (params = {}): Promise<unknown> => {
-  const query = strapi
-    .get('query-params')
-    .transform('admin::user', defaults({ populate: ['roles'] }, params));
-
-  return strapi.db.query('admin::user').findPage(query);
+// TODO: TS - type find Page. At the moment, 'admin::user'is not being resolved by the ES type registry
+const findPage = async (query = {}): Promise<unknown> => {
+  const enrichedQuery = defaults({ populate: ['roles'] }, query);
+  return strapi.entityService.findPage('admin::user', enrichedQuery);
 };
 
 /** Delete a user
  * @param id id of the user to delete
  */
-const deleteById = async (id: Data.ID): Promise<AdminUser | null> => {
+const deleteById = async (id: Entity.ID): Promise<AdminUser | null> => {
   // Check at least one super admin remains
-  const userToDelete: AdminUser | null = await strapi.db.query('admin::user').findOne({
+  const userToDelete = (await strapi.query('admin::user').findOne({
     where: { id },
     populate: ['roles'],
-  });
+  })) as AdminUser | null;
 
   if (!userToDelete) {
     return null;
@@ -270,7 +263,7 @@ const deleteById = async (id: Data.ID): Promise<AdminUser | null> => {
     }
   }
 
-  const deletedUser = await strapi.db
+  const deletedUser = await strapi
     .query('admin::user')
     .delete({ where: { id }, populate: ['roles'] });
 
@@ -285,7 +278,7 @@ const deleteById = async (id: Data.ID): Promise<AdminUser | null> => {
 const deleteByIds = async (ids: (string | number)[]): Promise<AdminUser[]> => {
   // Check at least one super admin remains
   const superAdminRole = await getService('role').getSuperAdminWithUsersCount();
-  const nbOfSuperAdminToDelete = await strapi.db.query('admin::user').count({
+  const nbOfSuperAdminToDelete = await strapi.query('admin::user').count({
     where: {
       id: ids,
       roles: { id: superAdminRole.id },
@@ -298,7 +291,7 @@ const deleteByIds = async (ids: (string | number)[]): Promise<AdminUser[]> => {
 
   const deletedUsers = [] as AdminUser[];
   for (const id of ids) {
-    const deletedUser = await strapi.db.query('admin::user').delete({
+    const deletedUser = await strapi.query('admin::user').delete({
       where: { id },
       populate: ['roles'],
     });
@@ -316,7 +309,7 @@ const deleteByIds = async (ids: (string | number)[]): Promise<AdminUser[]> => {
 /** Count the users that don't have any associated roles
  */
 const countUsersWithoutRole = async (): Promise<number> => {
-  return strapi.db.query('admin::user').count({
+  return strapi.query('admin::user').count({
     where: {
       roles: {
         id: { $null: true },
@@ -330,14 +323,14 @@ const countUsersWithoutRole = async (): Promise<number> => {
  * @param params params used for the query
  */
 const count = async (where = {}): Promise<number> => {
-  return strapi.db.query('admin::user').count({ where });
+  return strapi.query('admin::user').count({ where });
 };
 
 /**
  * Assign some roles to several users
  */
-const assignARoleToAll = async (roleId: Data.ID): Promise<void> => {
-  const users = await strapi.db.query('admin::user').findMany({
+const assignARoleToAll = async (roleId: Entity.ID): Promise<void> => {
+  const users = await strapi.query('admin::user').findMany({
     select: ['id'],
     where: {
       roles: { id: { $null: true } },
@@ -346,7 +339,7 @@ const assignARoleToAll = async (roleId: Data.ID): Promise<void> => {
 
   await Promise.all(
     users.map((user) => {
-      return strapi.db.query('admin::user').update({
+      return strapi.query('admin::user').update({
         where: { id: user.id },
         data: { roles: [roleId] },
       });
@@ -367,7 +360,7 @@ const displayWarningIfUsersDontHaveRole = async (): Promise<void> => {
 /** Returns an array of interface languages currently used by users
  */
 const getLanguagesInUse = async (): Promise<string[]> => {
-  const users = await strapi.db.query('admin::user').findMany({ select: ['preferedLanguage'] });
+  const users = await strapi.query('admin::user').findMany({ select: ['preferedLanguage'] });
 
   return users.map((user) => user.preferedLanguage || 'en');
 };

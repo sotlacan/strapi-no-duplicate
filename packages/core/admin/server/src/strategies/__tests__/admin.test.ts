@@ -25,7 +25,7 @@ describe('Admin Auth Strategy', () => {
             permission: { engine: { generateUserAbility } },
           },
         },
-        db: { query: jest.fn(() => ({ findOne })) },
+        query: jest.fn(() => ({ findOne })),
       } as any;
 
       const response = await adminAuthStrategy.authenticate(ctx);
@@ -84,7 +84,7 @@ describe('Admin Auth Strategy', () => {
             token: { decodeJwtToken },
           },
         },
-        db: { query: jest.fn(() => ({ findOne })) },
+        query: jest.fn(() => ({ findOne })),
       } as any;
 
       const response = await adminAuthStrategy.authenticate(ctx);
@@ -105,7 +105,7 @@ describe('Admin Auth Strategy', () => {
             token: { decodeJwtToken },
           },
         },
-        db: { query: jest.fn(() => ({ findOne })) },
+        query: jest.fn(() => ({ findOne })),
       } as any;
 
       const response = await adminAuthStrategy.authenticate(ctx);

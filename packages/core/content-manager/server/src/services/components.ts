@@ -1,6 +1,6 @@
 import { has, isNil, mapValues } from 'lodash/fp';
 
-import type { UID, Struct, Core } from '@strapi/types';
+import { Strapi, UID, Schema } from '@strapi/types';
 import type { Configuration } from '../../../shared/contracts/content-types';
 import type { ConfigurationUpdate } from './configuration';
 
@@ -21,7 +21,7 @@ const configurationService = createConfigurationService({
   },
 });
 
-export default ({ strapi }: { strapi: Core.Strapi }) => ({
+export default ({ strapi }: { strapi: Strapi }) => ({
   findAllComponents() {
     const { toContentManagerModel } = getService('data-mapper');
 
@@ -36,7 +36,7 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
     return isNil(component) ? component : toContentManagerModel(component);
   },
 
-  async findConfiguration(component: Struct.ComponentSchema) {
+  async findConfiguration(component: Schema.Component) {
     const configuration: Configuration = await configurationService.getConfiguration(component.uid);
 
     return {
@@ -46,16 +46,13 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
     };
   },
 
-  async updateConfiguration(
-    component: Struct.ComponentSchema,
-    newConfiguration: ConfigurationUpdate
-  ) {
+  async updateConfiguration(component: Schema.Component, newConfiguration: ConfigurationUpdate) {
     await configurationService.setConfiguration(component.uid, newConfiguration);
 
     return this.findConfiguration(component);
   },
 
-  async findComponentsConfigurations(model: Struct.ComponentSchema) {
+  async findComponentsConfigurations(model: Schema.Component) {
     const componentsMap: Record<
       string,
       Configuration & { category: string; isComponent: boolean }

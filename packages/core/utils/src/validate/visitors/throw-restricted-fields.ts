@@ -1,12 +1,12 @@
 import { isArray, isString } from 'lodash/fp';
 import type { Visitor } from '../../traverse/factory';
-import { throwInvalidKey } from '../utils';
+import { throwInvalidParam } from '../utils';
 
 export default (restrictedFields: string[] | null = null): Visitor =>
   ({ key, path: { attribute: path } }) => {
     // all fields
     if (restrictedFields === null) {
-      throwInvalidKey({ key, path });
+      throwInvalidParam({ key });
     }
 
     // Throw on invalid formats
@@ -18,7 +18,7 @@ export default (restrictedFields: string[] | null = null): Visitor =>
 
     // if an exact match was found
     if (restrictedFields.includes(path as string)) {
-      throwInvalidKey({ key, path });
+      throwInvalidParam({ key });
     }
 
     // nested matches
@@ -26,6 +26,6 @@ export default (restrictedFields: string[] | null = null): Visitor =>
       path?.toString().startsWith(`${allowedPath}.`)
     );
     if (isRestrictedNested) {
-      throwInvalidKey({ key, path });
+      throwInvalidParam({ key });
     }
   };

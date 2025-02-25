@@ -1,9 +1,8 @@
 import { useNotifyAT } from '@strapi/design-system';
+import { useNotification } from '@strapi/helper-plugin';
 import * as qs from 'qs';
 import { useIntl } from 'react-intl';
 import { useQuery } from 'react-query';
-
-import { useNotification } from '../../../features/Notifications';
 
 import type { MarketplacePageQuery, NpmPackageType, TabQuery } from '../MarketplacePage';
 
@@ -14,7 +13,6 @@ interface UseMarketplaceDataParams {
   debouncedSearch: string;
   query?: MarketplacePageQuery;
   tabQuery: TabQuery;
-  strapiVersion?: string | null;
 }
 
 type Collections =
@@ -102,11 +100,10 @@ function useMarketplaceData({
   debouncedSearch,
   query,
   tabQuery,
-  strapiVersion,
 }: UseMarketplaceDataParams) {
   const { notifyStatus } = useNotifyAT();
   const { formatMessage } = useIntl();
-  const { toggleNotification } = useNotification();
+  const toggleNotification = useNotification();
   const marketplaceTitle = formatMessage({
     id: 'global.marketplace',
     defaultMessage: 'Marketplace',
@@ -133,7 +130,6 @@ function useMarketplaceData({
     ...tabQuery.plugin,
     pagination: paginationParams,
     search: debouncedSearch,
-    version: strapiVersion,
   };
 
   const { data: pluginsResponse, status: pluginsStatus } = useQuery(
@@ -148,6 +144,7 @@ function useMarketplaceData({
         }
 
         const data = (await res.json()) as MarketplaceResponse<Plugin>;
+
         return data;
       } catch (error) {
         // silence
@@ -161,8 +158,8 @@ function useMarketplaceData({
       },
       onError() {
         toggleNotification({
-          type: 'danger',
-          message: formatMessage({ id: 'notification.error', defaultMessage: 'An error occured' }),
+          type: 'warning',
+          message: { id: 'notification.error', defaultMessage: 'An error occured' },
         });
       },
     }
@@ -172,7 +169,6 @@ function useMarketplaceData({
     ...tabQuery.provider,
     pagination: paginationParams,
     search: debouncedSearch,
-    version: strapiVersion,
   };
 
   const { data: providersResponse, status: providersStatus } = useQuery(
@@ -195,8 +191,8 @@ function useMarketplaceData({
       },
       onError() {
         toggleNotification({
-          type: 'danger',
-          message: formatMessage({ id: 'notification.error', defaultMessage: 'An error occured' }),
+          type: 'warning',
+          message: { id: 'notification.error', defaultMessage: 'An error occured' },
         });
       },
     }

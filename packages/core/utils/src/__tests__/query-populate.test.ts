@@ -1,12 +1,24 @@
 import { traverseQueryPopulate } from '../traverse';
+import { setGlobalStrapi, getStrapiFactory } from './test-utils';
 
 describe('traverseQueryPopulate', () => {
-  global.strapi = {
-    getModel() {},
-  } as any;
+  test('should return an empty object incase no populatable field exists', async () => {
+    const query = await traverseQueryPopulate(jest.fn(), {
+      schema: {
+        kind: 'collectionType',
+        attributes: {
+          title: {
+            type: 'string',
+          },
+        },
+      },
+    })('*');
 
-  test('should not modify wildcard', async () => {
-    const strapi = {
+    expect(query).toEqual({});
+  });
+
+  test('should return all populatable fields', async () => {
+    const strapi = getStrapiFactory({
       getModel: jest.fn((uid) => {
         return {
           uid,
@@ -22,13 +34,14 @@ describe('traverseQueryPopulate', () => {
           get: jest.fn(() => ({
             columnToAttribute: {
               address: 'address',
+              some: 'some',
             },
           })),
         },
       },
-    } as any;
+    })();
 
-    global.strapi = strapi;
+    setGlobalStrapi(strapi);
 
     const query = await traverseQueryPopulate(jest.fn(), {
       schema: {
@@ -49,14 +62,13 @@ describe('traverseQueryPopulate', () => {
           },
         },
       },
-      getModel() {},
     })('*');
 
-    expect(query).toEqual('*');
+    expect(query).toEqual({ address: true, some: true });
   });
 
   test('should return only selected populatable field', async () => {
-    const strapi = {
+    const strapi = getStrapiFactory({
       getModel: jest.fn((uid) => {
         return {
           uid,
@@ -76,9 +88,9 @@ describe('traverseQueryPopulate', () => {
           })),
         },
       },
-    } as any;
+    })();
 
-    global.strapi = strapi;
+    setGlobalStrapi(strapi);
 
     const query = await traverseQueryPopulate(jest.fn(), {
       schema: {
@@ -99,21 +111,18 @@ describe('traverseQueryPopulate', () => {
           },
         },
       },
-      getModel() {},
     })('address');
 
     expect(query).toEqual('address');
   });
 
-  test('should work with filters attribute', async () => {
-    expect.assertions(5);
-
-    const strapi = {
+  test('should populate dynamiczone', async () => {
+    const strapi = getStrapiFactory({
       getModel: jest.fn((uid) => {
         return {
           uid,
           attributes: {
-            filters: {
+            street: {
               type: 'string',
             },
           },
@@ -128,49 +137,127 @@ describe('traverseQueryPopulate', () => {
           })),
         },
       },
-    } as any;
+    })();
 
-    global.strapi = strapi;
+    setGlobalStrapi(strapi);
 
-    const schema = {
-      kind: 'collectionType',
-      attributes: {
-        title: {
-          type: 'string',
-        },
-        address: {
-          type: 'relation',
-          relation: 'oneToOne',
-          target: 'api::address.address',
+    const query = await traverseQueryPopulate(jest.fn(), {
+      schema: {
+        kind: 'collectionType',
+        attributes: {
+          title: {
+            type: 'string',
+          },
+          address: {
+            type: 'relation',
+            relation: 'oneToOne',
+            target: 'api::address.address',
+          },
+          some: {
+            type: 'relation',
+            relation: 'ManyToMany',
+            target: 'api::some.some',
+          },
+          zone: {
+            type: 'dynamiczone',
+            components: ['blog.test-como', 'some.another-como'],
+          },
         },
       },
-    } as const;
+    })('*');
 
-    const ctx = {
-      schema,
-      getModel: strapi.getModel,
-    } as const;
+    expect(query).toEqual({
+      address: true,
+      some: true,
+      zone: true,
+    });
+  });
 
-    await traverseQueryPopulate(({ key, parent, attribute }) => {
-      switch (key) {
-        case 'address':
-          // top level populate should not have parent
-          expect(parent).toBeUndefined();
-          expect(attribute).toBeDefined();
-          break;
-        case 'filters':
-          // Parent information should be available
-          expect(parent.key).toBe('address');
-          expect(parent.attribute).not.toBeUndefined();
-          expect(attribute).toBeDefined();
-          break;
-        default:
-          break;
-      }
-    }, ctx)({
-      address: {
-        filters: {
-          name: 'test',
+  test('should deep populate dynamiczone components', async () => {
+    const strapi = getStrapiFactory({
+      getModel: jest.fn((uid) => {
+        if (uid === 'blog.test-como') {
+          return {
+            uid,
+            attributes: {
+              street: {
+                type: 'string',
+              },
+              address: {
+                type: 'relation',
+                relation: 'oneToOne',
+                target: 'api::address.address',
+              },
+            },
+          };
+        }
+        if (uid === 'some.another-como') {
+          return {
+            uid,
+            attributes: {
+              street: {
+                type: 'string',
+              },
+              some: {
+                type: 'relation',
+                relation: 'ManyToMany',
+                target: 'api::some.some',
+              },
+            },
+          };
+        }
+        return {
+          uid,
+          attributes: {
+            street: {
+              type: 'string',
+            },
+          },
+        };
+      }),
+      db: {
+        metadata: {
+          get: jest.fn(() => ({
+            columnToAttribute: {
+              address: 'address',
+            },
+          })),
+        },
+      },
+    })();
+
+    setGlobalStrapi(strapi);
+
+    const query = await traverseQueryPopulate(jest.fn(), {
+      schema: {
+        kind: 'collectionType',
+        attributes: {
+          title: {
+            type: 'string',
+          },
+          address: {
+            type: 'relation',
+            relation: 'oneToOne',
+            target: 'api::address.address',
+          },
+          some: {
+            type: 'relation',
+            relation: 'ManyToMany',
+            target: 'api::some.some',
+          },
+          zone: {
+            type: 'dynamiczone',
+            components: ['blog.test-como', 'some.another-como'],
+          },
+        },
+      },
+    })({ zone: { populate: '*' } });
+
+    expect(query).toEqual({
+      zone: {
+        populate: {
+          address: true,
+          some: true,
         },
       },
     });

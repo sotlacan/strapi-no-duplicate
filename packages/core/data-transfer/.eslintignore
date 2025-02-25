@@ -3,4 +3,3 @@ dist/
 .eslintrc.js
 jest.config.js
 coverage/
-rollup.config.mjs

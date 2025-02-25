@@ -5,17 +5,7 @@ const responseHandlers = require('./src/response-handlers');
 module.exports = [
   'strapi::logger',
   'strapi::errors',
-  {
-    name: 'strapi::security',
-    config: {
-      contentSecurityPolicy: {
-        useDefaults: true,
-        directives: {
-          'frame-src': ["'self'"], // URLs that will be loaded in an iframe (e.g. Content Preview)
-        },
-      },
-    },
-  },
+  'strapi::security',
   'strapi::cors',
   'strapi::poweredBy',
   'strapi::query',

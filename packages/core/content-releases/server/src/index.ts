@@ -7,8 +7,10 @@ import { services } from './services';
 import { controllers } from './controllers';
 import { routes } from './routes';
 
+const { features } = require('@strapi/strapi/dist/utils/ee');
+
 const getPlugin = () => {
-  if (strapi.ee.features.isEnabled('cms-content-releases')) {
+  if (features.isEnabled('cms-content-releases')) {
     return {
       register,
       bootstrap,

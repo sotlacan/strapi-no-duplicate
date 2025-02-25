@@ -1,4 +1,5 @@
-import { initialState, reducer, actions } from '../reducer';
+import { ADD_ATTRIBUTE } from '../constants';
+import { initialState, reducer } from '../reducer';
 
 import type { Component, ContentType } from '../../../types';
 
@@ -23,7 +24,8 @@ describe('CTB | components | DataManagerProvider | reducer | ADD_ATTRIBUTE', () 
         },
       };
 
-      const action = actions.addAttribute({
+      const action: any = {
+        type: ADD_ATTRIBUTE,
         attributeToSet: {
           type: 'string',
           name: 'name',
@@ -36,8 +38,9 @@ describe('CTB | components | DataManagerProvider | reducer | ADD_ATTRIBUTE', () 
         },
         forTarget: 'contentType',
         targetUid: 'api::address.address',
+        initialAttribute: {},
         shouldAddComponentToData: false,
-      });
+      };
 
       const expected = {
         ...initialState,
@@ -141,7 +144,8 @@ describe('CTB | components | DataManagerProvider | reducer | ADD_ATTRIBUTE', () 
         },
       };
 
-      const action = actions.addAttribute({
+      const action: any = {
+        type: ADD_ATTRIBUTE,
         attributeToSet: {
           name: 'test',
           type: 'integer',
@@ -152,8 +156,9 @@ describe('CTB | components | DataManagerProvider | reducer | ADD_ATTRIBUTE', () 
         },
         forTarget: 'components',
         targetUid: 'default.dish',
+        initialAttribute: {},
         shouldAddComponentToData: false,
-      });
+      };
 
       const expected = {
         ...initialState,
@@ -277,7 +282,8 @@ describe('CTB | components | DataManagerProvider | reducer | ADD_ATTRIBUTE', () 
         },
       };
 
-      const action = actions.addAttribute({
+      const action: any = {
+        type: ADD_ATTRIBUTE,
         attributeToSet: {
           type: 'component',
           repeatable: true,
@@ -289,8 +295,9 @@ describe('CTB | components | DataManagerProvider | reducer | ADD_ATTRIBUTE', () 
         },
         forTarget: 'contentType',
         targetUid: 'api::address.address',
+        initialAttribute: {},
         shouldAddComponentToData: true,
-      });
+      };
 
       const expected = {
         ...initialState,
@@ -457,7 +464,8 @@ describe('CTB | components | DataManagerProvider | reducer | ADD_ATTRIBUTE', () 
         },
       };
 
-      const action = actions.addAttribute({
+      const action: any = {
+        type: ADD_ATTRIBUTE,
         attributeToSet: {
           type: 'component',
           repeatable: true,
@@ -469,9 +477,9 @@ describe('CTB | components | DataManagerProvider | reducer | ADD_ATTRIBUTE', () 
         },
         forTarget: 'contentType',
         targetUid: 'api::address.address',
-
+        initialAttribute: {},
         shouldAddComponentToData: true,
-      });
+      };
 
       const expected = {
         ...initialState,
@@ -653,7 +661,8 @@ describe('CTB | components | DataManagerProvider | reducer | ADD_ATTRIBUTE', () 
         },
       };
 
-      const action = actions.addAttribute({
+      const action: any = {
+        type: ADD_ATTRIBUTE,
         attributeToSet: {
           type: 'component',
           repeatable: true,
@@ -665,8 +674,9 @@ describe('CTB | components | DataManagerProvider | reducer | ADD_ATTRIBUTE', () 
         },
         forTarget: 'contentType',
         targetUid: contentTypeUID,
+        initialAttribute: {},
         shouldAddComponentToData: true,
-      });
+      };
 
       const expected = {
         ...initialState,
@@ -759,7 +769,8 @@ describe('CTB | components | DataManagerProvider | reducer | ADD_ATTRIBUTE', () 
         },
       };
 
-      const action = actions.addAttribute({
+      const action: any = {
+        type: ADD_ATTRIBUTE,
         attributeToSet: {
           name: 'newCompo',
           type: 'component',
@@ -768,8 +779,9 @@ describe('CTB | components | DataManagerProvider | reducer | ADD_ATTRIBUTE', () 
         },
         forTarget: 'contentType',
         targetUid: contentTypeUID,
+        initialAttribute: undefined,
         shouldAddComponentToData: false,
-      });
+      };
 
       const expected = {
         ...initialState,
@@ -827,7 +839,8 @@ describe('CTB | components | DataManagerProvider | reducer | ADD_ATTRIBUTE', () 
         },
       };
 
-      const action = actions.addAttribute({
+      const action: any = {
+        type: ADD_ATTRIBUTE,
         attributeToSet: {
           type: 'dynamiczone',
           components: [],
@@ -835,9 +848,9 @@ describe('CTB | components | DataManagerProvider | reducer | ADD_ATTRIBUTE', () 
         },
         forTarget: 'contentType',
         targetUid: contentTypeUID,
-
+        initialAttribute: {},
         shouldAddComponentToData: false,
-      });
+      };
 
       const expected = {
         ...initialState,
@@ -915,7 +928,8 @@ describe('CTB | components | DataManagerProvider | reducer | ADD_ATTRIBUTE', () 
         },
       };
 
-      const action = actions.addAttribute({
+      const action: any = {
+        type: ADD_ATTRIBUTE,
         attributeToSet: {
           name: 'categories',
           relation: 'oneToMany',
@@ -925,8 +939,9 @@ describe('CTB | components | DataManagerProvider | reducer | ADD_ATTRIBUTE', () 
         },
         forTarget: 'contentType',
         targetUid: contentTypeUID,
+        initialAttribute: {},
         shouldAddComponentToData: false,
-      });
+      };
 
       const expected = {
         ...initialState,
@@ -1005,7 +1020,8 @@ describe('CTB | components | DataManagerProvider | reducer | ADD_ATTRIBUTE', () 
         },
       };
 
-      const action = actions.addAttribute({
+      const action: any = {
+        type: ADD_ATTRIBUTE,
         attributeToSet: {
           name: 'address',
           relation: 'oneToOne',
@@ -1015,8 +1031,9 @@ describe('CTB | components | DataManagerProvider | reducer | ADD_ATTRIBUTE', () 
         },
         forTarget: 'component',
         targetUid: componentUID,
+        initialAttribute: {},
         shouldAddComponentToData: false,
-      });
+      };
 
       const expected = {
         ...initialState,
@@ -1080,7 +1097,8 @@ describe('CTB | components | DataManagerProvider | reducer | ADD_ATTRIBUTE', () 
         },
       };
 
-      const action = actions.addAttribute({
+      const action: any = {
+        type: ADD_ATTRIBUTE,
         attributeToSet: {
           name: 'address',
           relation: 'oneToOne',
@@ -1091,8 +1109,9 @@ describe('CTB | components | DataManagerProvider | reducer | ADD_ATTRIBUTE', () 
         },
         forTarget: 'components',
         targetUid: componentUID,
+        initialAttribute: {},
         shouldAddComponentToData: false,
-      });
+      };
 
       const expected = {
         ...initialState,
@@ -1150,7 +1169,8 @@ describe('CTB | components | DataManagerProvider | reducer | ADD_ATTRIBUTE', () 
         },
       };
 
-      const action = actions.addAttribute({
+      const action: any = {
+        type: ADD_ATTRIBUTE,
         forTarget: 'contentType',
         targetUid: contentTypeUID,
         attributeToSet: {
@@ -1161,7 +1181,7 @@ describe('CTB | components | DataManagerProvider | reducer | ADD_ATTRIBUTE', () 
           type: 'relation',
         },
         shouldAddComponentToData: false,
-      });
+      };
 
       const expected = {
         ...initialState,
@@ -1214,7 +1234,8 @@ describe('CTB | components | DataManagerProvider | reducer | ADD_ATTRIBUTE', () 
         },
       };
 
-      const action = actions.addAttribute({
+      const action: any = {
+        type: ADD_ATTRIBUTE,
         forTarget: 'contentType',
         targetUid: contentTypeUID,
         attributeToSet: {
@@ -1225,7 +1246,7 @@ describe('CTB | components | DataManagerProvider | reducer | ADD_ATTRIBUTE', () 
           type: 'relation',
         },
         shouldAddComponentToData: false,
-      });
+      };
 
       const expected = {
         ...initialState,
@@ -1290,14 +1311,13 @@ describe('CTB | components | DataManagerProvider | reducer | ADD_ATTRIBUTE', () 
         target: contentTypeUID,
         type: 'relation',
       };
-
-      const action = actions.addAttribute({
+      const action: any = {
+        type: ADD_ATTRIBUTE,
         forTarget: 'contentType',
         targetUid: contentTypeUID,
         attributeToSet: attribute,
         shouldAddComponentToData: false,
-      });
-
+      };
       const oppositeAttribute = {
         name: targetAttribute,
         relation: 'oneToOne',
@@ -1358,14 +1378,13 @@ describe('CTB | components | DataManagerProvider | reducer | ADD_ATTRIBUTE', () 
         target: contentTypeUID,
         type: 'relation',
       };
-
-      const action = actions.addAttribute({
+      const action: any = {
+        type: ADD_ATTRIBUTE,
         forTarget: 'contentType',
         targetUid: contentTypeUID,
         attributeToSet: attribute,
         shouldAddComponentToData: false,
-      });
-
+      };
       const oppositeAttribute = {
         name: targetAttribute,
         relation: 'manyToOne',
@@ -1425,14 +1444,13 @@ describe('CTB | components | DataManagerProvider | reducer | ADD_ATTRIBUTE', () 
         target: contentTypeUID,
         type: 'relation',
       };
-
-      const action = actions.addAttribute({
+      const action: any = {
+        type: ADD_ATTRIBUTE,
         forTarget: 'contentType',
         targetUid: contentTypeUID,
         attributeToSet: attribute,
         shouldAddComponentToData: false,
-      });
-
+      };
       const oppositeAttribute = {
         name: targetAttribute,
         relation: 'oneToMany',
@@ -1492,14 +1510,13 @@ describe('CTB | components | DataManagerProvider | reducer | ADD_ATTRIBUTE', () 
         target: contentTypeUID,
         type: 'relation',
       };
-
-      const action = actions.addAttribute({
+      const action: any = {
+        type: ADD_ATTRIBUTE,
         forTarget: 'contentType',
         targetUid: contentTypeUID,
         attributeToSet: attribute,
         shouldAddComponentToData: false,
-      });
-
+      };
       const oppositeAttribute = {
         name: targetAttribute,
         relation: 'manyToMany',

@@ -451,7 +451,7 @@ const applyWhere = (qb: Knex.QueryBuilder, where: Where) => {
 
 const fieldLowerFn = (qb: Knex.QueryBuilder) => {
   // Postgres requires string to be passed
-  if (qb.client.dialect === 'postgresql') {
+  if (qb.client.config.client === 'postgres') {
     return 'LOWER(CAST(?? AS VARCHAR))';
   }
 

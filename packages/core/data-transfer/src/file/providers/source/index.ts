@@ -8,12 +8,12 @@ import tar from 'tar';
 import { isEmpty, keyBy } from 'lodash/fp';
 import { chain } from 'stream-chain';
 import { parser } from 'stream-json/jsonl/Parser';
-import type { Struct } from '@strapi/types';
+import type { Schema } from '@strapi/types';
 
 import type { IAsset, IMetadata, ISourceProvider, ProviderType, IFile } from '../../../../types';
-import type { IDiagnosticReporter } from '../../../utils/diagnostic';
 
-import * as utils from '../../../utils';
+import { createDecryptionCipher } from '../../../utils/encryption';
+import { collect } from '../../../utils/stream';
 import { ProviderInitializationError, ProviderTransferError } from '../../../errors/providers';
 import { isFilePathInDirname, isPathEquivalent, unknownPathToPosix } from './utils';
 
@@ -55,8 +55,6 @@ class LocalFileSourceProvider implements ISourceProvider {
 
   #metadata?: IMetadata;
 
-  #diagnostics?: IDiagnosticReporter;
-
   constructor(options: ILocalFileSourceProviderOptions) {
     this.options = options;
 
@@ -67,22 +65,10 @@ class LocalFileSourceProvider implements ISourceProvider {
     }
   }
 
-  #reportInfo(message: string) {
-    this.#diagnostics?.report({
-      details: {
-        createdAt: new Date(),
-        message,
-        origin: 'file-source-provider',
-      },
-      kind: 'info',
-    });
-  }
-
   /**
    * Pre flight checks regarding the provided options, making sure that the file can be opened (decrypted, decompressed), etc.
    */
-  async bootstrap(diagnostics: IDiagnosticReporter) {
-    this.#diagnostics = diagnostics;
+  async bootstrap() {
     const { path: filePath } = this.options.file;
 
     try {
@@ -114,7 +100,6 @@ class LocalFileSourceProvider implements ISourceProvider {
   }
 
   async getMetadata() {
-    this.#reportInfo('getting metadata');
     if (!this.#metadata) {
       await this.#loadMetadata();
     }
@@ -123,39 +108,28 @@ class LocalFileSourceProvider implements ISourceProvider {
   }
 
   async getSchemas() {
-    this.#reportInfo('getting schemas');
-    const schemaCollection = await utils.stream.collect<Struct.Schema>(
-      this.createSchemasReadStream()
-    );
+    const schemas = await collect<Schema.Schema>(this.createSchemasReadStream());
 
-    if (isEmpty(schemaCollection)) {
+    if (isEmpty(schemas)) {
       throw new ProviderInitializationError('Could not load schemas from Strapi data file.');
     }
 
-    // Group schema by UID
-    const schemas = keyBy('uid', schemaCollection);
-
-    // Transform to valid JSON
-    return utils.schema.schemasToValidJSON(schemas);
+    return keyBy('uid', schemas);
   }
 
   createEntitiesReadStream(): Readable {
-    this.#reportInfo('creating entities read stream');
     return this.#streamJsonlDirectory('entities');
   }
 
   createSchemasReadStream(): Readable {
-    this.#reportInfo('creating schemas read stream');
     return this.#streamJsonlDirectory('schemas');
   }
 
   createLinksReadStream(): Readable {
-    this.#reportInfo('creating links read stream');
     return this.#streamJsonlDirectory('links');
   }
 
   createConfigurationReadStream(): Readable {
-    this.#reportInfo('creating configuration read stream');
     // NOTE: TBD
     return this.#streamJsonlDirectory('configuration');
   }
@@ -164,7 +138,6 @@ class LocalFileSourceProvider implements ISourceProvider {
     const inStream = this.#getBackupStream();
     const outStream = new PassThrough({ objectMode: true });
     const loadAssetMetadata = this.#loadAssetMetadata.bind(this);
-    this.#reportInfo('creating assets read stream');
 
     pipeline(
       [
@@ -185,7 +158,9 @@ class LocalFileSourceProvider implements ISourceProvider {
             try {
               metadata = await loadAssetMetadata(`assets/metadata/${file}.json`);
             } catch (error) {
-              throw new Error(`Failed to read metadata for ${file}`);
+              console.warn(
+                ` Failed to read metadata for ${file}, Strapi will try to fix this issue automatically`
+              );
             }
             const asset: IAsset = {
               metadata,
@@ -216,7 +191,7 @@ class LocalFileSourceProvider implements ISourceProvider {
     }
 
     if (encryption.enabled && encryption.key) {
-      streams.push(utils.encryption.createDecryptionCipher(encryption.key));
+      streams.push(createDecryptionCipher(encryption.key));
     }
 
     if (compression.enabled) {

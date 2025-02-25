@@ -1,55 +1,74 @@
 import * as React from 'react';
 
+import { Button, ContentLayout, EmptyStateLayout, HeaderLayout, Main } from '@strapi/design-system';
 import {
-  Page,
-  useAPIErrorHandler,
-  useNotification,
+  CheckPagePermissions,
+  LoadingIndicatorPage,
+  useFocusWhenNavigate,
   useRBAC,
-  Layouts,
-} from '@strapi/admin/strapi-admin';
-import { EmptyStateLayout } from '@strapi/design-system';
-import { EmptyDocuments } from '@strapi/icons/symbols';
+} from '@strapi/helper-plugin';
+import { EmptyDocuments, Plus } from '@strapi/icons';
 import { useIntl } from 'react-intl';
 
-import { CreateLocale } from '../components/CreateLocale';
-import { LocaleTable } from '../components/LocaleTable';
+import { CreateModal } from '../components/CreateModal';
+import { DeleteModal } from '../components/DeleteModal';
+import { EditModal } from '../components/EditModal';
+import { LocaleTable, LocaleTableProps } from '../components/LocaleTable';
 import { PERMISSIONS } from '../constants';
-import { useGetLocalesQuery } from '../services/locales';
+import { useLocales } from '../hooks/useLocales';
+import { Locale } from '../store/reducers';
 import { getTranslation } from '../utils/getTranslation';
 
 const SettingsPage = () => {
+  const [isOpenedCreateModal, setIsOpenedCreateModal] = React.useState(false);
+  const [localeToDelete, setLocaleToDelete] = React.useState<Locale>();
+  const [localeToEdit, setLocaleToEdit] = React.useState<Locale>();
+  const { locales } = useLocales();
   const { formatMessage } = useIntl();
-  const { toggleNotification } = useNotification();
-  const { _unstableFormatAPIError: formatAPIError } = useAPIErrorHandler();
-  const { data: locales, isLoading: isLoadingLocales, error } = useGetLocalesQuery();
+
   const {
-    isLoading: isLoadingRBAC,
+    isLoading,
     allowedActions: { canUpdate, canCreate, canDelete },
   } = useRBAC(PERMISSIONS);
 
-  React.useEffect(() => {
-    if (error) {
-      toggleNotification({
-        type: 'danger',
-        message: formatAPIError(error),
-      });
-    }
-  }, [error, formatAPIError, toggleNotification]);
+  const handleToggleModalCreate = () => {
+    setIsOpenedCreateModal((s) => !s);
+  };
 
-  const isLoading = isLoadingLocales || isLoadingRBAC;
+  useFocusWhenNavigate();
+
+  // Delete actions
+  const closeModalToDelete = () => setLocaleToDelete(undefined);
+  const handleDeleteLocale: LocaleTableProps['onDeleteLocale'] = (locale) => {
+    setLocaleToDelete(locale);
+  };
+
+  // Edit actions
+  const closeModalToEdit = () => setLocaleToEdit(undefined);
+  const handleEditLocale: LocaleTableProps['onEditLocale'] = (locale) => {
+    setLocaleToEdit(locale);
+  };
 
   if (isLoading) {
-    return <Page.Loading />;
-  }
-
-  if (error || !Array.isArray(locales)) {
-    return <Page.Error />;
+    return <LoadingIndicatorPage />;
   }
 
   return (
-    <Page.Main tabIndex={-1}>
-      <Layouts.Header
-        primaryAction={<CreateLocale disabled={!canCreate} />}
+    <Main tabIndex={-1}>
+      <HeaderLayout
+        primaryAction={
+          <Button
+            disabled={!canCreate}
+            startIcon={<Plus />}
+            onClick={handleToggleModalCreate}
+            size="S"
+          >
+            {formatMessage({
+              id: getTranslation('Settings.list.actions.add'),
+              defaultMessage: 'Add new locale',
+            })}
+          </Button>
+        }
         title={formatMessage({
           id: getTranslation('plugin.name'),
           defaultMessage: 'Internationalization',
@@ -59,9 +78,15 @@ const SettingsPage = () => {
           defaultMessage: 'Configure the settings',
         })}
       />
-      <Layouts.Content>
-        {locales.length > 0 ? (
-          <LocaleTable locales={locales} canDelete={canDelete} canUpdate={canUpdate} />
+      <ContentLayout>
+        {locales?.length > 0 ? (
+          <LocaleTable
+            locales={locales}
+            canDelete={canDelete}
+            canEdit={canUpdate}
+            onDeleteLocale={handleDeleteLocale}
+            onEditLocale={handleEditLocale}
+          />
         ) : (
           <EmptyStateLayout
             icon={<EmptyDocuments width={undefined} height={undefined} />}
@@ -69,19 +94,37 @@ const SettingsPage = () => {
               id: getTranslation('Settings.list.empty.title'),
               defaultMessage: 'There are no locales',
             })}
-            action={<CreateLocale disabled={!canCreate} variant="secondary" />}
+            action={
+              <Button
+                disabled={!canCreate}
+                variant="secondary"
+                startIcon={<Plus />}
+                onClick={handleToggleModalCreate}
+              >
+                {formatMessage({
+                  id: getTranslation('Settings.list.actions.add'),
+                  defaultMessage: 'Add new locale',
+                })}
+              </Button>
+            }
           />
         )}
-      </Layouts.Content>
-    </Page.Main>
+      </ContentLayout>
+
+      {isOpenedCreateModal && <CreateModal onClose={handleToggleModalCreate} />}
+      {localeToEdit && <EditModal onClose={closeModalToEdit} locale={localeToEdit} />}
+      {localeToDelete && (
+        <DeleteModal localeToDelete={localeToDelete} onClose={closeModalToDelete} />
+      )}
+    </Main>
   );
 };
 
 const ProtectedSettingsPage = () => {
   return (
-    <Page.Protect permissions={PERMISSIONS.read}>
+    <CheckPagePermissions permissions={PERMISSIONS.read}>
       <SettingsPage />
-    </Page.Protect>
+    </CheckPagePermissions>
   );
 };
 

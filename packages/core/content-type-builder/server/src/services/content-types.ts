@@ -1,17 +1,17 @@
 import _ from 'lodash';
 import { getOr } from 'lodash/fp';
 import { contentTypes as contentTypesUtils, errors } from '@strapi/utils';
-import type { UID, Struct } from '@strapi/types';
+import type { Common, Schema } from '@strapi/types';
 import { formatAttributes, replaceTemporaryUIDs } from '../utils/attributes';
 import createBuilder from './schema-builder';
 import { coreUids, pluginsUids } from './constants';
 
 const { ApplicationError } = errors;
 
-export const isContentTypeVisible = (model: Struct.ContentTypeSchema) =>
+export const isContentTypeVisible = (model: Schema.ContentType) =>
   getOr(true, 'pluginOptions.content-type-builder.visible', model) === true;
 
-export const getRestrictRelationsTo = (contentType: Struct.ContentTypeSchema) => {
+export const getRestrictRelationsTo = (contentType: Schema.ContentType) => {
   const { uid } = contentType;
   if (uid === coreUids.STRAPI_USER) {
     // TODO: replace with an obj { relation: 'x', bidirectional: true|false }
@@ -57,7 +57,7 @@ export const formatContentType = (contentType: any) => {
 
 export const createContentTypes = async (contentTypes: any[]) => {
   const builder = createBuilder();
-  const createdContentTypes: any[] = [];
+  const createdContentTypes = [];
 
   for (const contentType of contentTypes) {
     createdContentTypes.push(await createContentType(contentType, { defaultBuilder: builder }));
@@ -156,7 +156,7 @@ export const generateAPI = ({
  * Edits a contentType and handle the nested contentTypes sent with it
  */
 export const editContentType = async (
-  uid: UID.ContentType,
+  uid: Common.UID.ContentType,
   { contentType, components = [] }: any
 ) => {
   const builder = createBuilder();
@@ -179,7 +179,7 @@ export const editContentType = async (
   contentType.attributes = _.merge(prevNonVisibleAttributes, contentType.attributes);
 
   if (newKind !== previousKind && newKind === 'singleType') {
-    const entryCount = await strapi.db.query(uid).count();
+    const entryCount = await strapi.query(uid).count();
     if (entryCount > 1) {
       throw new ApplicationError(
         'You cannot convert a collectionType to a singleType when having multiple entries in DB'
@@ -234,7 +234,7 @@ export const editContentType = async (
   return updatedContentType;
 };
 
-export const deleteContentTypes = async (uids: UID.ContentType[]) => {
+export const deleteContentTypes = async (uids: Common.UID.ContentType[]) => {
   const builder = createBuilder();
   const apiHandler = strapi.plugin('content-type-builder').service('api-handler');
 
@@ -256,7 +256,10 @@ export const deleteContentTypes = async (uids: UID.ContentType[]) => {
 /**
  * Deletes a content type and the api files related to it
  */
-export const deleteContentType = async (uid: UID.ContentType, defaultBuilder: any = undefined) => {
+export const deleteContentType = async (
+  uid: Common.UID.ContentType,
+  defaultBuilder: any = undefined
+) => {
   const builder = defaultBuilder || createBuilder();
   // make a backup
   const apiHandler = strapi.plugin('content-type-builder').service('api-handler');

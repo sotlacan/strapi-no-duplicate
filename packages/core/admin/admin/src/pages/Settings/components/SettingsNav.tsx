@@ -1,32 +1,30 @@
+import { Icon } from '@strapi/design-system';
 import {
   SubNav,
   SubNavHeader,
   SubNavLink,
   SubNavSection,
   SubNavSections,
-} from '@strapi/design-system';
+} from '@strapi/design-system/v2';
+import { useTracking } from '@strapi/helper-plugin';
 import { Lightning } from '@strapi/icons';
 import { useIntl } from 'react-intl';
 import { NavLink, useLocation } from 'react-router-dom';
-import { styled } from 'styled-components';
+import styled from 'styled-components';
 
-import { useTracking } from '../../../features/Tracking';
 import { SettingsMenu } from '../../../hooks/useSettingsMenu';
 
-const CustomIcon = styled(Lightning)`
+/**
+ * TODO: refactor the SubNav entirely, we shouldn't have
+ * to do this hack to work a lock at the end. It's a bit hacky.
+ */
+
+const CustomIcon = styled(Icon)`
   right: 15px;
   position: absolute;
-  bottom: 50%;
-  transform: translateY(50%);
 
   path {
     fill: ${({ theme }) => theme.colors.warning500};
-  }
-`;
-
-const Link = styled(SubNavLink)`
-  &.active ${CustomIcon} {
-    right: 13px;
   }
 `;
 
@@ -67,24 +65,29 @@ const SettingsNav = ({ menu }: SettingsNavProps) => {
   };
 
   return (
-    <SubNav aria-label={label}>
+    <SubNav ariaLabel={label}>
       <SubNavHeader label={label} />
       <SubNavSections>
         {sections.map((section) => (
           <SubNavSection key={section.id} label={formatMessage(section.intlLabel)}>
             {section.links.map((link) => {
               return (
-                <Link
-                  tag={NavLink}
+                <SubNavLink
+                  as={NavLink}
                   withBullet={link.hasNotification}
+                  // @ts-expect-error – this is an issue with the DS where as props are not inferred
                   to={link.to}
                   onClick={handleClickOnLink(link.to)}
                   key={link.id}
-                  position="relative"
                 >
                   {formatMessage(link.intlLabel)}
-                  {link?.licenseOnly && <CustomIcon width="1.5rem" height="1.5rem" />}
-                </Link>
+                  {
+                    // TODO: to replace with another name in v5
+                    link?.lockIcon && (
+                      <CustomIcon width={`${15 / 16}rem`} height={`${15 / 16}rem`} as={Lightning} />
+                    )
+                  }
+                </SubNavLink>
               );
             })}
           </SubNavSection>

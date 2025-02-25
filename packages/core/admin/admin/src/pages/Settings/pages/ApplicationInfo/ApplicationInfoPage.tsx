@@ -1,17 +1,31 @@
 import * as React from 'react';
 
-import { Box, Button, Flex, Grid, Link, Typography } from '@strapi/design-system';
+import {
+  Box,
+  Button,
+  ContentLayout,
+  Flex,
+  Grid,
+  GridItem,
+  HeaderLayout,
+  Layout,
+  Link,
+  Main,
+  Typography,
+} from '@strapi/design-system';
+import {
+  SettingsPageTitle,
+  useAppInfo,
+  useFocusWhenNavigate,
+  useRBAC,
+  useTracking,
+} from '@strapi/helper-plugin';
 import { Check, ExternalLink } from '@strapi/icons';
 import { useIntl } from 'react-intl';
 import { useSelector } from 'react-redux';
 
-import { Layouts } from '../../../../components/Layouts/Layout';
-import { Page } from '../../../../components/PageHelpers';
-import { useAppInfo } from '../../../../features/AppInfo';
 import { useConfiguration } from '../../../../features/Configuration';
-import { useTracking } from '../../../../features/Tracking';
 import { useEnterprise } from '../../../../hooks/useEnterprise';
-import { useRBAC } from '../../../../hooks/useRBAC';
 import { selectAdminPermissions } from '../../../../selectors';
 
 import { LogoInput, LogoInputProps } from './components/LogoInput';
@@ -30,14 +44,13 @@ const ApplicationInfoPage = () => {
   const [logos, setLogos] = React.useState({ menu: serverLogos.menu, auth: serverLogos.auth });
   const { settings } = useSelector(selectAdminPermissions);
 
-  const communityEdition = useAppInfo('ApplicationInfoPage', (state) => state.communityEdition);
-  const latestStrapiReleaseTag = useAppInfo(
-    'ApplicationInfoPage',
-    (state) => state.latestStrapiReleaseTag
-  );
-  const nodeVersion = useAppInfo('ApplicationInfoPage', (state) => state.nodeVersion);
-  const shouldUpdateStrapi = useAppInfo('ApplicationInfoPage', (state) => state.shouldUpdateStrapi);
-  const strapiVersion = useAppInfo('ApplicationInfoPage', (state) => state.strapiVersion);
+  const {
+    communityEdition,
+    latestStrapiReleaseTag,
+    nodeVersion,
+    shouldUpdateStrapi,
+    strapiVersion,
+  } = useAppInfo();
 
   const AdminSeatInfo = useEnterprise(
     AdminSeatInfoCE,
@@ -52,6 +65,8 @@ const ApplicationInfoPage = () => {
   const {
     allowedActions: { canRead, canUpdate },
   } = useRBAC(settings ? settings['project-settings'] : {});
+
+  useFocusWhenNavigate();
 
   const handleSubmit: React.FormEventHandler<HTMLFormElement> = (e) => {
     e.preventDefault();
@@ -99,21 +114,16 @@ const ApplicationInfoPage = () => {
     logos.auth.custom === serverLogos.auth.custom && logos.menu.custom === serverLogos.menu.custom;
 
   return (
-    <Layouts.Root>
-      <Page.Title>
-        {formatMessage(
-          { id: 'Settings.PageTitle', defaultMessage: 'Settings - {name}' },
-          {
-            name: formatMessage({
-              id: 'Settings.application.header',
-              defaultMessage: 'Application',
-            }),
-          }
-        )}
-      </Page.Title>
-      <Page.Main>
+    <Layout>
+      <SettingsPageTitle
+        name={formatMessage({
+          id: 'Settings.application.header',
+          defaultMessage: 'Application',
+        })}
+      />
+      <Main>
         <form onSubmit={handleSubmit}>
-          <Layouts.Header
+          <HeaderLayout
             title={formatMessage({
               id: 'Settings.application.title',
               defaultMessage: 'Overview',
@@ -130,7 +140,7 @@ const ApplicationInfoPage = () => {
               )
             }
           />
-          <Layouts.Content>
+          <ContentLayout>
             <Flex direction="column" alignItems="stretch" gap={6}>
               <Flex
                 direction="column"
@@ -144,22 +154,22 @@ const ApplicationInfoPage = () => {
                 paddingRight={7}
                 paddingLeft={7}
               >
-                <Typography variant="delta" tag="h3">
+                <Typography variant="delta" as="h3">
                   {formatMessage({
                     id: 'global.details',
                     defaultMessage: 'Details',
                   })}
                 </Typography>
 
-                <Grid.Root gap={5} tag="dl">
-                  <Grid.Item col={6} s={12} direction="column" alignItems="start">
-                    <Typography variant="sigma" textColor="neutral600" tag="dt">
+                <Grid gap={5} as="dl">
+                  <GridItem col={6} s={12}>
+                    <Typography variant="sigma" textColor="neutral600" as="dt">
                       {formatMessage({
                         id: 'Settings.application.strapiVersion',
                         defaultMessage: 'strapi version',
                       })}
                     </Typography>
-                    <Flex gap={3} direction="column" alignItems="start" tag="dd">
+                    <Flex gap={3} direction="column" alignItems="start" as="dd">
                       <Typography>v{strapiVersion}</Typography>
                       {shouldUpdateStrapi && (
                         <Link
@@ -173,15 +183,15 @@ const ApplicationInfoPage = () => {
                         </Link>
                       )}
                     </Flex>
-                  </Grid.Item>
-                  <Grid.Item col={6} s={12} direction="column" alignItems="start">
-                    <Typography variant="sigma" textColor="neutral600" tag="dt">
+                  </GridItem>
+                  <GridItem col={6} s={12}>
+                    <Typography variant="sigma" textColor="neutral600" as="dt">
                       {formatMessage({
                         id: 'Settings.application.edition-title',
-                        defaultMessage: 'current edition',
+                        defaultMessage: 'current plan',
                       })}
                     </Typography>
-                    <Flex gap={3} direction="column" alignItems="start" tag="dd">
+                    <Flex gap={3} direction="column" alignItems="start" as="dd">
                       <Typography>
                         {formatMessage(
                           {
@@ -199,19 +209,19 @@ const ApplicationInfoPage = () => {
                         })}
                       </Link>
                     </Flex>
-                  </Grid.Item>
+                  </GridItem>
 
-                  <Grid.Item col={6} s={12} direction="column" alignItems="start">
-                    <Typography variant="sigma" textColor="neutral600" tag="dt">
+                  <GridItem col={6} s={12}>
+                    <Typography variant="sigma" textColor="neutral600" as="dt">
                       {formatMessage({
                         id: 'Settings.application.node-version',
                         defaultMessage: 'node version',
                       })}
                     </Typography>
-                    <Typography tag="dd">{nodeVersion}</Typography>
-                  </Grid.Item>
+                    <Typography as="dd">{nodeVersion}</Typography>
+                  </GridItem>
                   <AdminSeatInfo />
-                </Grid.Root>
+                </Grid>
               </Flex>
               {canRead && (
                 <Box
@@ -223,7 +233,7 @@ const ApplicationInfoPage = () => {
                   paddingRight={7}
                   paddingLeft={7}
                 >
-                  <Typography variant="delta" tag="h3">
+                  <Typography variant="delta" as="h3">
                     {formatMessage({
                       id: 'Settings.application.customization',
                       defaultMessage: 'Customization',
@@ -239,8 +249,8 @@ const ApplicationInfoPage = () => {
                       { dimension: DIMENSION, size: SIZE }
                     )}
                   </Typography>
-                  <Grid.Root paddingTop={4} gap={4}>
-                    <Grid.Item col={6} s={12} direction="column" alignItems="stretch">
+                  <Grid paddingTop={4} gap={4}>
+                    <GridItem col={6} s={12}>
                       <LogoInput
                         canUpdate={canUpdate}
                         customLogo={logos.menu.custom}
@@ -255,8 +265,8 @@ const ApplicationInfoPage = () => {
                         })}
                         onChangeLogo={handleChangeLogo('menu')}
                       />
-                    </Grid.Item>
-                    <Grid.Item col={6} s={12} direction="column" alignItems="stretch">
+                    </GridItem>
+                    <GridItem col={6} s={12}>
                       <LogoInput
                         canUpdate={canUpdate}
                         customLogo={logos.auth.custom}
@@ -271,15 +281,15 @@ const ApplicationInfoPage = () => {
                         })}
                         onChangeLogo={handleChangeLogo('auth')}
                       />
-                    </Grid.Item>
-                  </Grid.Root>
+                    </GridItem>
+                  </Grid>
                 </Box>
               )}
             </Flex>
-          </Layouts.Content>
+          </ContentLayout>
         </form>
-      </Page.Main>
-    </Layouts.Root>
+      </Main>
+    </Layout>
   );
 };
 

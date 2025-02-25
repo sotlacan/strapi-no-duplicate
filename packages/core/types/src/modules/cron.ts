@@ -1,6 +1,6 @@
 import type { Job, Spec } from 'node-schedule';
 
-import type { Strapi } from '../core';
+import type { Strapi } from '..';
 
 interface JobSpec {
   job: Job;

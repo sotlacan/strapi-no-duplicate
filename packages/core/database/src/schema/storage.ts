@@ -24,12 +24,7 @@ export default (db: Database) => {
   };
 
   return {
-    async read(): Promise<{
-      id: number;
-      time: Date;
-      hash: string;
-      schema: Schema;
-    } | null> {
+    async read() {
       await checkTableExists();
 
       const res = await db

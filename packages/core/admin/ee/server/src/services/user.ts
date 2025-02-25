@@ -1,6 +1,7 @@
 import _ from 'lodash';
 import { pipe, map, castArray, toNumber } from 'lodash/fp';
-import { arrays, errors } from '@strapi/utils';
+import { stringIncludes } from '@strapi/utils';
+import { errors } from '@strapi/utils';
 import { hasSuperAdminRole } from '../../../../server/src/domain/user';
 import constants from '../../../../server/src/services/constants';
 import { getService } from '../utils';
@@ -69,7 +70,7 @@ const updateById = async (id: any, attributes: any) => {
   if (_.has(attributes, 'roles')) {
     const lastAdminUser = await isLastSuperAdminUser(id);
     const superAdminRole = await getService('role').getSuperAdminWithUsersCount();
-    const willRemoveSuperAdminRole = !arrays.includesString(attributes.roles, superAdminRole.id);
+    const willRemoveSuperAdminRole = !stringIncludes(attributes.roles, superAdminRole.id);
 
     if (lastAdminUser && willRemoveSuperAdminRole) {
       throw new ValidationError('You must have at least one user with super admin role.');
@@ -88,7 +89,7 @@ const updateById = async (id: any, attributes: any) => {
   if (_.has(attributes, 'password')) {
     const hashedPassword = await getService('auth').hashPassword(attributes.password);
 
-    const updatedUser = await strapi.db.query('admin::user').update({
+    const updatedUser = await strapi.query('admin::user').update({
       where: { id },
       data: {
         ...attributes,
@@ -102,7 +103,7 @@ const updateById = async (id: any, attributes: any) => {
     return updatedUser;
   }
 
-  const updatedUser = await strapi.db.query('admin::user').update({
+  const updatedUser = await strapi.query('admin::user').update({
     where: { id },
     data: attributes,
     populate: ['roles'],
@@ -123,7 +124,7 @@ const updateById = async (id: any, attributes: any) => {
  */
 const deleteById = async (id: unknown) => {
   // Check at least one super admin remains
-  const userToDelete = await strapi.db.query('admin::user').findOne({
+  const userToDelete = await strapi.query('admin::user').findOne({
     where: { id },
     populate: ['roles'],
   });
@@ -141,7 +142,7 @@ const deleteById = async (id: unknown) => {
     }
   }
 
-  const deletedUser = await strapi.db
+  const deletedUser = await strapi
     .query('admin::user')
     .delete({ where: { id }, populate: ['roles'] });
 
@@ -159,7 +160,7 @@ const deleteById = async (id: unknown) => {
 const deleteByIds = async (ids: any) => {
   // Check at least one super admin remains
   const superAdminRole = await getService('role').getSuperAdminWithUsersCount();
-  const nbOfSuperAdminToDelete = await strapi.db.query('admin::user').count({
+  const nbOfSuperAdminToDelete = await strapi.query('admin::user').count({
     where: {
       id: ids,
       roles: { id: superAdminRole.id },
@@ -172,7 +173,7 @@ const deleteByIds = async (ids: any) => {
 
   const deletedUsers = [];
   for (const id of ids) {
-    const deletedUser = await strapi.db.query('admin::user').delete({
+    const deletedUser = await strapi.query('admin::user').delete({
       where: { id },
       populate: ['roles'],
     });
@@ -217,7 +218,7 @@ const sanitizeUser = (user: any) => {
  * Find one user
  */
 const findOne = async (id: any, populate = ['roles']) => {
-  return strapi.db.query('admin::user').findOne({ where: { id }, populate });
+  return strapi.entityService.findOne('admin::user', id, { populate });
 };
 
 const getCurrentActiveUserCount = async () => {

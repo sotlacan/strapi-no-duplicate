@@ -1,25 +1,23 @@
-import type { ContentTypes } from '../schema';
-import type * as UID from '../uid';
+import { Common, Shared } from '../types';
+import type * as Types from './entity-service';
 
-import type * as EntityService from './entity-service';
-
-export type Entity = {
-  id: number;
+type Entity = {
+  id: ID;
   [key: string]: unknown;
 } | null;
 
-type Options = { isDraft?: boolean; locale?: string };
+type ID = { id: string | number };
 
 export interface EntityValidator {
-  validateEntityCreation: <TUID extends UID.ContentType>(
-    model: ContentTypes[TUID],
-    data: EntityService.Params.Data.Input<TUID>,
-    options?: Options
-  ) => Promise<EntityService.Params.Data.Input<TUID>>;
-  validateEntityUpdate: <TUID extends UID.ContentType>(
-    model: ContentTypes[TUID],
-    data: Partial<EntityService.Params.Data.Input<TUID>> | undefined,
-    options?: Options,
+  validateEntityCreation: <TUID extends Common.UID.ContentType>(
+    model: Shared.ContentTypes[TUID],
+    data: Types.Params.Data.Input<TUID>,
+    options?: { isDraft?: boolean }
+  ) => Promise<Types.Params.Data.Input<TUID>>;
+  validateEntityUpdate: <TUID extends Common.UID.ContentType>(
+    model: Shared.ContentTypes[TUID],
+    data: Partial<Types.Params.Data.Input<TUID>> | undefined,
+    options?: { isDraft?: boolean },
     entity?: Entity
-  ) => Promise<EntityService.Params.Data.Input<TUID>>;
+  ) => Promise<Types.Params.Data.Input<TUID>>;
 }

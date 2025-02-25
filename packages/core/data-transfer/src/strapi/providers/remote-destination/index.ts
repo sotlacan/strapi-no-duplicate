@@ -2,19 +2,11 @@ import { randomUUID } from 'crypto';
 import { Writable } from 'stream';
 import { WebSocket } from 'ws';
 import { once } from 'lodash/fp';
-import type { Struct, Utils } from '@strapi/types';
+import type { Schema, Utils } from '@strapi/types';
 
 import { createDispatcher, connectToWebsocket, trimTrailingSlash } from '../utils';
 
-import type {
-  IDestinationProvider,
-  IMetadata,
-  ProviderType,
-  IAsset,
-  TransferStage,
-  Protocol,
-} from '../../../../types';
-import type { IDiagnosticReporter } from '../../../utils/diagnostic';
+import type { IDestinationProvider, IMetadata, ProviderType, IAsset } from '../../../../types';
 import type { Client, Server, Auth } from '../../../../types/remote/protocol';
 import type { ILocalStrapiDestinationProviderOptions } from '../local-destination';
 import { TRANSFER_PATH } from '../../remote/constants';
@@ -45,26 +37,11 @@ class RemoteStrapiDestinationProvider implements IDestinationProvider {
 
   transferID: string | null;
 
-  stats!: { [TStage in Exclude<TransferStage, 'schemas'>]: { count: number } };
-
-  #diagnostics?: IDiagnosticReporter;
-
   constructor(options: IRemoteStrapiDestinationProviderOptions) {
     this.options = options;
     this.ws = null;
     this.dispatcher = null;
     this.transferID = null;
-
-    this.resetStats();
-  }
-
-  private resetStats() {
-    this.stats = {
-      assets: { count: 0 },
-      entities: { count: 0 },
-      links: { count: 0 },
-      configuration: { count: 0 },
-    };
   }
 
   async initTransfer(): Promise<string> {
@@ -79,9 +56,6 @@ class RemoteStrapiDestinationProvider implements IDestinationProvider {
     if (!res?.transferID) {
       throw new ProviderTransferError('Init failed, invalid response from the server');
     }
-
-    this.resetStats();
-
     return res.transferID;
   }
 
@@ -104,48 +78,33 @@ class RemoteStrapiDestinationProvider implements IDestinationProvider {
       return new ProviderTransferError('Unexpected error');
     }
 
-    this.stats[step] = { count: 0 };
-
     return null;
   }
 
   async #endStep<T extends Client.TransferPushStep>(step: T) {
     try {
-      const res = await this.dispatcher?.dispatchTransferStep<{
-        ok: boolean;
-        stats: Protocol.Client.Stats;
-      }>({
-        action: 'end',
-        step,
-      });
-
-      return { stats: res?.stats ?? null, error: null };
+      await this.dispatcher?.dispatchTransferStep({ action: 'end', step });
     } catch (e) {
       if (e instanceof Error) {
-        return { stats: null, error: e };
+        return e;
       }
 
       if (typeof e === 'string') {
-        return { stats: null, error: new ProviderTransferError(e) };
+        return new ProviderTransferError(e);
       }
 
-      return { stats: null, error: new ProviderTransferError('Unexpected error') };
+      return new ProviderTransferError('Unexpected error');
     }
+
+    return null;
   }
 
   async #streamStep<T extends Client.TransferPushStep>(
     step: T,
-    message: Client.GetTransferPushStreamData<T>
+    data: Client.GetTransferPushStreamData<T>
   ) {
     try {
-      if (step === 'assets') {
-        const assetMessage = message as Protocol.Client.TransferAssetFlow[];
-        this.stats[step].count += assetMessage.filter((data) => data.action === 'start').length;
-      } else {
-        this.stats[step].count += message.length;
-      }
-
-      await this.dispatcher?.dispatchTransferStep({ action: 'stream', step, data: message });
+      await this.dispatcher?.dispatchTransferStep({ action: 'stream', step, data });
     } catch (e) {
       if (e instanceof Error) {
         return e;
@@ -184,19 +143,9 @@ class RemoteStrapiDestinationProvider implements IDestinationProvider {
             return callback(streamError);
           }
         }
-        const { error, stats } = await this.#endStep(step);
+        const e = await this.#endStep(step);
 
-        const { count } = this.stats[step];
-
-        if (stats && (stats.started !== count || stats.finished !== count)) {
-          callback(
-            new Error(
-              `Data missing: sent ${this.stats[step].count} ${step}, recieved ${stats.started} and saved ${stats.finished} ${step}`
-            )
-          );
-        }
-
-        callback(error);
+        callback(e);
       },
 
       write: async (chunk, _encoding, callback) => {
@@ -222,19 +171,7 @@ class RemoteStrapiDestinationProvider implements IDestinationProvider {
     });
   }
 
-  #reportInfo(message: string) {
-    this.#diagnostics?.report({
-      details: {
-        createdAt: new Date(),
-        message,
-        origin: 'remote-destination-provider',
-      },
-      kind: 'info',
-    });
-  }
-
-  async bootstrap(diagnostics?: IDiagnosticReporter): Promise<void> {
-    this.#diagnostics = diagnostics;
+  async bootstrap(): Promise<void> {
     const { url, auth } = this.options;
     const validProtocols = ['https:', 'http:'];
 
@@ -254,16 +191,15 @@ class RemoteStrapiDestinationProvider implements IDestinationProvider {
       url.pathname
     )}${TRANSFER_PATH}/push`;
 
-    this.#reportInfo('establishing websocket connection');
     // No auth defined, trying public access for transfer
     if (!auth) {
-      ws = await connectToWebsocket(wsUrl, undefined, this.#diagnostics);
+      ws = await connectToWebsocket(wsUrl);
     }
 
     // Common token auth, this should be the main auth method
     else if (auth.type === 'token') {
       const headers = { Authorization: `Bearer ${auth.token}` };
-      ws = await connectToWebsocket(wsUrl, { headers }, this.#diagnostics);
+      ws = await connectToWebsocket(wsUrl, { headers });
     }
 
     // Invalid auth method provided
@@ -276,20 +212,11 @@ class RemoteStrapiDestinationProvider implements IDestinationProvider {
       });
     }
 
-    this.#reportInfo('established websocket connection');
-
     this.ws = ws;
     const { retryMessageOptions } = this.options;
+    this.dispatcher = createDispatcher(this.ws, retryMessageOptions);
 
-    this.#reportInfo('creating dispatcher');
-    this.dispatcher = createDispatcher(this.ws, retryMessageOptions, (message: string) =>
-      this.#reportInfo(message)
-    );
-    this.#reportInfo('created dispatcher');
-
-    this.#reportInfo('initialize transfer');
     this.transferID = await this.initTransfer();
-    this.#reportInfo(`initialized transfer ${this.transferID}`);
 
     this.dispatcher.setTransferProperties({ id: this.transferID, kind: 'push' });
 
@@ -336,7 +263,7 @@ class RemoteStrapiDestinationProvider implements IDestinationProvider {
       return Promise.resolve(null);
     }
 
-    return this.dispatcher.dispatchTransferAction<Utils.String.Dict<Struct.Schema>>('getSchemas');
+    return this.dispatcher.dispatchTransferAction<Utils.String.Dict<Schema.Schema>>('getSchemas');
   }
 
   createEntitiesWriteStream(): Writable {
@@ -389,7 +316,7 @@ class RemoteStrapiDestinationProvider implements IDestinationProvider {
         }
 
         if (hasStarted) {
-          const { error: endStepError } = await this.#endStep('assets');
+          const endStepError = await this.#endStep('assets');
 
           if (endStepError) {
             return callback(endStepError);

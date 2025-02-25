@@ -3,11 +3,12 @@
 import * as yup from 'yup';
 import _ from 'lodash';
 import { isNumber, isInteger, get } from 'lodash/fp';
-import { strings } from './primitives';
+import * as utils from './string-formatting';
 import { printValue } from './print-value';
 
 export * from 'yup';
 
+// @ts-ignore
 export const strapiID = (): InstanceType<typeof StrapiIDSchema> => new StrapiIDSchema();
 
 const isNotNilTest = (value: unknown) => !_.isNil(value);
@@ -35,7 +36,7 @@ yup.addMethod(
   'isCamelCase',
   function isCamelCase(message = '${path} is not in camel case (anExampleOfCamelCase)') {
     return this.test('is in camelCase', message, (value) =>
-      value ? strings.isCamelCase(value) : true
+      value ? utils.isCamelCase(value) : true
     );
   }
 );
@@ -45,7 +46,7 @@ yup.addMethod(
   'isKebabCase',
   function isKebabCase(message = '${path} is not in kebab case (an-example-of-kebab-case)') {
     return this.test('is in kebab-case', message, (value) =>
-      value ? strings.isKebabCase(value) : true
+      value ? utils.isKebabCase(value) : true
     );
   }
 );
@@ -102,21 +103,21 @@ export class StrapiIDSchema extends yup.MixedSchema {
 }
 
 declare module 'yup' {
-  // const strapiID: () => InstanceType<typeof StrapiIDSchema>;
+  const strapiID: () => InstanceType<typeof StrapiIDSchema>;
 
-  export interface BaseSchema {
+  interface BaseSchema {
     isFunction(message?: string): this;
     notNil(message?: string): this;
     notNull(message?: string): this;
   }
 
-  export interface StringSchema {
+  interface StringSchema {
     isCamelCase(message?: string): this;
     isKebabCase(message?: string): this;
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  export interface ObjectSchema<TShape> {
+  interface ObjectSchema<TShape> {
     onlyContainsFunctions(message?: string): this;
   }
 }

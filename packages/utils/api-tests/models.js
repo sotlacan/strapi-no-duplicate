@@ -2,7 +2,6 @@
 
 const { isFunction, isNil, prop } = require('lodash/fp');
 const { createStrapiInstance } = require('./strapi');
-const componentData = require('../../core/core/src/services/document-service/components');
 
 const toContentTypeUID = (name) => {
   return name.includes('::') ? name : `api::${name}.${name}`;
@@ -130,7 +129,7 @@ const deleteContentTypes = async (modelsUIDs, { strapi } = {}) => {
 async function cleanupModel(uid, { strapi: strapiIst } = {}) {
   const { strapi, cleanup } = await createHelpers({ strapi: strapiIst });
 
-  await strapi.db.query(uid).deleteMany();
+  await strapi.query(uid).deleteMany();
 
   await cleanup();
 }
@@ -150,7 +149,7 @@ async function createFixtures(dataMap, { strapi: strapiIst } = {}) {
     const entries = [];
 
     for (const data of dataMap[model]) {
-      entries.push(await strapi.db.query(toContentTypeUID(model)).create({ data }));
+      entries.push(await strapi.entityService.create(toContentTypeUID(model), { data }));
     }
 
     resultMap[model] = entries;
@@ -163,24 +162,13 @@ async function createFixtures(dataMap, { strapi: strapiIst } = {}) {
 
 async function createFixturesFor(model, entries, { strapi: strapiIst } = {}) {
   const { strapi, cleanup } = await createHelpers({ strapi: strapiIst });
-
-  const uid = toContentTypeUID(model);
-  const contentType = strapi.getModel(uid);
-
   const results = [];
 
   for (const entry of entries) {
     const dataToCreate = isFunction(entry) ? entry(results) : entry;
-
-    const componentValidData = await componentData.createComponents(uid, dataToCreate);
-    const entryData = Object.assign(
-      componentData.omitComponentData(contentType, dataToCreate),
-      componentValidData
+    results.push(
+      await strapi.entityService.create(toContentTypeUID(model), { data: dataToCreate })
     );
-
-    const res = await strapi.db.query(uid).create({ data: entryData });
-
-    results.push(res);
   }
 
   await cleanup();
@@ -191,7 +179,7 @@ async function createFixturesFor(model, entries, { strapi: strapiIst } = {}) {
 async function deleteFixturesFor(model, entries, { strapi: strapiIst } = {}) {
   const { strapi, cleanup } = await createHelpers({ strapi: strapiIst });
 
-  await strapi.db
+  await strapi
     .query(toContentTypeUID(model))
     .deleteMany({ where: { id: entries.map(prop('id')) } });
 

@@ -1,15 +1,20 @@
 import * as React from 'react';
 
-import { produce } from 'immer';
+import {
+  LoadingIndicatorPage,
+  useStrapiApp,
+  type StrapiAppContextValue,
+} from '@strapi/helper-plugin';
+import produce from 'immer';
+import set from 'lodash/set';
 
-import { Page } from '../components/PageHelpers';
-import { StrapiAppContextValue, useStrapiApp } from '../features/StrapiApp';
+import { Admin } from '../pages/Admin';
 
 /**
  * TODO: this isn't great, and we really should focus on fixing this.
  */
-const PluginsInitializer = ({ children }: { children: React.ReactNode }) => {
-  const appPlugins = useStrapiApp('PluginsInitializer', (state) => state.plugins);
+const PluginsInitializer = () => {
+  const { plugins: appPlugins } = useStrapiApp();
   const [{ plugins }, dispatch] = React.useReducer<React.Reducer<State, Action>, State>(
     reducer,
     initialState,
@@ -62,12 +67,12 @@ const PluginsInitializer = ({ children }: { children: React.ReactNode }) => {
     return (
       <>
         {initializers}
-        <Page.Loading />
+        <LoadingIndicatorPage />
       </>
     );
   }
 
-  return children;
+  return <Admin />;
 };
 
 /* -------------------------------------------------------------------------------------------------
@@ -93,7 +98,7 @@ const reducer: React.Reducer<State, Action> = (state = initialState, action: Act
   produce(state, (draftState) => {
     switch (action.type) {
       case 'SET_PLUGIN_READY': {
-        draftState.plugins[action.pluginId].isReady = true;
+        set(draftState, ['plugins', action.pluginId, 'isReady'], true);
         break;
       }
       default:
@@ -107,7 +112,11 @@ const reducer: React.Reducer<State, Action> = (state = initialState, action: Act
 
 const init = (plugins: State['plugins']): State => {
   return {
-    plugins,
+    plugins: Object.keys(plugins).reduce<State['plugins']>((acc, current) => {
+      acc[current] = { ...plugins[current] };
+
+      return acc;
+    }, {}),
   };
 };
 

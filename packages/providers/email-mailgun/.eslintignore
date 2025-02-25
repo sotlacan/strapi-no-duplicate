@@ -2,4 +2,3 @@ node_modules/
 .eslintrc.js
 dist/
 jest.config.js
-rollup.config.mjs

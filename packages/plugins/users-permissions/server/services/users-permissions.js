@@ -6,7 +6,7 @@ const urlJoin = require('url-join');
 const {
   template: { createStrictInterpolationRegExp },
   errors,
-  objects,
+  keysDeep,
 } = require('@strapi/utils');
 
 const { getService } = require('../utils');
@@ -45,7 +45,7 @@ module.exports = ({ strapi }) => ({
       return action[Symbol.for('__type__')].includes('content-api');
     };
 
-    _.forEach(strapi.apis, (api, apiName) => {
+    _.forEach(strapi.api, (api, apiName) => {
       const controllers = _.reduce(
         api.controllers,
         (acc, controller, controllerName) => {
@@ -105,7 +105,7 @@ module.exports = ({ strapi }) => ({
   async getRoutes() {
     const routesMap = {};
 
-    _.forEach(strapi.apis, (api, apiName) => {
+    _.forEach(strapi.api, (api, apiName) => {
       const routes = _.flatMap(api.routes, (route) => {
         if (_.has(route, 'routes')) {
           return route.routes;
@@ -151,12 +151,12 @@ module.exports = ({ strapi }) => ({
   },
 
   async syncPermissions() {
-    const roles = await strapi.db.query('plugin::users-permissions.role').findMany();
-    const dbPermissions = await strapi.db.query('plugin::users-permissions.permission').findMany();
+    const roles = await strapi.query('plugin::users-permissions.role').findMany();
+    const dbPermissions = await strapi.query('plugin::users-permissions.permission').findMany();
 
     const permissionsFoundInDB = _.uniq(_.map(dbPermissions, 'action'));
 
-    const appActions = _.flatMap(strapi.apis, (api, apiName) => {
+    const appActions = _.flatMap(strapi.api, (api, apiName) => {
       return _.flatMap(api.controllers, (controller, controllerName) => {
         return _.keys(controller).map((actionName) => {
           return `api::${apiName}.${controllerName}.${actionName}`;
@@ -178,9 +178,7 @@ module.exports = ({ strapi }) => ({
 
     await Promise.all(
       toDelete.map((action) => {
-        return strapi.db
-          .query('plugin::users-permissions.permission')
-          .delete({ where: { action } });
+        return strapi.query('plugin::users-permissions.permission').delete({ where: { action } });
       })
     );
 
@@ -194,7 +192,7 @@ module.exports = ({ strapi }) => ({
 
         await Promise.all(
           toCreate.map((action) => {
-            return strapi.db.query('plugin::users-permissions.permission').create({
+            return strapi.query('plugin::users-permissions.permission').create({
               data: {
                 action,
                 role: role.id,
@@ -207,10 +205,10 @@ module.exports = ({ strapi }) => ({
   },
 
   async initialize() {
-    const roleCount = await strapi.db.query('plugin::users-permissions.role').count();
+    const roleCount = await strapi.query('plugin::users-permissions.role').count();
 
     if (roleCount === 0) {
-      await strapi.db.query('plugin::users-permissions.role').create({
+      await strapi.query('plugin::users-permissions.role').create({
         data: {
           name: 'Authenticated',
           description: 'Default role given to authenticated user.',
@@ -218,7 +216,7 @@ module.exports = ({ strapi }) => ({
         },
       });
 
-      await strapi.db.query('plugin::users-permissions.role').create({
+      await strapi.query('plugin::users-permissions.role').create({
         data: {
           name: 'Public',
           description: 'Default role given to unauthenticated user.',
@@ -231,13 +229,13 @@ module.exports = ({ strapi }) => ({
   },
 
   async updateUserRole(user, role) {
-    return strapi.db
+    return strapi
       .query('plugin::users-permissions.user')
       .update({ where: { id: user.id }, data: { role } });
   },
 
   template(layout, data) {
-    const allowedTemplateVariables = objects.keysDeep(data);
+    const allowedTemplateVariables = keysDeep(data);
 
     // Create a strict interpolation RegExp based on possible variable names
     const interpolate = createStrictInterpolationRegExp(allowedTemplateVariables, 'g');

@@ -1,4 +1,5 @@
 import { Box, BoxProps, Flex, FlexProps, Typography } from '@strapi/design-system';
+import { pxToRem } from '@strapi/helper-plugin';
 import { Check } from '@strapi/icons';
 
 import { STATES, States } from './constants';
@@ -18,13 +19,13 @@ const Number = ({ children, state, ...props }: NumberProps) => {
       background="primary600"
       padding={2}
       borderRadius="50%"
-      width={`3rem`}
-      height={`3rem`}
+      width={pxToRem(30)}
+      height={pxToRem(30)}
       justifyContent="center"
       {...props}
     >
       {state === STATES.IS_DONE ? (
-        <Check aria-hidden width={`1.6rem`} fill="neutral0" />
+        <Check aria-hidden width={pxToRem(16)} color="neutral0" />
       ) : (
         <Typography fontWeight="semiBold" textColor="neutral0">
           {children}
@@ -38,8 +39,8 @@ const Number = ({ children, state, ...props }: NumberProps) => {
       borderStyle="solid"
       padding={2}
       borderRadius="50%"
-      width={`3rem`}
-      height={`3rem`}
+      width={pxToRem(30)}
+      height={pxToRem(30)}
       justifyContent="center"
       {...props}
     >
@@ -60,11 +61,11 @@ interface VerticalDividerProps extends BoxProps {
 
 const VerticalDivider = ({ state, ...props }: VerticalDividerProps) => (
   <Box
-    width={`0.2rem`}
+    width={pxToRem(2)}
     height="100%"
     background={state === STATES.IS_NOT_DONE ? 'neutral300' : 'primary500'}
     hasRadius
-    minHeight={state === STATES.IS_ACTIVE ? `8.5rem` : `6.5rem`}
+    minHeight={state === STATES.IS_ACTIVE ? pxToRem(85) : pxToRem(65)}
     {...props}
   />
 );

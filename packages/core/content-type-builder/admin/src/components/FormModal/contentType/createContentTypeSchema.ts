@@ -1,4 +1,4 @@
-import { translatedErrors as errorsTrads } from '@strapi/admin/strapi-admin';
+import { translatedErrors as errorsTrads } from '@strapi/helper-plugin';
 import { snakeCase } from 'lodash/fp';
 import * as yup from 'yup';
 
@@ -25,7 +25,7 @@ export const createContentTypeSchema = ({
       .string()
       .test({
         name: 'nameAlreadyUsed',
-        message: errorsTrads.unique.id,
+        message: errorsTrads.unique,
         test(value) {
           if (!value) {
             return false;
@@ -54,12 +54,12 @@ export const createContentTypeSchema = ({
           });
         },
       })
-      .required(errorsTrads.required.id),
+      .required(errorsTrads.required),
     pluralName: yup
       .string()
       .test({
         name: 'pluralNameAlreadyUsed',
-        message: errorsTrads.unique.id,
+        message: errorsTrads.unique,
         test(value) {
           if (!value) {
             return false;
@@ -128,12 +128,12 @@ export const createContentTypeSchema = ({
           });
         },
       })
-      .required(errorsTrads.required.id),
+      .required(errorsTrads.required),
     singularName: yup
       .string()
       .test({
         name: 'singularNameAlreadyUsed',
-        message: errorsTrads.unique.id,
+        message: errorsTrads.unique,
         test(value) {
           if (!value) {
             return false;
@@ -187,9 +187,10 @@ export const createContentTypeSchema = ({
           });
         },
       })
-      .required(errorsTrads.required.id),
+      .required(errorsTrads.required),
     draftAndPublish: yup.boolean(),
     kind: yup.string().oneOf(['singleType', 'collectionType']),
+    reviewWorkflows: yup.boolean(),
   };
 
   return yup.object(shape);

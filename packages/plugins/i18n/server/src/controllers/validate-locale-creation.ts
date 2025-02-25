@@ -1,34 +1,31 @@
 import { get } from 'lodash/fp';
 import { errors } from '@strapi/utils';
-import type { Core, Struct } from '@strapi/types';
+import type { Common, Schema } from '@strapi/types';
 import { getService } from '../utils';
 
 const { ApplicationError } = errors;
 
-// TODO: v5 if implemented in the CM => delete this middleware
-const validateLocaleCreation: Core.MiddlewareHandler = async (ctx, next) => {
+const validateLocaleCreation: Common.MiddlewareHandler = async (ctx, next) => {
   const { model } = ctx.params;
-  const { query } = ctx.request;
+  const { query, body } = ctx.request;
 
-  // Prevent empty body
-  if (!ctx.request.body) {
-    ctx.request.body = {};
-  }
+  const {
+    getValidLocale,
+    getNewLocalizationsFrom,
+    isLocalizedContentType,
+    getAndValidateRelatedEntity,
+    fillNonLocalizedAttributes,
+  } = getService('content-types');
 
-  const body = ctx.request.body as any;
-
-  const { getValidLocale, isLocalizedContentType } = getService('content-types');
-
-  const modelDef = strapi.getModel(model) as Struct.ContentTypeSchema;
+  const modelDef = strapi.getModel(model) as Schema.ContentType;
 
   if (!isLocalizedContentType(modelDef)) {
     return next();
   }
 
-  // Prevent empty string locale
-  const locale = get('locale', query) || get('locale', body) || undefined;
-
-  // cleanup to avoid creating duplicates in single types
+  const locale = get('locale', query);
+  const relatedEntityId = get('relatedEntityId', query);
+  // cleanup to avoid creating duplicates in singletypes
   ctx.request.query = {};
 
   let entityLocale;
@@ -43,7 +40,7 @@ const validateLocaleCreation: Core.MiddlewareHandler = async (ctx, next) => {
   if (modelDef.kind === 'singleType') {
     const entity = await strapi.entityService.findMany(modelDef.uid, {
       locale: entityLocale,
-    } as any); // TODO: add this type to entityService
+    } as any);
 
     ctx.request.query.locale = body.locale;
 
@@ -52,6 +49,19 @@ const validateLocaleCreation: Core.MiddlewareHandler = async (ctx, next) => {
       return next();
     }
   }
+
+  let relatedEntity;
+  try {
+    relatedEntity = await getAndValidateRelatedEntity(relatedEntityId, model, entityLocale);
+  } catch (e) {
+    throw new ApplicationError(
+      "The related entity doesn't exist or the entity already exists in this locale"
+    );
+  }
+
+  fillNonLocalizedAttributes(body, relatedEntity, { model });
+  const localizations = await getNewLocalizationsFrom(relatedEntity);
+  body.localizations = localizations;
 
   return next();
 };

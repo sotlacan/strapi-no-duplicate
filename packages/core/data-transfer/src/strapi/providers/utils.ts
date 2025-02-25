@@ -10,7 +10,6 @@ import {
   ProviderValidationError,
   ProviderErrorDetails,
 } from '../../errors/providers';
-import { IDiagnosticReporter } from '../../utils/diagnostic';
 
 interface IDispatcherState {
   transfer?: { kind: Client.TransferKind; id: string };
@@ -27,8 +26,7 @@ export const createDispatcher = (
   retryMessageOptions = {
     retryMessageMaxRetries: 5,
     retryMessageTimeout: 30000,
-  },
-  reportInfo?: (message: string) => void
+  }
 ) => {
   const state: IDispatcherState = {};
 
@@ -51,16 +49,6 @@ export const createDispatcher = (
         Object.assign(payload, { transferID: state.transfer?.id });
       }
 
-      if (message.type === 'command') {
-        reportInfo?.(
-          `dispatching message command:${(message as Client.CommandMessage).command} uuid:${uuid} sent:${numberOfTimesMessageWasSent}`
-        );
-      } else if (message.type === 'transfer') {
-        const messageToSend = message as Client.TransferMessage;
-        reportInfo?.(
-          `dispatching message action:${messageToSend.action} ${messageToSend.kind === 'step' ? `step:${messageToSend.step}` : ''} uuid:${uuid} sent:${numberOfTimesMessageWasSent}`
-        );
-      }
       const stringifiedPayload = JSON.stringify(payload);
       ws.send(stringifiedPayload, (error) => {
         if (error) {
@@ -84,16 +72,6 @@ export const createDispatcher = (
 
       const onResponse = (raw: RawData) => {
         const response: Server.Message<U> = JSON.parse(raw.toString());
-        if (message.type === 'command') {
-          reportInfo?.(
-            `received response to message command: ${(message as Client.CommandMessage).command} uuid: ${uuid} sent: ${numberOfTimesMessageWasSent}`
-          );
-        } else if (message.type === 'transfer') {
-          const messageToSend = message as Client.TransferMessage;
-          reportInfo?.(
-            `received response to message action:${messageToSend.action} ${messageToSend.kind === 'step' ? `step:${messageToSend.step}` : ''} uuid:${uuid} sent:${numberOfTimesMessageWasSent}`
-          );
-        }
         if (response.uuid === uuid) {
           clearInterval(interval);
           if (response.error) {
@@ -139,7 +117,7 @@ export const createDispatcher = (
   const dispatchTransferStep = async <
     T,
     A extends Client.TransferPushMessage['action'] = Client.TransferPushMessage['action'],
-    S extends Client.TransferPushStep = Client.TransferPushStep,
+    S extends Client.TransferPushStep = Client.TransferPushStep
   >(
     payload: {
       step: S;
@@ -183,11 +161,7 @@ type WebsocketParams = ConstructorParameters<typeof WebSocket>;
 type Address = WebsocketParams[0];
 type Options = WebsocketParams[2];
 
-export const connectToWebsocket = (
-  address: Address,
-  options?: Options,
-  diagnostics?: IDiagnosticReporter
-): Promise<WebSocket> => {
+export const connectToWebsocket = (address: Address, options?: Options): Promise<WebSocket> => {
   return new Promise((resolve, reject) => {
     const server = new WebSocket(address, options);
     server.once('open', () => {
@@ -226,15 +200,6 @@ export const connectToWebsocket = (
       );
     });
 
-    server.on('message', (raw: RawData) => {
-      const response: Server.Message = JSON.parse(raw.toString());
-      if (response.diagnostic) {
-        diagnostics?.report({
-          ...response.diagnostic,
-        });
-      }
-    });
-
     server.once('error', (err) => {
       reject(
         new ProviderTransferError(err.message, {
@@ -249,18 +214,4 @@ export const connectToWebsocket = (
 
 export const trimTrailingSlash = (input: string): string => {
   return input.replace(/\/$/, '');
-};
-
-export const wait = (ms: number) => {
-  return new Promise<void>((resolve) => {
-    setTimeout(resolve, ms);
-  });
-};
-
-export const waitUntil = async (test: () => boolean, interval: number): Promise<void> => {
-  while (!test()) {
-    await wait(interval);
-  }
-
-  return Promise.resolve();
 };

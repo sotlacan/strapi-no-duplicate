@@ -1,14 +1,11 @@
-import type * as Plugin from '../../plugin';
-import type * as UID from '../../uid';
-import type * as Public from '../../public';
+import type { Common, Plugin, Utils, Shared } from '../../types';
 
-import type { Guard, Object, If } from '../../utils';
-
-export type GetPluginParams<TSchemaUID extends UID.Schema> = Guard.OfTypes<
+export type GetPluginParams<TSchemaUID extends Common.UID.Schema> = Utils.Guard.OfTypes<
   [never, undefined],
-  Object.Values<{
-    [TPluginName in keyof Public.EntityServicePluginParams]: Public.EntityServicePluginParams[TPluginName] extends infer TParam
-      ? If<Plugin.IsEnabled<TPluginName, TSchemaUID>, TParam>
+  Utils.Object.Values<{
+    [TPluginName in keyof Shared.EntityServicePluginParams]: Shared.EntityServicePluginParams[TPluginName] extends infer TParam
+      ? Utils.Expression.If<Plugin.IsEnabled<TPluginName, TSchemaUID>, TParam>
       : never;
-  }>
+  }>,
+  unknown
 >;

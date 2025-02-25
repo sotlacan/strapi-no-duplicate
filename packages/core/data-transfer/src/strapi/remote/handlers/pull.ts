@@ -1,6 +1,6 @@
 import { Readable } from 'stream';
 import { randomUUID } from 'crypto';
-import type { Core } from '@strapi/types';
+import type { LoadedStrapi } from '@strapi/types';
 
 import { Handler } from './abstract';
 import { handlerControllerFactory, isDataTransferMessage } from './utils';
@@ -47,27 +47,6 @@ export const createPullController = handlerControllerFactory<Partial<PullHandler
     delete this.provider;
   },
 
-  onInfo(message) {
-    this.diagnostics?.report({
-      details: {
-        message,
-        origin: 'pull-handler',
-        createdAt: new Date(),
-      },
-      kind: 'info',
-    });
-  },
-  onWarning(message) {
-    this.diagnostics?.report({
-      details: {
-        message,
-        createdAt: new Date(),
-        origin: 'pull-handler',
-      },
-      kind: 'warning',
-    });
-  },
-
   assertValidTransferAction(this: PullHandler, action) {
     // Abstract the constant to string[] to allow looser check on the given action
     const validActions = VALID_TRANSFER_ACTIONS as unknown as string[];
@@ -106,7 +85,7 @@ export const createPullController = handlerControllerFactory<Partial<PullHandler
     // Regular command message (init, end, status)
     if (type === 'command') {
       const { command } = msg;
-      this.onInfo(`received command:${command} uuid:${uuid}`);
+
       await this.executeAndRespond(uuid, () => {
         this.assertValidTransferCommand(command);
 
@@ -121,7 +100,6 @@ export const createPullController = handlerControllerFactory<Partial<PullHandler
 
     // Transfer message (the transfer must be init first)
     else if (type === 'transfer') {
-      this.onInfo(`received transfer action:${msg.action} step:${msg.kind} uuid:${uuid}`);
       await this.executeAndRespond(uuid, async () => {
         await this.verifyAuth();
 
@@ -154,9 +132,6 @@ export const createPullController = handlerControllerFactory<Partial<PullHandler
 
     this.assertValidTransferAction(action);
 
-    if (action === 'bootstrap') {
-      return this.provider?.[action](this.diagnostics);
-    }
     return this.provider?.[action]();
   },
 
@@ -329,7 +304,7 @@ export const createPullController = handlerControllerFactory<Partial<PullHandler
 
     this.provider = createLocalStrapiSourceProvider({
       autoDestroy: false,
-      getStrapi: () => strapi as Core.Strapi,
+      getStrapi: () => strapi as LoadedStrapi,
     });
 
     return { transferID: this.transferID };

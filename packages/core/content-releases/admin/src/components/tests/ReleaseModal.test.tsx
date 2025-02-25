@@ -1,5 +1,6 @@
 import { fireEvent } from '@testing-library/react';
 import { render, screen, waitFor } from '@tests/utils';
+import { MemoryRouter } from 'react-router-dom';
 
 import { pluginId } from '../../pluginId';
 import { ReleaseModal } from '../ReleaseModal';
@@ -20,16 +21,14 @@ describe('ReleaseModal', () => {
   it('renders correctly the dialog content on create', async () => {
     const handleCloseMocked = jest.fn();
     const { user } = render(
-      <ReleaseModal
-        open
-        handleClose={handleCloseMocked}
-        handleSubmit={jest.fn()}
-        initialValues={{ name: '', time: '', timezone: '', scheduledAt: null }}
-        isLoading={false}
-      />,
-      {
-        initialEntries: [{ pathname: `/plugins/${pluginId}` }],
-      }
+      <MemoryRouter initialEntries={[`/plugins/${pluginId}`]}>
+        <ReleaseModal
+          handleClose={handleCloseMocked}
+          handleSubmit={jest.fn()}
+          initialValues={{ name: '', date: null, time: '', timezone: '', scheduledAt: null }}
+          isLoading={false}
+        />
+      </MemoryRouter>
     );
     const dialogCancelButton = screen.getByRole('button', {
       name: /cancel/i,
@@ -42,10 +41,9 @@ describe('ReleaseModal', () => {
   it('should show scheduled fields when selecting schedule release', async () => {
     render(
       <ReleaseModal
-        open
         handleClose={jest.fn()}
         handleSubmit={jest.fn()}
-        initialValues={{ name: 'title', time: '', timezone: '', scheduledAt: null }}
+        initialValues={{ name: 'title', date: null, time: '', timezone: '', scheduledAt: null }}
         isLoading={false}
       />
     );
@@ -73,7 +71,7 @@ describe('ReleaseModal', () => {
     expect(dateField).toBeInTheDocument();
 
     const time = await screen.findByRole('combobox', {
-      name: 'Timezone',
+      name: /time\s/i,
     });
     expect(time).toBeInTheDocument();
 

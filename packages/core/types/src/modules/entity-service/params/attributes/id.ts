@@ -1,3 +1,3 @@
-import type * as Data from '../../../../data';
+import type { Entity } from '../../../../types';
 
-export type ID = Data.ID;
+export type ID = Entity.ID;

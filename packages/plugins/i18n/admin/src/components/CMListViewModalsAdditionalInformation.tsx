@@ -3,7 +3,7 @@ import * as React from 'react';
 import { Typography } from '@strapi/design-system';
 import { useIntl } from 'react-intl';
 
-import { useI18n } from '../hooks/useI18n';
+import { useContentTypeHasI18n } from '../hooks/useContentTypeHasI18n';
 import { getTranslation } from '../utils/getTranslation';
 
 const Emphasis = (chunks: React.ReactNode) => {
@@ -15,10 +15,10 @@ const Emphasis = (chunks: React.ReactNode) => {
 };
 
 const DeleteModalAdditionalInfo = () => {
-  const { hasI18n } = useI18n();
+  const hasI18nEnabled = useContentTypeHasI18n();
   const { formatMessage } = useIntl();
 
-  if (!hasI18n) {
+  if (!hasI18nEnabled) {
     return null;
   }
 
@@ -39,10 +39,10 @@ const DeleteModalAdditionalInfo = () => {
 };
 
 const PublishModalAdditionalInfo = () => {
-  const { hasI18n } = useI18n();
+  const hasI18nEnabled = useContentTypeHasI18n();
   const { formatMessage } = useIntl();
 
-  if (!hasI18n) {
+  if (!hasI18nEnabled) {
     return null;
   }
 
@@ -63,10 +63,10 @@ const PublishModalAdditionalInfo = () => {
 };
 
 const UnpublishModalAdditionalInfo = () => {
-  const { hasI18n } = useI18n();
+  const hasI18nEnabled = useContentTypeHasI18n();
   const { formatMessage } = useIntl();
 
-  if (!hasI18n) {
+  if (!hasI18nEnabled) {
     return null;
   }
 

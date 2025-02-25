@@ -1,44 +1,30 @@
 import { CurriedFunction1 } from 'lodash';
 import { isArray, isObject } from 'lodash/fp';
 
-import { getNonWritableAttributes, constants } from '../content-types';
-import { pipe as pipeAsync } from '../async';
-import { throwInvalidKey } from './utils';
+import { getNonWritableAttributes } from '../content-types';
+import { pipeAsync } from '../async';
+import { throwInvalidParam } from './utils';
 
 import * as visitors from './visitors';
 import * as validators from './validators';
 import traverseEntity from '../traverse-entity';
 
-import { traverseQueryFilters, traverseQuerySort, traverseQueryPopulate } from '../traverse';
+import { traverseQueryFilters, traverseQuerySort } from '../traverse';
 
 import { Model, Data } from '../types';
-import { ValidationError } from '../errors';
-
-const { ID_ATTRIBUTE, DOC_ID_ATTRIBUTE } = constants;
 
 export interface Options {
   auth?: unknown;
 }
 
-export interface Validator {
+interface Validator {
   (schema: Model): CurriedFunction1<Data, Promise<Data>>;
 }
 export interface ValidateFunc {
   (data: unknown, schema: Model, options?: Options): Promise<void>;
 }
 
-interface APIOptions {
-  validators?: Validators;
-  getModel: (model: string) => Model;
-}
-
-export interface Validators {
-  input?: Validator[];
-}
-
-const createAPIValidators = (opts: APIOptions) => {
-  const { getModel } = opts || {};
-
+const createContentAPIValidators = () => {
   const validateInput: ValidateFunc = async (data: unknown, schema: Model, { auth } = {}) => {
     if (!schema) {
       throw new Error('Missing schema in validateInput');
@@ -53,44 +39,25 @@ const createAPIValidators = (opts: APIOptions) => {
 
     const transforms = [
       (data: unknown) => {
-        if (isObject(data)) {
-          if (ID_ATTRIBUTE in data) {
-            throwInvalidKey({ key: ID_ATTRIBUTE });
-          }
-
-          if (DOC_ID_ATTRIBUTE in data) {
-            throwInvalidKey({ key: DOC_ID_ATTRIBUTE });
-          }
+        if (isObject(data) && 'id' in data) {
+          throwInvalidParam({ key: 'id' });
         }
-        return data;
       },
       // non-writable attributes
-      traverseEntity(visitors.throwRestrictedFields(nonWritableAttributes), { schema, getModel }),
-      // unrecognized attributes
-      traverseEntity(visitors.throwUnrecognizedFields, { schema, getModel }),
+      traverseEntity(visitors.throwRestrictedFields(nonWritableAttributes), { schema }),
     ];
 
     if (auth) {
       // restricted relations
-      transforms.push(
-        traverseEntity(visitors.throwRestrictedRelations(auth), {
-          schema,
-          getModel,
-        })
-      );
+      transforms.push(traverseEntity(visitors.throwRestrictedRelations(auth), { schema }));
     }
 
     // Apply validators from registry if exists
-    opts?.validators?.input?.forEach((validator: Validator) => transforms.push(validator(schema)));
+    strapi.validators
+      .get('content-api.input')
+      .forEach((validator: Validator) => transforms.push(validator(schema)));
 
-    try {
-      await pipeAsync(...transforms)(data as Data);
-    } catch (e) {
-      if (e instanceof ValidationError) {
-        e.details.source = 'body';
-      }
-      throw e;
-    }
+    pipeAsync(...transforms)(data as Data);
   };
 
   const validateQuery = async (
@@ -101,7 +68,7 @@ const createAPIValidators = (opts: APIOptions) => {
     if (!schema) {
       throw new Error('Missing schema in validateQuery');
     }
-    const { filters, sort, fields, populate } = query;
+    const { filters, sort, fields } = query;
 
     if (filters) {
       await validateFilters(filters, schema, { auth });
@@ -115,10 +82,7 @@ const createAPIValidators = (opts: APIOptions) => {
       await validateFields(fields, schema);
     }
 
-    // a wildcard is always valid; its conversion will be handled by the entity service and can be optimized with sanitizer
-    if (populate && populate !== '*') {
-      await validatePopulate(populate, schema);
-    }
+    // TODO: validate populate
   };
 
   const validateFilters: ValidateFunc = async (filters, schema: Model, { auth } = {}) => {
@@ -130,95 +94,35 @@ const createAPIValidators = (opts: APIOptions) => {
       return;
     }
 
-    const transforms = [validators.defaultValidateFilters({ schema, getModel })];
+    const transforms = [validators.defaultValidateFilters(schema)];
 
     if (auth) {
-      transforms.push(
-        traverseQueryFilters(visitors.throwRestrictedRelations(auth), {
-          schema,
-          getModel,
-        })
-      );
+      transforms.push(traverseQueryFilters(visitors.throwRestrictedRelations(auth), { schema }));
     }
 
-    try {
-      await pipeAsync(...transforms)(filters);
-    } catch (e) {
-      if (e instanceof ValidationError) {
-        e.details.source = 'query';
-        e.details.param = 'filters';
-      }
-      throw e;
-    }
+    return pipeAsync(...transforms)(filters);
   };
 
   const validateSort: ValidateFunc = async (sort, schema: Model, { auth } = {}) => {
     if (!schema) {
       throw new Error('Missing schema in validateSort');
     }
-    const transforms = [validators.defaultValidateSort({ schema, getModel })];
+    const transforms = [validators.defaultValidateSort(schema)];
 
     if (auth) {
-      transforms.push(
-        traverseQuerySort(visitors.throwRestrictedRelations(auth), {
-          schema,
-          getModel,
-        })
-      );
+      transforms.push(traverseQuerySort(visitors.throwRestrictedRelations(auth), { schema }));
     }
 
-    try {
-      await pipeAsync(...transforms)(sort);
-    } catch (e) {
-      if (e instanceof ValidationError) {
-        e.details.source = 'query';
-        e.details.param = 'sort';
-      }
-      throw e;
-    }
+    return pipeAsync(...transforms)(sort);
   };
 
-  const validateFields: ValidateFunc = async (fields, schema: Model) => {
+  const validateFields: ValidateFunc = (fields, schema: Model) => {
     if (!schema) {
       throw new Error('Missing schema in validateFields');
     }
-    const transforms = [validators.defaultValidateFields({ schema, getModel })];
+    const transforms = [validators.defaultValidateFields(schema)];
 
-    try {
-      await pipeAsync(...transforms)(fields);
-    } catch (e) {
-      if (e instanceof ValidationError) {
-        e.details.source = 'query';
-        e.details.param = 'fields';
-      }
-      throw e;
-    }
-  };
-
-  const validatePopulate: ValidateFunc = async (populate, schema: Model, { auth } = {}) => {
-    if (!schema) {
-      throw new Error('Missing schema in sanitizePopulate');
-    }
-    const transforms = [validators.defaultValidatePopulate({ schema, getModel })];
-
-    if (auth) {
-      transforms.push(
-        traverseQueryPopulate(visitors.throwRestrictedRelations(auth), {
-          schema,
-          getModel,
-        })
-      );
-    }
-
-    try {
-      await pipeAsync(...transforms)(populate);
-    } catch (e) {
-      if (e instanceof ValidationError) {
-        e.details.source = 'query';
-        e.details.param = 'populate';
-      }
-      throw e;
-    }
+    return pipeAsync(...transforms)(fields);
   };
 
   return {
@@ -227,10 +131,13 @@ const createAPIValidators = (opts: APIOptions) => {
     filters: validateFilters,
     sort: validateSort,
     fields: validateFields,
-    populate: validatePopulate,
   };
 };
 
-export { createAPIValidators, validators, visitors };
+const contentAPI = createContentAPIValidators();
 
-export type APIValidators = ReturnType<typeof createAPIValidators>;
+export default {
+  contentAPI,
+  validators,
+  visitors,
+};

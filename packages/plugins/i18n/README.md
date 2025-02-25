@@ -9,7 +9,25 @@ The Internationalization (i18n) plugin allows Strapi users to create, manage and
 
 ## Installation
 
-This plugin is pre-installed & required with strapi
+To install this plugin, you need to add an NPM dependency to your Strapi application:
+
+```sh
+# Using Yarn
+yarn add @strapi/plugin-i18n
+
+# Or using NPM
+npm install @strapi/plugin-i18n
+```
+
+Then, you'll need to build your admin panel:
+
+```sh
+# Using Yarn
+yarn build
+
+# Or using NPM
+npm run build
+```
 
 ## Documentation
 

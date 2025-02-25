@@ -50,12 +50,6 @@ export const actions = [
     section: 'settings',
     category: 'users and roles',
     subCategory: 'users',
-    aliases: [
-      {
-        actionId: 'plugin::content-manager.explorer.read',
-        subjects: ['admin::user'],
-      },
-    ],
   },
   {
     uid: 'users.update',
@@ -88,12 +82,6 @@ export const actions = [
     section: 'settings',
     category: 'users and roles',
     subCategory: 'roles',
-    aliases: [
-      {
-        actionId: 'plugin::content-manager.explorer.read',
-        subjects: ['admin::role'],
-      },
-    ],
   },
   {
     uid: 'roles.update',

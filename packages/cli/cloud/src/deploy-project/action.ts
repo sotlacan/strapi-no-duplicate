@@ -1,6 +1,4 @@
 import fse from 'fs-extra';
-import inquirer from 'inquirer';
-import boxen from 'boxen';
 import path from 'path';
 import chalk from 'chalk';
 import { AxiosError } from 'axios';
@@ -8,13 +6,7 @@ import * as crypto from 'node:crypto';
 import { apiConfig } from '../config/api';
 import { compressFilesToTar } from '../utils/compress-files';
 import createProjectAction from '../create-project/action';
-import type {
-  CLIContext,
-  CloudApiService,
-  CloudCliConfig,
-  EnvironmentDetails,
-  ProjectInfo,
-} from '../types';
+import type { CLIContext, CloudApiService, CloudCliConfig, ProjectInfos } from '../types';
 import { getTmpStoragePath } from '../config/local';
 import { cloudApiFactory, tokenServiceFactory, local } from '../services';
 import { notificationServiceFactory } from '../services/notification';
@@ -30,45 +22,14 @@ type PackageJson = {
   };
 };
 
-interface CmdOptions {
-  env?: string;
-  force?: boolean;
-}
-
-const boxenOptions: boxen.Options = {
-  padding: 1,
-  margin: 1,
-  align: 'center',
-  borderColor: 'yellow',
-  borderStyle: 'round',
-};
-
-const QUIT_OPTION = 'Quit';
-
-async function promptForEnvironment(environments: string[]): Promise<string> {
-  const choices = environments.map((env) => ({ name: env, value: env }));
-  const { selectedEnvironment } = await inquirer.prompt([
-    {
-      type: 'list',
-      name: 'selectedEnvironment',
-      message: 'Select the environment to deploy:',
-      choices: [...choices, { name: chalk.grey(`(${QUIT_OPTION})`), value: null }],
-    },
-  ]);
-  if (selectedEnvironment === null) {
-    process.exit(1);
-  }
-
-  return selectedEnvironment;
-}
-
 async function upload(
   ctx: CLIContext,
-  project: ProjectInfo,
+  project: ProjectInfos,
   token: string,
   maxProjectFileSize: number
 ) {
   const cloudApi = await cloudApiFactory(ctx, token);
+  // * Upload project
   try {
     const storagePath = await getTmpStoragePath();
     const projectFolder = path.resolve(process.cwd());
@@ -139,7 +100,18 @@ async function upload(
       return data.build_id;
     } catch (e: any) {
       progressBar.stop();
-      ctx.logger.error('An error occurred while deploying the project. Please try again later.');
+      if (e instanceof AxiosError && e.response?.data) {
+        if (e.response.status === 404) {
+          ctx.logger.error(
+            `The project does not exist. Remove the ${local.LOCAL_SAVE_FILENAME} file and try again.`
+          );
+        } else {
+          ctx.logger.error(e.response.data);
+        }
+      } else {
+        ctx.logger.error('An error occurred while deploying the project. Please try again later.');
+      }
+
       ctx.logger.debug(e);
     } finally {
       await fse.remove(tarFilePath);
@@ -182,47 +154,7 @@ async function getConfig({
   }
 }
 
-function validateEnvironment(ctx: CLIContext, environment: string, environments: string[]): void {
-  if (!environments.includes(environment)) {
-    ctx.logger.error(`Environment ${environment} does not exist.`);
-    process.exit(1);
-  }
-}
-
-async function getTargetEnvironment(
-  ctx: CLIContext,
-  opts: CmdOptions,
-  project: ProjectInfo,
-  environments: string[]
-): Promise<string> {
-  if (opts.env) {
-    validateEnvironment(ctx, opts.env, environments);
-    return opts.env;
-  }
-
-  if (project.targetEnvironment) {
-    return project.targetEnvironment;
-  }
-
-  if (environments.length > 1) {
-    return promptForEnvironment(environments);
-  }
-
-  return environments[0];
-}
-
-function hasPendingOrLiveDeployment(
-  environments: EnvironmentDetails[],
-  targetEnvironment: string
-): boolean {
-  const environment = environments.find((env) => env.name === targetEnvironment);
-  if (!environment) {
-    throw new Error(`Environment details ${targetEnvironment} not found.`);
-  }
-  return environment.hasPendingDeployment || environment.hasLiveDeployment || false;
-}
-
-export default async (ctx: CLIContext, opts: CmdOptions) => {
+export default async (ctx: CLIContext) => {
   const { getValidToken } = await tokenServiceFactory(ctx);
   const token = await getValidToken(ctx, promptLogin);
   if (!token) {
@@ -234,46 +166,7 @@ export default async (ctx: CLIContext, opts: CmdOptions) => {
     return;
   }
 
-  const cloudApiService = await cloudApiFactory(ctx, token);
-  let projectData;
-  let environments: string[];
-  let environmentsDetails: EnvironmentDetails[];
-
-  try {
-    const {
-      data: { data, metadata },
-    } = await cloudApiService.getProject({ name: project.name });
-    projectData = data;
-    environments = projectData.environments;
-    environmentsDetails = projectData.environmentsDetails;
-    const isProjectSuspended = projectData.suspendedAt;
-
-    if (isProjectSuspended) {
-      ctx.logger.log(
-        '\n Oops! This project has been suspended. \n\n Please reactivate it from the dashboard to continue deploying: '
-      );
-      ctx.logger.log(chalk.underline(`${metadata.dashboardUrls.project}`));
-      return;
-    }
-  } catch (e: Error | unknown) {
-    if (e instanceof AxiosError && e.response?.data) {
-      if (e.response.status === 404) {
-        ctx.logger.warn(
-          `The project associated with this folder does not exist in Strapi Cloud. \nPlease link your local project to an existing Strapi Cloud project using the ${chalk.cyan(
-            'link'
-          )} command before deploying.`
-        );
-      } else {
-        ctx.logger.error(e.response.data);
-      }
-    } else {
-      ctx.logger.error(
-        "An error occurred while retrieving the project's information. Please try again later."
-      );
-    }
-    ctx.logger.debug(e);
-    return;
-  }
+  const cloudApiService = await cloudApiFactory(ctx);
 
   await trackEvent(ctx, cloudApiService, 'willDeployWithCLI', {
     projectInternalName: project.name,
@@ -285,7 +178,7 @@ export default async (ctx: CLIContext, opts: CmdOptions) => {
   const cliConfig = await getConfig({ ctx, cloudApiService });
   if (!cliConfig) {
     ctx.logger.error(
-      'An error occurred while retrieving data from Strapi Cloud. Please check your network or try again later.'
+      'An error occurred while retrieving data from Strapi Cloud. Please try check your network or again later.'
     );
     return;
   }
@@ -298,28 +191,6 @@ export default async (ctx: CLIContext, opts: CmdOptions) => {
     maxSize = 100000000;
   }
 
-  project.targetEnvironment = await getTargetEnvironment(ctx, opts, project, environments);
-
-  if (!opts.force) {
-    const shouldDisplayWarning = hasPendingOrLiveDeployment(
-      environmentsDetails,
-      project.targetEnvironment
-    );
-    if (shouldDisplayWarning) {
-      ctx.logger.log(boxen(cliConfig.projectDeployment.confirmationText, boxenOptions));
-      const { confirm } = await inquirer.prompt([
-        {
-          type: 'confirm',
-          name: 'confirm',
-          message: `Do you want to proceed with deployment to ${chalk.cyan(projectData.displayName)} on ${chalk.cyan(project.targetEnvironment)} environment?`,
-        },
-      ]);
-      if (!confirm) {
-        process.exit(1);
-      }
-    }
-  }
-
   const buildId = await upload(ctx, project, token, maxSize);
 
   if (!buildId) {
@@ -327,9 +198,6 @@ export default async (ctx: CLIContext, opts: CmdOptions) => {
   }
 
   try {
-    ctx.logger.log(
-      `🚀 Deploying project to ${chalk.cyan(project.targetEnvironment ?? `production`)} environment...`
-    );
     notificationService(`${apiConfig.apiBaseUrl}/notifications`, token, cliConfig);
     await buildLogsService(`${apiConfig.apiBaseUrl}/v1/logs/${buildId}`, token, cliConfig);
 

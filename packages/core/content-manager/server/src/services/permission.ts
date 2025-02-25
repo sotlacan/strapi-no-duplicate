@@ -1,16 +1,16 @@
 import { prop } from 'lodash/fp';
 import { contentTypes as contentTypesUtils } from '@strapi/utils';
+import { LoadedStrapi as Strapi, Schema } from '@strapi/types';
 
-import type { Core, Struct } from '@strapi/types';
 import { getService } from '../utils';
 
-export default ({ strapi }: { strapi: Core.Strapi }) => ({
+export default ({ strapi }: { strapi: Strapi }) => ({
   canConfigureContentType({
     userAbility,
     contentType,
   }: {
     userAbility: any;
-    contentType: Struct.ContentTypeSchema;
+    contentType: Schema.ContentType;
   }) {
     const action = contentTypesUtils.isSingleType(contentType)
       ? 'plugin::content-manager.single-types.configure-view'
@@ -22,6 +22,10 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
   async registerPermissions() {
     const displayedContentTypes = getService('content-types').findDisplayedContentTypes();
     const contentTypesUids = displayedContentTypes.map(prop('uid'));
+
+    const draftAndPublishContentTypesUids = displayedContentTypes
+      .filter(contentTypesUtils.hasDraftAndPublish)
+      .map(prop('uid'));
 
     const actions = [
       {
@@ -66,7 +70,7 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
         displayName: 'Publish',
         uid: 'explorer.publish',
         pluginName: 'content-manager',
-        subjects: contentTypesUids,
+        subjects: draftAndPublishContentTypesUids,
       },
       {
         section: 'plugins',
@@ -91,6 +95,6 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
       },
     ];
 
-    await strapi.service('admin::permission').actionProvider.registerMany(actions);
+    await strapi.admin.services.permission.actionProvider.registerMany(actions);
   },
 });

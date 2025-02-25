@@ -5,11 +5,10 @@
  */
 import * as React from 'react';
 
+import { NotificationConfig, useNotification } from '@strapi/helper-plugin';
 import isNil from 'lodash/isNil';
 import { useIntl } from 'react-intl';
 import { useLocation } from 'react-router-dom';
-
-import { NotificationConfig, useNotification } from '../../../../admin/src/features/Notifications';
 
 import { useLicenseLimits } from './useLicenseLimits';
 
@@ -21,7 +20,7 @@ const BILLING_SELF_HOSTED_URL = 'https://strapi.io/billing/request-seats';
 export const useLicenseLimitNotification = () => {
   const { formatMessage } = useIntl();
   const { license, isError, isLoading } = useLicenseLimits();
-  const { toggleNotification } = useNotification();
+  const toggleNotification = useNotification();
   const { pathname } = useLocation();
 
   const { enforcementUserCount, permittedSeats, licenseLimitStatus, isHostedOnStrapiCloud } =
@@ -40,9 +39,9 @@ export const useLicenseLimitNotification = () => {
     let notificationType: NotificationConfig['type'];
 
     if (licenseLimitStatus === 'OVER_LIMIT') {
-      notificationType = 'danger';
-    } else if (licenseLimitStatus === 'AT_LIMIT') {
       notificationType = 'warning';
+    } else if (licenseLimitStatus === 'AT_LIMIT') {
+      notificationType = 'softWarning';
     }
 
     if (shouldDisplayNotification) {

@@ -1,10 +1,34 @@
 import * as React from 'react';
 
-import { Box, Button, Flex, Grid, Typography, Link } from '@strapi/design-system';
+import {
+  Box,
+  Button,
+  Checkbox,
+  Flex,
+  Grid,
+  GridItem,
+  Main,
+  TextInput,
+  Typography,
+} from '@strapi/design-system';
+import { Link } from '@strapi/design-system/v2';
+import {
+  Form,
+  auth,
+  getYupInnerErrors,
+  translatedErrors,
+  useAPIErrorHandler,
+  useGuidedTour,
+  useNotification,
+  useQuery,
+  useTracking,
+} from '@strapi/helper-plugin';
+import { Eye, EyeStriked } from '@strapi/icons';
+import { Formik, FormikHelpers } from 'formik';
 import omit from 'lodash/omit';
-import { useIntl } from 'react-intl';
-import { NavLink, Navigate, useNavigate, useMatch, useLocation } from 'react-router-dom';
-import { styled } from 'styled-components';
+import { MessageDescriptor, useIntl } from 'react-intl';
+import { NavLink, Redirect, useHistory, useRouteMatch } from 'react-router-dom';
+import styled from 'styled-components';
 import * as yup from 'yup';
 import { ValidationError } from 'yup';
 
@@ -12,167 +36,57 @@ import {
   Register as RegisterUser,
   RegisterAdmin,
 } from '../../../../../shared/contracts/authentication';
-import { Form, FormHelpers } from '../../../components/Form';
-import { InputRenderer } from '../../../components/FormInputs/Renderer';
-import { useGuidedTour } from '../../../components/GuidedTour/Provider';
 import { useNpsSurveySettings } from '../../../components/NpsSurvey';
 import { Logo } from '../../../components/UnauthenticatedLogo';
-import { useTypedDispatch } from '../../../core/store/hooks';
-import { useNotification } from '../../../features/Notifications';
-import { useTracking } from '../../../features/Tracking';
-import { useAPIErrorHandler } from '../../../hooks/useAPIErrorHandler';
+import { useAuth } from '../../../features/Auth';
 import { LayoutContent, UnauthenticatedLayout } from '../../../layouts/UnauthenticatedLayout';
-import { login } from '../../../reducer';
 import {
   useGetRegistrationInfoQuery,
   useRegisterAdminMutation,
   useRegisterUserMutation,
 } from '../../../services/auth';
 import { isBaseQueryError } from '../../../utils/baseQuery';
-import { getByteSize } from '../../../utils/strings';
-import { translatedErrors } from '../../../utils/translatedErrors';
+import { AuthType } from '../constants';
+
+import { FieldActionWrapper } from './FieldActionWrapper';
 
 const REGISTER_USER_SCHEMA = yup.object().shape({
-  firstname: yup.string().trim().required(translatedErrors.required).nullable(),
+  firstname: yup.string().trim().required(translatedErrors.required),
   lastname: yup.string().nullable(),
   password: yup
     .string()
-    .min(8, {
-      id: translatedErrors.minLength.id,
-      defaultMessage: 'Password must be at least 8 characters',
-      values: { min: 8 },
-    })
-    .test(
-      'max-bytes',
-      {
-        id: 'components.Input.error.contain.maxBytes',
-        defaultMessage: 'Password must be less than 73 bytes',
-      },
-      function (value) {
-        if (!value || typeof value !== 'string') return true; // validated elsewhere
-
-        const byteSize = getByteSize(value);
-        return byteSize <= 72;
-      }
-    )
-    .matches(/[a-z]/, {
-      message: {
-        id: 'components.Input.error.contain.lowercase',
-        defaultMessage: 'Password must contain at least 1 lowercase letter',
-      },
-    })
-    .matches(/[A-Z]/, {
-      message: {
-        id: 'components.Input.error.contain.uppercase',
-        defaultMessage: 'Password must contain at least 1 uppercase letter',
-      },
-    })
-    .matches(/\d/, {
-      message: {
-        id: 'components.Input.error.contain.number',
-        defaultMessage: 'Password must contain at least 1 number',
-      },
-    })
-    .required({
-      id: translatedErrors.required.id,
-      defaultMessage: 'Password is required',
-    })
-    .nullable(),
+    .min(8, translatedErrors.minLength)
+    .matches(/[a-z]/, 'components.Input.error.contain.lowercase')
+    .matches(/[A-Z]/, 'components.Input.error.contain.uppercase')
+    .matches(/\d/, 'components.Input.error.contain.number')
+    .required(translatedErrors.required),
   confirmPassword: yup
     .string()
-    .required({
-      id: translatedErrors.required.id,
-      defaultMessage: 'Confirm password is required',
-    })
-    .oneOf([yup.ref('password'), null], {
-      id: 'components.Input.error.password.noMatch',
-      defaultMessage: 'Passwords must match',
-    })
-    .nullable(),
-  registrationToken: yup.string().required({
-    id: translatedErrors.required.id,
-    defaultMessage: 'Registration token is required',
-  }),
+    .oneOf([yup.ref('password'), null], 'components.Input.error.password.noMatch')
+    .required(translatedErrors.required),
+  registrationToken: yup.string().required(translatedErrors.required),
 });
 
 const REGISTER_ADMIN_SCHEMA = yup.object().shape({
-  firstname: yup
-    .string()
-    .trim()
-    .required({
-      id: translatedErrors.required.id,
-      defaultMessage: 'Firstname is required',
-    })
-    .nullable(),
+  firstname: yup.string().trim().required(translatedErrors.required),
   lastname: yup.string().nullable(),
   password: yup
     .string()
-    .min(8, {
-      id: translatedErrors.minLength.id,
-      defaultMessage: 'Password must be at least 8 characters',
-      values: { min: 8 },
-    })
-    .test(
-      'max-bytes',
-      {
-        id: 'components.Input.error.contain.maxBytes',
-        defaultMessage: 'Password must be less than 73 bytes',
-      },
-      function (value) {
-        if (!value) return true;
-        return new TextEncoder().encode(value).length <= 72;
-      }
-    )
-    .matches(/[a-z]/, {
-      message: {
-        id: 'components.Input.error.contain.lowercase',
-        defaultMessage: 'Password must contain at least 1 lowercase letter',
-      },
-    })
-    .matches(/[A-Z]/, {
-      message: {
-        id: 'components.Input.error.contain.uppercase',
-        defaultMessage: 'Password must contain at least 1 uppercase letter',
-      },
-    })
-    .matches(/\d/, {
-      message: {
-        id: 'components.Input.error.contain.number',
-        defaultMessage: 'Password must contain at least 1 number',
-      },
-    })
-    .required({
-      id: translatedErrors.required.id,
-      defaultMessage: 'Password is required',
-    })
-    .nullable(),
-  confirmPassword: yup
-    .string()
-    .required({
-      id: translatedErrors.required,
-      defaultMessage: 'Confirm password is required',
-    })
-    .nullable()
-    .oneOf([yup.ref('password'), null], {
-      id: 'components.Input.error.password.noMatch',
-      defaultMessage: 'Passwords must match',
-    }),
+    .min(8, translatedErrors.minLength)
+    .matches(/[a-z]/, 'components.Input.error.contain.lowercase')
+    .matches(/[A-Z]/, 'components.Input.error.contain.uppercase')
+    .matches(/\d/, 'components.Input.error.contain.number')
+    .required(translatedErrors.required),
   email: yup
     .string()
-    .email({
-      id: translatedErrors.email.id,
-      defaultMessage: 'Not a valid email',
-    })
+    .email(translatedErrors.email)
     .strict()
-    .lowercase({
-      id: translatedErrors.lowercase.id,
-      defaultMessage: 'Email must be lowercase',
-    })
-    .required({
-      id: translatedErrors.required.id,
-      defaultMessage: 'Email is required',
-    })
-    .nullable(),
+    .lowercase(translatedErrors.lowercase)
+    .required(translatedErrors.required),
+  confirmPassword: yup
+    .string()
+    .oneOf([yup.ref('password'), null], 'components.Input.error.password.noMatch')
+    .required(translatedErrors.required),
 });
 
 interface RegisterProps {
@@ -190,16 +104,19 @@ interface RegisterFormValues {
 }
 
 const Register = ({ hasAdmin }: RegisterProps) => {
-  const { toggleNotification } = useNotification();
-  const navigate = useNavigate();
+  const toggleNotification = useNotification();
+  const { push } = useHistory();
+  const [passwordShown, setPasswordShown] = React.useState(false);
+  const [confirmPasswordShown, setConfirmPasswordShown] = React.useState(false);
   const [submitCount, setSubmitCount] = React.useState(0);
   const [apiError, setApiError] = React.useState<string>();
   const { trackUsage } = useTracking();
   const { formatMessage } = useIntl();
-  const setSkipped = useGuidedTour('Register', (state) => state.setSkipped);
-  const { search: searchString } = useLocation();
-  const query = React.useMemo(() => new URLSearchParams(searchString), [searchString]);
-  const match = useMatch('/auth/:authType');
+  const { setSkipped } = useGuidedTour();
+  const query = useQuery();
+  const match = useRouteMatch<{ authType: Extract<AuthType, `register${string}`> }>(
+    '/auth/:authType'
+  );
   const {
     _unstableFormatAPIError: formatAPIError,
     _unstableFormatValidationErrors: formatValidationErrors,
@@ -214,31 +131,29 @@ const Register = ({ hasAdmin }: RegisterProps) => {
 
   React.useEffect(() => {
     if (error) {
-      const message: string = isBaseQueryError(error)
-        ? formatAPIError(error)
-        : (error.message ?? '');
+      const message: string = isBaseQueryError(error) ? formatAPIError(error) : error.message ?? '';
 
       toggleNotification({
-        type: 'danger',
+        type: 'warning',
         message,
       });
 
-      navigate(`/auth/oops?info=${encodeURIComponent(message)}`);
+      push(`/auth/oops?info=${encodeURIComponent(message)}`);
     }
-  }, [error, formatAPIError, navigate, toggleNotification]);
+  }, [error, formatAPIError, push, toggleNotification]);
 
   const [registerAdmin] = useRegisterAdminMutation();
   const [registerUser] = useRegisterUserMutation();
-  const dispatch = useTypedDispatch();
+  const { setToken } = useAuth('Register');
 
   const handleRegisterAdmin = async (
     { news, ...body }: RegisterAdmin.Request['body'] & { news: boolean },
-    setFormErrors: FormHelpers<RegisterFormValues>['setErrors']
+    setFormErrors: FormikHelpers<RegisterFormValues>['setErrors']
   ) => {
     const res = await registerAdmin(body);
 
     if ('data' in res) {
-      dispatch(login({ token: res.data.token }));
+      setToken(res.data.token);
 
       const { roles } = res.data.user;
 
@@ -246,7 +161,7 @@ const Register = ({ hasAdmin }: RegisterProps) => {
         const isUserSuperAdmin = roles.find(({ code }) => code === 'strapi-super-admin');
 
         if (isUserSuperAdmin) {
-          localStorage.setItem('GUIDED_TOUR_SKIPPED', JSON.stringify(false));
+          auth.set(false, 'GUIDED_TOUR_SKIPPED', true);
           setSkipped(false);
           trackUsage('didLaunchGuidedtour');
         }
@@ -256,12 +171,12 @@ const Register = ({ hasAdmin }: RegisterProps) => {
         // Only enable EE survey if user accepted the newsletter
         setNpsSurveySettings((s) => ({ ...s, enabled: true }));
 
-        navigate({
+        push({
           pathname: '/usecase',
           search: `?hasAdmin=${true}`,
         });
       } else {
-        navigate('/');
+        push('/');
       }
     } else {
       if (isBaseQueryError(res.error)) {
@@ -279,23 +194,23 @@ const Register = ({ hasAdmin }: RegisterProps) => {
 
   const handleRegisterUser = async (
     { news, ...body }: RegisterUser.Request['body'] & { news: boolean },
-    setFormErrors: FormHelpers<RegisterFormValues>['setErrors']
+    setFormErrors: FormikHelpers<RegisterFormValues>['setErrors']
   ) => {
     const res = await registerUser(body);
 
     if ('data' in res) {
-      dispatch(login({ token: res.data.token }));
+      setToken(res.data.token);
 
       if (news) {
         // Only enable EE survey if user accepted the newsletter
         setNpsSurveySettings((s) => ({ ...s, enabled: true }));
 
-        navigate({
+        push({
           pathname: '/usecase',
           search: `?hasAdmin=${hasAdmin}`,
         });
       } else {
-        navigate('/');
+        push('/');
       }
     } else {
       if (isBaseQueryError(res.error)) {
@@ -315,7 +230,7 @@ const Register = ({ hasAdmin }: RegisterProps) => {
     !match ||
     (match.params.authType !== 'register' && match.params.authType !== 'register-admin')
   ) {
-    return <Navigate to="/" />;
+    return <Redirect to="/" />;
   }
 
   const isAdminRegistration = match.params.authType === 'register-admin';
@@ -328,7 +243,7 @@ const Register = ({ hasAdmin }: RegisterProps) => {
         <Flex direction="column" alignItems="center" gap={3}>
           <Logo />
 
-          <Typography tag="h1" variant="alpha" textAlign="center">
+          <Typography as="h1" variant="alpha" textAlign="center">
             {formatMessage({
               id: 'Auth.form.welcome.title',
               defaultMessage: 'Welcome to Strapi!',
@@ -347,8 +262,8 @@ const Register = ({ hasAdmin }: RegisterProps) => {
             </Typography>
           ) : null}
         </Flex>
-        <Form
-          method="POST"
+        <Formik
+          enableReinitialize
           initialValues={
             {
               firstname: userInfo?.firstname || '',
@@ -360,7 +275,7 @@ const Register = ({ hasAdmin }: RegisterProps) => {
               news: false,
             } satisfies RegisterFormValues
           }
-          onSubmit={async (data, helpers) => {
+          onSubmit={async (data, formik) => {
             const normalizedData = normalizeData(data);
 
             try {
@@ -382,135 +297,205 @@ const Register = ({ hasAdmin }: RegisterProps) => {
                     registrationToken: normalizedData.registrationToken,
                     news: normalizedData.news,
                   },
-                  helpers.setErrors
+                  formik.setErrors
                 );
               } else {
                 await handleRegisterAdmin(
                   omit(normalizedData, ['registrationToken', 'confirmPassword']),
-                  helpers.setErrors
+                  formik.setErrors
                 );
               }
             } catch (err) {
               if (err instanceof ValidationError) {
-                helpers.setErrors(
-                  err.inner.reduce<Record<string, string>>((acc, { message, path }) => {
-                    if (path && typeof message === 'object') {
-                      acc[path] = formatMessage(message);
-                    }
-                    return acc;
-                  }, {})
-                );
+                const errors = getYupInnerErrors(err);
+
+                formik.setErrors(errors);
               }
               setSubmitCount(submitCount + 1);
             }
           }}
+          validateOnChange={false}
         >
-          <Flex direction="column" alignItems="stretch" gap={6} marginTop={7}>
-            <Grid.Root gap={4}>
-              {[
-                {
-                  label: formatMessage({
-                    id: 'Auth.form.firstname.label',
-                    defaultMessage: 'Firstname',
-                  }),
-                  name: 'firstname',
-                  required: true,
-                  size: 6,
-                  type: 'string' as const,
-                },
-                {
-                  label: formatMessage({
-                    id: 'Auth.form.lastname.label',
-                    defaultMessage: 'Lastname',
-                  }),
-                  name: 'lastname',
-                  size: 6,
-                  type: 'string' as const,
-                },
-                {
-                  disabled: !isAdminRegistration,
-                  label: formatMessage({
-                    id: 'Auth.form.email.label',
-                    defaultMessage: 'Email',
-                  }),
-                  name: 'email',
-                  required: true,
-                  size: 12,
-                  type: 'email' as const,
-                },
-                {
-                  hint: formatMessage({
-                    id: 'Auth.form.password.hint',
-                    defaultMessage:
-                      'Must be at least 8 characters, 1 uppercase, 1 lowercase & 1 number',
-                  }),
-                  label: formatMessage({
-                    id: 'global.password',
-                    defaultMessage: 'Password',
-                  }),
-                  name: 'password',
-                  required: true,
-                  size: 12,
-                  type: 'password' as const,
-                },
-                {
-                  label: formatMessage({
-                    id: 'Auth.form.confirmPassword.label',
-                    defaultMessage: 'Confirm Password',
-                  }),
-                  name: 'confirmPassword',
-                  required: true,
-                  size: 12,
-                  type: 'password' as const,
-                },
-                {
-                  label: formatMessage(
-                    {
-                      id: 'Auth.form.register.news.label',
-                      defaultMessage:
-                        'Keep me updated about new features & upcoming improvements (by doing this you accept the {terms} and the {policy}).',
-                    },
-                    {
-                      terms: (
-                        <A target="_blank" href="https://strapi.io/terms" rel="noreferrer">
-                          {formatMessage({
-                            id: 'Auth.privacy-policy-agreement.terms',
-                            defaultMessage: 'terms',
+          {({ values, errors, handleChange }) => {
+            return (
+              <Form>
+                <Main>
+                  <Flex direction="column" alignItems="stretch" gap={6} marginTop={7}>
+                    <Grid gap={4}>
+                      <GridItem col={6}>
+                        <TextInput
+                          name="firstname"
+                          required
+                          value={values.firstname}
+                          error={
+                            errors.firstname
+                              ? formatMessage(errors.firstname as MessageDescriptor)
+                              : undefined
+                          }
+                          onChange={handleChange}
+                          label={formatMessage({
+                            id: 'Auth.form.firstname.label',
+                            defaultMessage: 'Firstname',
                           })}
-                        </A>
-                      ),
-                      policy: (
-                        <A target="_blank" href="https://strapi.io/privacy" rel="noreferrer">
-                          {formatMessage({
-                            id: 'Auth.privacy-policy-agreement.policy',
-                            defaultMessage: 'policy',
+                        />
+                      </GridItem>
+                      <GridItem col={6}>
+                        <TextInput
+                          name="lastname"
+                          value={values.lastname}
+                          onChange={handleChange}
+                          label={formatMessage({
+                            id: 'Auth.form.lastname.label',
+                            defaultMessage: 'Lastname',
                           })}
-                        </A>
-                      ),
-                    }
-                  ),
-                  name: 'news',
-                  size: 12,
-                  type: 'checkbox' as const,
-                },
-              ].map(({ size, ...field }) => (
-                <Grid.Item key={field.name} col={size} direction="column" alignItems="stretch">
-                  <InputRenderer {...field} />
-                </Grid.Item>
-              ))}
-            </Grid.Root>
-            <Button fullWidth size="L" type="submit">
-              {formatMessage({
-                id: 'Auth.form.button.register',
-                defaultMessage: "Let's start",
-              })}
-            </Button>
-          </Flex>
-        </Form>
+                        />
+                      </GridItem>
+                    </Grid>
+                    <TextInput
+                      name="email"
+                      disabled={!isAdminRegistration}
+                      value={values.email}
+                      onChange={handleChange}
+                      error={
+                        errors.email ? formatMessage(errors.email as MessageDescriptor) : undefined
+                      }
+                      required
+                      label={formatMessage({
+                        id: 'Auth.form.email.label',
+                        defaultMessage: 'Email',
+                      })}
+                      type="email"
+                    />
+                    <PasswordInput
+                      name="password"
+                      onChange={handleChange}
+                      value={values.password}
+                      error={
+                        errors.password
+                          ? formatMessage(errors.password as MessageDescriptor)
+                          : undefined
+                      }
+                      endAction={
+                        <FieldActionWrapper
+                          onClick={(e) => {
+                            e.preventDefault();
+                            setPasswordShown((prev) => !prev);
+                          }}
+                          label={formatMessage(
+                            passwordShown
+                              ? {
+                                  id: 'Auth.form.password.show-password',
+                                  defaultMessage: 'Show password',
+                                }
+                              : {
+                                  id: 'Auth.form.password.hide-password',
+                                  defaultMessage: 'Hide password',
+                                }
+                          )}
+                        >
+                          {passwordShown ? <Eye /> : <EyeStriked />}
+                        </FieldActionWrapper>
+                      }
+                      hint={formatMessage({
+                        id: 'Auth.form.password.hint',
+                        defaultMessage:
+                          'Must be at least 8 characters, 1 uppercase, 1 lowercase & 1 number',
+                      })}
+                      required
+                      label={formatMessage({
+                        id: 'global.password',
+                        defaultMessage: 'Password',
+                      })}
+                      type={passwordShown ? 'text' : 'password'}
+                    />
+                    <PasswordInput
+                      name="confirmPassword"
+                      onChange={handleChange}
+                      value={values.confirmPassword}
+                      error={
+                        errors.confirmPassword
+                          ? formatMessage(errors.confirmPassword as MessageDescriptor)
+                          : undefined
+                      }
+                      endAction={
+                        <FieldActionWrapper
+                          onClick={(e) => {
+                            e.preventDefault();
+                            setConfirmPasswordShown((prev) => !prev);
+                          }}
+                          label={formatMessage(
+                            confirmPasswordShown
+                              ? {
+                                  id: 'Auth.form.password.show-password',
+                                  defaultMessage: 'Show password',
+                                }
+                              : {
+                                  id: 'Auth.form.password.hide-password',
+                                  defaultMessage: 'Hide password',
+                                }
+                          )}
+                        >
+                          {confirmPasswordShown ? <Eye /> : <EyeStriked />}
+                        </FieldActionWrapper>
+                      }
+                      required
+                      label={formatMessage({
+                        id: 'Auth.form.confirmPassword.label',
+                        defaultMessage: 'Confirm Password',
+                      })}
+                      type={confirmPasswordShown ? 'text' : 'password'}
+                    />
+                    <Checkbox
+                      onValueChange={(checked) => {
+                        handleChange({ target: { value: checked, name: 'news' } });
+                      }}
+                      value={values.news}
+                      name="news"
+                      aria-label="news"
+                    >
+                      {formatMessage(
+                        {
+                          id: 'Auth.form.register.news.label',
+                          defaultMessage:
+                            'Keep me updated about new features & upcoming improvements (by doing this you accept the {terms} and the {policy}).',
+                        },
+                        {
+                          terms: (
+                            <A target="_blank" href="https://strapi.io/terms" rel="noreferrer">
+                              {formatMessage({
+                                id: 'Auth.privacy-policy-agreement.terms',
+                                defaultMessage: 'terms',
+                              })}
+                            </A>
+                          ),
+                          policy: (
+                            <A target="_blank" href="https://strapi.io/privacy" rel="noreferrer">
+                              {formatMessage({
+                                id: 'Auth.privacy-policy-agreement.policy',
+                                defaultMessage: 'policy',
+                              })}
+                            </A>
+                          ),
+                        }
+                      )}
+                    </Checkbox>
+                    <Button fullWidth size="L" type="submit">
+                      {formatMessage({
+                        id: 'Auth.form.button.register',
+                        defaultMessage: "Let's start",
+                      })}
+                    </Button>
+                  </Flex>
+                </Main>
+              </Form>
+            );
+          }}
+        </Formik>
         {match?.params.authType === 'register' && (
           <Box paddingTop={4}>
             <Flex justifyContent="center">
-              <Link tag={NavLink} to="/auth/login">
+              {/* @ts-expect-error – error with inferring the props from the as component */}
+              <Link as={NavLink} to="/auth/login">
                 {formatMessage({
                   id: 'Auth.link.signin.account',
                   defaultMessage: 'Already have an account?',
@@ -576,6 +561,12 @@ function normalizeData(data: RegisterFormValues) {
 
 const A = styled.a`
   color: ${({ theme }) => theme.colors.primary600};
+`;
+
+const PasswordInput = styled(TextInput)`
+  ::-ms-reveal {
+    display: none;
+  }
 `;
 
 export { Register };

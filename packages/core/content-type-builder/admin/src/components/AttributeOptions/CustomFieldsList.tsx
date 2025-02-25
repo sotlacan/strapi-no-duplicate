@@ -1,5 +1,6 @@
-import { useStrapiApp } from '@strapi/admin/strapi-admin';
-import { Flex, Grid, KeyboardNavigable, Link } from '@strapi/design-system';
+import { Flex, Grid, GridItem, KeyboardNavigable } from '@strapi/design-system';
+import { Link } from '@strapi/design-system/v2';
+import { useCustomFields, CustomFieldUID } from '@strapi/helper-plugin';
 import { useIntl } from 'react-intl';
 
 import { getTrad } from '../../utils';
@@ -9,9 +10,12 @@ import { EmptyAttributes } from './EmptyAttributes';
 
 export const CustomFieldsList = () => {
   const { formatMessage } = useIntl();
-  const getAllCustomFields = useStrapiApp('CustomFieldsList', (state) => state.customFields.getAll);
+  const customFields = useCustomFields();
   // TODO change this once useCustomFields is typed (helper-plugin types are solved)
-  const registeredCustomFields = Object.entries(getAllCustomFields());
+  const registeredCustomFields = Object.entries(customFields.getAll()) as [
+    CustomFieldUID,
+    CustomFieldOption
+  ][];
 
   if (!registeredCustomFields.length) {
     return <EmptyAttributes />;
@@ -25,13 +29,13 @@ export const CustomFieldsList = () => {
   return (
     <KeyboardNavigable tagName="button">
       <Flex direction="column" alignItems="stretch" gap={3}>
-        <Grid.Root gap={3}>
+        <Grid gap={3}>
           {sortedCustomFields.map(([uid, customField]) => (
-            <Grid.Item key={uid} col={6} direction="column" alignItems="stretch">
+            <GridItem key={uid} col={6}>
               <CustomFieldOption key={uid} customFieldUid={uid} customField={customField} />
-            </Grid.Item>
+            </GridItem>
           ))}
-        </Grid.Root>
+        </Grid>
         <Link
           href="https://docs.strapi.io/developer-docs/latest/development/custom-fields.html"
           isExternal

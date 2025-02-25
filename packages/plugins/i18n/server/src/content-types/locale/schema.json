@@ -6,7 +6,9 @@
     "displayName": "Locale",
     "description": ""
   },
-  "options": {},
+  "options": {
+    "draftAndPublish": false
+  },
   "pluginOptions": {
     "content-manager": {
       "visible": false

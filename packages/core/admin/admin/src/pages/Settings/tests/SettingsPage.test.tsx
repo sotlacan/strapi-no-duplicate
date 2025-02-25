@@ -1,47 +1,40 @@
+import { AppInfoContext, StrapiAppProvider, StrapiAppProviderProps } from '@strapi/helper-plugin';
 import { render as baseRender, screen } from '@tests/utils';
-import { Route, Routes, useLocation } from 'react-router-dom';
+import { Route } from 'react-router-dom';
 
-import { RBAC } from '../../../core/apis/rbac';
-import { StrapiAppContextValue, StrapiAppProvider } from '../../../features/StrapiApp';
 import { useSettingsMenu } from '../../../hooks/useSettingsMenu';
-import { Layout } from '../Layout';
+import { SettingsPage } from '../SettingsPage';
 
 jest.mock('../../../hooks/useSettingsMenu');
 
-const LocationDisplay = () => {
-  const location = useLocation();
+jest.mock('../pages/ApplicationInfo/ApplicationInfoPage', () => ({
+  ApplicationInfoPage: () => {
+    return <h1>App infos</h1>;
+  },
+}));
 
-  return <span data-testid="location-display">{location.pathname}</span>;
-};
-
-const render = (settings: StrapiAppContextValue['settings']) =>
-  baseRender(<Route path="/settings?/:settingId" element={<Layout />} />, {
-    initialEntries: ['/settings'],
+const render = (settings: StrapiAppProviderProps['settings']) =>
+  baseRender(<Route path="/settings/:settingId" component={SettingsPage} />, {
+    initialEntries: ['/settings/application-infos'],
     renderOptions: {
       wrapper({ children }) {
         return (
-          <StrapiAppProvider
-            components={{}}
-            fields={{}}
-            customFields={{
-              customFields: {},
-              get: jest.fn(),
-              getAll: jest.fn(),
-              register: jest.fn(),
-            }}
-            settings={settings}
-            plugins={{}}
-            rbac={new RBAC()}
-            getPlugin={jest.fn()}
-            getAdminInjectedComponents={jest.fn()}
-            runHookParallel={jest.fn()}
-            runHookWaterfall={jest.fn()}
-            runHookSeries={jest.fn()}
-            menu={[]}
+          <AppInfoContext.Provider
+            value={{ shouldUpdateStrapi: false, setUserDisplayName: () => {}, userDisplayName: '' }}
           >
-            <Routes>{children}</Routes>
-            <LocationDisplay />
-          </StrapiAppProvider>
+            <StrapiAppProvider
+              settings={settings}
+              plugins={{}}
+              getPlugin={jest.fn()}
+              getAdminInjectedComponents={jest.fn()}
+              runHookParallel={jest.fn()}
+              runHookWaterfall={jest.fn()}
+              runHookSeries={jest.fn()}
+              menu={[]}
+            >
+              {children}
+            </StrapiAppProvider>
+          </AppInfoContext.Provider>
         );
       },
     },
@@ -60,7 +53,9 @@ describe('ADMIN | pages | SettingsPage', () => {
       },
     });
 
-    await screen.findByText('/settings/application-infos');
+    await screen.findByText('App infos');
+
+    expect(screen.getByText(/App infos/)).toBeInTheDocument();
   });
 
   it('should create the plugins routes correctly', async () => {
@@ -115,8 +110,7 @@ describe('ADMIN | pages | SettingsPage', () => {
             intlLabel: { id: 'i18n.plugin.name', defaultMessage: 'Internationalization' },
             permissions: [],
             to: '/settings/internationalization',
-            // @ts-expect-error – this expects lazy components, but we're not doing it in the test
-            Component: () => <div>i18n settings</div>,
+            Component: () => ({ default: () => <div>i18n settings</div> }),
           },
         ],
       },
@@ -129,21 +123,20 @@ describe('ADMIN | pages | SettingsPage', () => {
             intlLabel: { id: 'email', defaultMessage: 'email' },
             permissions: [],
             to: '/settings/email-settings',
-            // @ts-expect-error – this expects lazy components, but we're not doing it in the test
-            Component: () => <div>email settings</div>,
+            Component: () => ({ default: () => <div>email settings</div> }),
           },
         ],
       },
     });
 
-    await screen.findByText('/settings/application-infos');
+    expect(screen.getByText(/App infos/)).toBeInTheDocument();
 
     await user.click(screen.getByText('Internationalization'));
 
-    await screen.findByText('/settings/internationalization');
+    await screen.findByText(/i18n settings/);
 
     await user.click(screen.getByText('email'));
 
-    await screen.findByText('/settings/email-settings');
+    await screen.findByText(/email settings/);
   });
 });

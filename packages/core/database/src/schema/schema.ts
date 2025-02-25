@@ -1,36 +1,21 @@
 import * as types from '../utils/types';
-import { identifiers } from '../utils/identifiers';
+
 import type { Metadata, Meta } from '../metadata';
 import type { Column, Schema, Table } from './types';
 import type { Attribute } from '../types';
-
-/**
- * TODO: This needs to be refactored to support incoming names such as
- * (column, table, index) that are of the form string | NameToken[] so
- * that pieces can be passed through and shortened here.
- *
- * Currently, we are potentially shortening twice, although in reality
- * that won't happen since the shortened attribute column names will
- * fit here because they are already shortened to the max identifier
- * length
- *
- * That is the reason we use getName() here and not getColumnName();
- * we just want the exact shortened name for the value without doing
- * any other potential manipulation to it
- * */
 
 const createColumn = (name: string, attribute: Attribute): Column => {
   const { type, args = [], ...opts } = getColumnType(attribute);
 
   return {
-    name: identifiers.getName(name),
+    name,
     type,
     args,
     defaultTo: null,
     notNullable: false,
     unsigned: false,
     ...opts,
-    ...('column' in attribute ? (attribute.column ?? {}) : {}),
+    ...('column' in attribute ? attribute.column ?? {} : {}),
   };
 };
 
@@ -50,11 +35,8 @@ const createTable = (meta: Meta): Table => {
       if ('morphColumn' in attribute && attribute.morphColumn && attribute.owner) {
         const { idColumn, typeColumn } = attribute.morphColumn;
 
-        const idColumnName = identifiers.getName(idColumn.name);
-        const typeColumnName = identifiers.getName(typeColumn.name);
-
         table.columns.push(
-          createColumn(idColumnName, {
+          createColumn(idColumn.name, {
             type: 'integer',
             column: {
               unsigned: true,
@@ -62,7 +44,7 @@ const createTable = (meta: Meta): Table => {
           })
         );
 
-        table.columns.push(createColumn(typeColumnName, { type: 'string' }));
+        table.columns.push(createColumn(typeColumn.name, { type: 'string' }));
       } else if (
         'joinColumn' in attribute &&
         attribute.joinColumn &&
@@ -71,18 +53,10 @@ const createTable = (meta: Meta): Table => {
       ) {
         // NOTE: we could pass uniquness for oneToOne to avoid creating more than one to one
 
-        const {
-          name: columnNameFull,
-          referencedColumn,
-          referencedTable,
-          columnType = 'integer',
-        } = attribute.joinColumn;
-
-        const columnName = identifiers.getName(columnNameFull);
+        const { name: columnName, referencedColumn, referencedTable } = attribute.joinColumn;
 
         const column = createColumn(columnName, {
-          // TODO: find the column type automatically, or allow passing all the column params
-          type: columnType,
+          type: 'integer',
           column: {
             unsigned: true,
           },
@@ -90,10 +64,9 @@ const createTable = (meta: Meta): Table => {
 
         table.columns.push(column);
 
-        const fkName = identifiers.getFkIndexName([table.name, columnName]);
         table.foreignKeys.push({
-          name: fkName,
-          columns: [column.name],
+          name: `${table.name}_${columnName}_fk`,
+          columns: [columnName],
           referencedTable,
           referencedColumns: [referencedColumn],
           // NOTE: could allow configuration
@@ -101,28 +74,26 @@ const createTable = (meta: Meta): Table => {
         });
 
         table.indexes.push({
-          name: fkName,
-          columns: [column.name],
+          name: `${table.name}_${columnName}_fk`,
+          columns: [columnName],
         });
       }
     } else if (types.isScalarAttribute(attribute)) {
-      const columnName = identifiers.getName(attribute.columnName || key);
-
-      const column = createColumn(columnName, attribute);
+      const column = createColumn(attribute.columnName || key, attribute);
 
       if (column.unique) {
         table.indexes.push({
           type: 'unique',
-          name: identifiers.getUniqueIndexName([table.name, column.name]),
-          columns: [columnName],
+          name: `${table.name}_${column.name}_unique`,
+          columns: [column.name],
         });
       }
 
       if (column.primary) {
         table.indexes.push({
           type: 'primary',
-          name: identifiers.getPrimaryIndexName([table.name, column.name]),
-          columns: [columnName],
+          name: `${table.name}_${column.name}_primary`,
+          columns: [column.name],
         });
       }
 
@@ -157,6 +128,7 @@ const getColumnType = (attribute: Attribute) => {
     case 'uid': {
       return {
         type: 'string',
+        unique: true,
       };
     }
     case 'richtext':

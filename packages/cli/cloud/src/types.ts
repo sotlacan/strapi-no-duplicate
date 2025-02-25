@@ -22,9 +22,6 @@ export type CloudCliConfig = {
     defaults: Partial<ProjectAnswers>;
     introText: string;
   };
-  projectDeployment: {
-    confirmationText: string;
-  };
   buildLogsConnectionTimeout: string;
   buildLogsMaxRetries: string;
   notificationsConnectionTimeout: string;
@@ -40,11 +37,7 @@ export type StrapiCloudCommand = (params: {
   command: Command;
   argv: string[];
   ctx: CLIContext;
-}) => void | Command | Promise<Command | void>;
-
-export type StrapiCloudNamespaceCommand = (params: {
-  command: Command;
-}) => void | Command | Promise<Command | void>;
+}) => void | Promise<void>;
 
 export type StrapiCloudCommandInfo = {
   name: string;

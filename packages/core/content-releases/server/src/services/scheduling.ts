@@ -1,12 +1,12 @@
 import { scheduleJob, Job } from 'node-schedule';
-import type { Core } from '@strapi/types';
+import { LoadedStrapi } from '@strapi/types';
 
 import { errors } from '@strapi/utils';
 import { Release } from '../../../shared/contracts/releases';
 import { getService } from '../utils';
 import { RELEASE_MODEL_UID } from '../constants';
 
-const createSchedulingService = ({ strapi }: { strapi: Core.Strapi }) => {
+const createSchedulingService = ({ strapi }: { strapi: LoadedStrapi }) => {
   const scheduledJobs = new Map<Release['id'], Job>();
 
   return {
@@ -21,7 +21,7 @@ const createSchedulingService = ({ strapi }: { strapi: Core.Strapi }) => {
 
       const job = scheduleJob(scheduleDate, async () => {
         try {
-          await getService('release', { strapi }).publish(releaseId);
+          await getService('release').publish(releaseId);
           // @TODO: Trigger webhook with success message
         } catch (error) {
           // @TODO: Trigger webhook with error message

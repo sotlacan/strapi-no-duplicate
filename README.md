@@ -9,7 +9,7 @@
 
 <h3 align="center">Open-source headless CMS, self-hosted or Cloud you’re in control.</h3>
 <p align="center">The leading open-source headless CMS, 100% JavaScript/TypeScript, flexible and fully customizable.</p>
-<p align="center"><a href="https://cloud.strapi.io/signups?source=github1">Cloud</a> · <a href="https://strapi.io/demo?utm_campaign=Growth-Experiments&utm_source=strapi%2Fstrapi%20README.md">Try live demo</a></p>
+<p align="center"><a href="https://cloud.strapi.io/signups?source=github1">Cloud</a> · <a href="https://strapi.io/demo?utm_campaign=Growth-Experiments&utm_source=strapi%2Fstrapi%20README.md">Try live demo</a> · <a href="https://strapi.io/five?utm_campaign=Product%20Marketing%20Strapi%205%20Launch%20Q1%20Q2%202024&utm_source=GitHub&utm_medium=strapi%2Fstrapi%20README.md">Strapi 5 (coming soon)</a></p>
 <br />
 
 <p align="center">
@@ -59,18 +59,18 @@ Install Strapi with this **Quickstart** command to create a Strapi project insta
 - (Use **yarn** to install the Strapi project (recommended). [Install yarn with these docs](https://yarnpkg.com/lang/en/docs/install/).)
 
 ```bash
-yarn create strapi
+yarn create strapi-app my-project --quickstart
 ```
 
 **or**
 
-- (Using npx to install the Strapi project.)
+- (Use npm/npx to install the Strapi project.)
 
 ```bash
-npx create-strapi@latest
+npx create-strapi-app my-project --quickstart
 ```
 
-This command generates a brand new project with the default features (authentication, permissions, content management, content type builder & file upload).
+This command generates a brand new project with the default features (authentication, permissions, content management, content type builder & file upload). The **Quickstart** command installs Strapi using a **SQLite** database which is used for prototyping in development.
 
 Enjoy 🎉
 
@@ -80,15 +80,11 @@ Complete installation requirements can be found in the documentation under <a hr
 
 **Supported operating systems**:
 
-| OS              | Recommended | Minimum    |
-| --------------- | ----------- | ---------- |
-| Ubuntu          | 24.04       | LTS        |
-| Debian          | 11          | LTS        |
-| RHEL            | 9           | LTS        |
-| macOS           | 14          | 12         |
-| Windows Desktop | 11          | 10         |
-| Windows Server  | No Support  | No Support |
-| Docker          | N/A         | N/A        |
+- Ubuntu LTS/Debian 9.x
+- CentOS/RHEL 8
+- macOS Mojave
+- Windows 10
+- Docker
 
 (Please note that Strapi may work on other operating systems, but these are not tested nor officially supported at this time.)
 
@@ -98,7 +94,6 @@ Strapi only supports maintenance and LTS versions of Node.js. Please refer to th
 
 | Strapi Version  | Recommended | Minimum |
 | --------------- | ----------- | ------- |
-| 5.0.0 and up    | 20.x        | 18.x    |
 | 4.14.5 and up   | 20.x        | 18.x    |
 | 4.11.0 and up   | 18.x        | 16.x    |
 | 4.3.9 to 4.10.x | 18.x        | 14.x    |
@@ -108,9 +103,9 @@ Strapi only supports maintenance and LTS versions of Node.js. Please refer to th
 
 | Database   | Recommended | Minimum |
 | ---------- | ----------- | ------- |
-| MySQL      | 8.0         | 8.0     |
-| MariaDB    | 11.2        | 10.3    |
-| PostgreSQL | 16.0        | 14.0    |
+| MySQL      | 8.0         | 5.7.8   |
+| MariaDB    | 10.6        | 10.3    |
+| PostgreSQL | 14.0        | 11.0    |
 | SQLite     | 3           | 3       |
 
 **We recommend always using the latest version of Strapi stable to start your new projects**.
@@ -157,7 +152,6 @@ See our dedicated [repository](https://github.com/strapi/documentation) for the 
 
 - [Developer docs](https://docs.strapi.io/developer-docs/latest/getting-started/introduction.html)
 - [User guide](https://docs.strapi.io/user-docs/latest/getting-started/introduction.html)
-- [Cloud guide](https://docs.strapi.io/cloud/intro)
 
 ## Try live demo
 

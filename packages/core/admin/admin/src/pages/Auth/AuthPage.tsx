@@ -1,22 +1,25 @@
-import { Navigate, useLocation, useMatch } from 'react-router-dom';
+import { Redirect, useHistory, useRouteMatch } from 'react-router-dom';
 
 import { useAuth } from '../../features/Auth';
 import { useEnterprise } from '../../hooks/useEnterprise';
-import { useInitQuery } from '../../services/admin';
 
 import { Login as LoginCE } from './components/Login';
-import { FORMS, FormDictionary } from './constants';
+import { AuthType, FORMS, FormDictionary } from './constants';
 
 /* -------------------------------------------------------------------------------------------------
  * AuthPage
  * -----------------------------------------------------------------------------------------------*/
 
-const AuthPage = () => {
-  const { search } = useLocation();
-  const match = useMatch('/auth/:authType');
+interface AuthPageProps {
+  hasAdmin: boolean;
+}
+
+const AuthPage = ({ hasAdmin }: AuthPageProps) => {
+  const {
+    location: { search },
+  } = useHistory();
+  const match = useRouteMatch<{ authType: AuthType }>('/auth/:authType');
   const authType = match?.params.authType;
-  const { data } = useInitQuery();
-  const { hasAdmin } = data ?? {};
   const Login = useEnterprise(
     LoginCE,
     async () => (await import('../../../../ee/admin/src/pages/AuthPage/components/Login')).LoginEE
@@ -35,34 +38,26 @@ const AuthPage = () => {
     }
   );
 
-  const { token } = useAuth('AuthPage', (auth) => auth);
+  const { token } = useAuth('AuthPage');
 
   if (!authType || !forms) {
-    return <Navigate to="/" />;
+    return <Redirect to="/" />;
   }
 
-  const Component = forms[authType as keyof FormDictionary];
+  const Component = forms[authType];
 
   // Redirect the user to the login page if
-  // the endpoint does not exists
-  if (!Component) {
-    return <Navigate to="/" />;
-  }
-
-  // User is already logged in
-  if (authType !== 'register-admin' && authType !== 'register' && token) {
-    return <Navigate to="/" />;
-  }
-
+  // the endpoint does not exist or
   // there is already an admin user oo
-  if (hasAdmin && authType === 'register-admin' && token) {
-    return <Navigate to="/" />;
+  // the user is already logged in
+  if (!Component || (hasAdmin && authType === 'register-admin') || token) {
+    return <Redirect to="/" />;
   }
 
   // Redirect the user to the register-admin if it is the first user
   if (!hasAdmin && authType !== 'register-admin') {
     return (
-      <Navigate
+      <Redirect
         to={{
           pathname: '/auth/register-admin',
           // Forward the `?redirectTo` from /auth/login
@@ -85,3 +80,4 @@ const AuthPage = () => {
 };
 
 export { AuthPage };
+export type { AuthPageProps };

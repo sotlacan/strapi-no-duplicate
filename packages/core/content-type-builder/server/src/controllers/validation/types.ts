@@ -2,8 +2,9 @@ import _ from 'lodash';
 import { yup } from '@strapi/utils';
 
 import type { TestContext } from 'yup';
-import type { Schema, Struct } from '@strapi/types';
+import type { Attribute, Common, Schema } from '@strapi/types';
 
+import { hasComponent } from '../../utils/attributes';
 import { modelTypes, VALID_UID_TARGETS } from '../../services/constants';
 import {
   validators,
@@ -17,7 +18,7 @@ import {
 
 export type GetTypeValidatorOptions = {
   types: ReadonlyArray<string>;
-  attributes?: Struct.SchemaAttributes;
+  attributes?: Schema.Attributes;
   modelType?: (typeof modelTypes)[keyof typeof modelTypes];
 };
 
@@ -31,7 +32,7 @@ const maxLengthIsGreaterThanOrEqualToMinLength = {
 };
 
 export const getTypeValidator = (
-  attribute: Schema.Attribute.AnyAttribute,
+  attribute: Attribute.Any,
   { types, modelType, attributes }: GetTypeValidatorOptions
 ) => {
   return yup.object({
@@ -46,7 +47,7 @@ export const getTypeValidator = (
   } as any);
 };
 
-const getTypeShape = (attribute: Schema.Attribute.AnyAttribute, { attributes }: any = {}) => {
+const getTypeShape = (attribute: Attribute.Any, { modelType, attributes }: any = {}) => {
   switch (attribute.type) {
     /**
      * complex types
@@ -215,8 +216,24 @@ const getTypeShape = (attribute: Schema.Attribute.AnyAttribute, { attributes }: 
       return {
         required: validators.required,
         repeatable: yup.boolean(),
-        // TODO: Add correct server validation for nested components
-        component: yup.string().required(),
+        component: yup
+          .string()
+          .test({
+            name: 'Check max component nesting is 1 lvl',
+            test(compoUID: unknown) {
+              const targetCompo = strapi.components[compoUID as Common.UID.Component];
+              if (!targetCompo) return true; // ignore this error as it will fail beforehand
+
+              if (modelType === modelTypes.COMPONENT && hasComponent(targetCompo)) {
+                return this.createError({
+                  path: this.path,
+                  message: `${targetCompo.modelName} already is a nested component. You cannot have more than one level of nesting inside your components.`,
+                });
+              }
+              return true;
+            },
+          })
+          .required(),
         min: yup.number(),
         max: yup.number(),
       };

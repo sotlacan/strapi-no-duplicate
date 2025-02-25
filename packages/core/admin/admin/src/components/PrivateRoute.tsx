@@ -1,28 +1,34 @@
 import * as React from 'react';
 
-import { Navigate, useLocation } from 'react-router-dom';
+import { Redirect, Route, RouteProps } from 'react-router-dom';
 
 import { useAuth } from '../features/Auth';
 
-interface PrivateRouteProps {
+interface PrivateRouteProps extends Omit<RouteProps, 'render' | 'component'> {
   children: React.ReactNode;
 }
 
-const PrivateRoute = ({ children }: PrivateRouteProps) => {
-  const token = useAuth('PrivateRoute', (state) => state.token);
-  const { pathname, search } = useLocation();
+const PrivateRoute = ({ children, ...rest }: PrivateRouteProps) => {
+  const { token } = useAuth('PrivateRoute');
 
-  return token !== null ? (
-    children
-  ) : (
-    <Navigate
-      to={{
-        pathname: '/auth/login',
-        search:
-          pathname !== '/'
-            ? `?redirectTo=${encodeURIComponent(`${pathname}${search}`)}`
-            : undefined,
-      }}
+  return (
+    <Route
+      {...rest}
+      render={({ location: { pathname, search } }) =>
+        token !== null ? (
+          children
+        ) : (
+          <Redirect
+            to={{
+              pathname: '/auth/login',
+              search:
+                pathname !== '/'
+                  ? `?redirectTo=${encodeURIComponent(`${pathname}${search}`)}`
+                  : undefined,
+            }}
+          />
+        )
+      }
     />
   );
 };

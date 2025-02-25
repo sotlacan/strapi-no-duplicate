@@ -1,7 +1,6 @@
 import { pick, getOr } from 'lodash/fp';
 import { contentTypes as contentTypesUtils } from '@strapi/utils';
-
-import type { Schema, Struct } from '@strapi/types';
+import { Attribute, Schema } from '@strapi/types';
 
 const dtoFields = [
   'uid',
@@ -17,7 +16,7 @@ const dtoFields = [
 ];
 
 export default () => ({
-  toContentManagerModel(contentType: Struct.ComponentSchema) {
+  toContentManagerModel(contentType: Schema.Component) {
     return {
       ...contentType,
       apiID: contentType.modelName,
@@ -34,7 +33,7 @@ export default () => ({
   toDto: pick(dtoFields),
 });
 
-const formatAttributes = (contentType: Struct.ComponentSchema) => {
+const formatAttributes = (contentType: Schema.Component) => {
   const { getVisibleAttributes, getTimestamps, getCreatorFields } = contentTypesUtils;
 
   // only get attributes that can be seen in the auto generated Edit view or List view
@@ -55,7 +54,7 @@ const formatAttributes = (contentType: Struct.ComponentSchema) => {
 };
 
 // FIXME: not needed
-const formatAttribute = (key: any, attribute: Schema.Attribute.AnyAttribute) => {
+const formatAttribute = (key: any, attribute: Attribute.Any) => {
   if (attribute.type === 'relation') {
     return toRelation(attribute);
   }
@@ -64,7 +63,7 @@ const formatAttribute = (key: any, attribute: Schema.Attribute.AnyAttribute) => 
 };
 
 // FIXME: not needed
-const toRelation = (attribute: Schema.Attribute.Relation) => {
+const toRelation = (attribute: Attribute.Relation) => {
   return {
     ...attribute,
     type: 'relation',
@@ -73,5 +72,5 @@ const toRelation = (attribute: Schema.Attribute.Relation) => {
   };
 };
 
-const isVisible = (model: Struct.ComponentSchema): boolean =>
+const isVisible = (model: Schema.Component): boolean =>
   getOr(true, 'pluginOptions.content-manager.visible', model) === true;

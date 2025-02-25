@@ -18,7 +18,7 @@ jest.mock('../../utils', () => ({
 }));
 
 describe('Release controller', () => {
-  describe('findPage', () => {
+  describe('findMany', () => {
     it('should call findPage', async () => {
       mockFindPage.mockResolvedValue({ results: [], pagination: {} });
       mockFindManyWithContentTypeEntryAttached.mockResolvedValue([]);
@@ -35,6 +35,7 @@ describe('Release controller', () => {
         },
       };
       global.strapi = {
+        // @ts-expect-error Ignore missing properties
         admin: {
           services: {
             permission: {
@@ -46,17 +47,51 @@ describe('Release controller', () => {
             },
           },
         },
-        db: {
-          query: jest.fn().mockReturnValue({
-            count: jest.fn().mockResolvedValue(2),
-          }),
-        },
-      } as any;
+        query: jest.fn().mockReturnValue({
+          count: jest.fn().mockResolvedValue(2),
+        }),
+      };
 
       // @ts-expect-error partial context
-      await releaseController.findPage(ctx);
+      await releaseController.findMany(ctx);
 
       expect(mockFindPage).toHaveBeenCalled();
+    });
+
+    it('should call findManyWithoutContentTypeEntryAttached', async () => {
+      mockFindPage.mockResolvedValue({ results: [], pagination: {} });
+      mockFindManyWithContentTypeEntryAttached.mockResolvedValue([]);
+      const userAbility = {
+        can: jest.fn(),
+      };
+      const ctx = {
+        state: {
+          userAbility: {},
+        },
+        query: {
+          contentTypeUid: 'api::kitchensink.kitchensink',
+          entryId: 1,
+        },
+      };
+      global.strapi = {
+        // @ts-expect-error Ignore missing properties
+        admin: {
+          services: {
+            permission: {
+              createPermissionsManager: jest.fn(() => ({
+                ability: userAbility,
+                validateQuery: jest.fn(),
+                sanitizeQuery: jest.fn(() => ctx.query),
+              })),
+            },
+          },
+        },
+      };
+
+      // @ts-expect-error partial context
+      await releaseController.findMany(ctx);
+
+      expect(mockFindManyWithoutContentTypeEntryAttached).toHaveBeenCalled();
     });
   });
   describe('create', () => {
@@ -123,7 +158,9 @@ describe('Release controller', () => {
 
   describe('findOne', () => {
     beforeAll(() => {
+      // @ts-expect-error Ignore global error
       global.strapi = {
+        // @ts-expect-error Ignore global error
         ...global.strapi,
         admin: {
           services: {
@@ -149,7 +186,7 @@ describe('Release controller', () => {
             },
           },
         },
-      } as any;
+      };
     });
 
     it('throws an error if the release does not exists', async () => {
@@ -227,11 +264,11 @@ describe('Release controller', () => {
 
       // @ts-expect-error partial context
       await releaseController.findOne(ctx);
-      expect(strapi.service('admin::user').sanitizeUser).toHaveBeenCalled();
+      expect(strapi.admin.services.user.sanitizeUser).toHaveBeenCalled();
     });
   });
 
-  describe.skip('mapEntriesToReleases', () => {
+  describe('mapEntriesToReleases', () => {
     it('should throw an error if contentTypeUid or entriesIds are missing', async () => {
       const ctx = {
         query: {},

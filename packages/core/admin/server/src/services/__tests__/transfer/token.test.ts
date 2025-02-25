@@ -78,23 +78,22 @@ describe('Transfer Token', () => {
 
       global.strapi = {
         ...getActionProvider(['push'] as any),
-        db: {
-          query() {
-            return {
-              load,
-              create,
-            };
-          },
-          transaction: jest.fn((cb) => cb()),
+        query() {
+          return { create };
         },
+        db: { transaction: jest.fn((cb) => cb()) },
         config: {
           get: jest.fn(() => ''),
+        },
+        entityService: {
+          load,
         },
       } as any;
 
       const res = await tokenServiceCreate(attributes);
 
       expect(load).toHaveBeenCalledWith(
+        'admin::transfer-token',
         {
           ...createTokenResult,
         },
@@ -155,12 +154,11 @@ describe('Transfer Token', () => {
 
       global.strapi = {
         ...getActionProvider(['push'] as any),
-        db: {
-          query() {
-            return { load, create };
-          },
-          transaction: jest.fn((cb) => cb()),
+        query() {
+          return { create };
         },
+        entityService: { load },
+        db: { transaction: jest.fn((cb) => cb()) },
         config: {
           get: jest.fn(() => ''),
         },
@@ -198,12 +196,10 @@ describe('Transfer Token', () => {
       const create = jest.fn(({ data }) => Promise.resolve(data));
       global.strapi = {
         ...getActionProvider(['push'] as any),
-        db: {
-          query() {
-            return { create };
-          },
-          transaction: jest.fn((cb) => cb()),
+        query() {
+          return { create };
         },
+        db: { transaction: jest.fn((cb) => cb()) },
         config: {
           get: jest.fn(() => ''),
         },
@@ -244,24 +240,25 @@ describe('Transfer Token', () => {
 
       global.strapi = {
         ...getActionProvider(['push'] as any),
-        db: {
-          query() {
-            return {
-              load,
-              findOne,
-              create,
-            };
-          },
-          transaction: jest.fn((cb) => cb()),
+        query() {
+          return {
+            findOne,
+            create,
+          };
         },
+        db: { transaction: jest.fn((cb) => cb()) },
         config: {
           get: jest.fn(() => ''),
+        },
+        entityService: {
+          load,
         },
       } as any;
 
       const res = await tokenServiceCreate(attributes);
 
       expect(load).toHaveBeenCalledWith(
+        'admin::transfer-token',
         {
           ...createTokenResult,
         },
@@ -318,18 +315,18 @@ describe('Transfer Token', () => {
 
       global.strapi = {
         ...getActionProvider(['push'] as any),
-        db: {
-          query() {
-            return {
-              findOne,
-              load,
-              create,
-            };
-          },
-          transaction: jest.fn((cb) => cb()),
+        query() {
+          return {
+            findOne,
+            create,
+          };
         },
+        db: { transaction: jest.fn((cb) => cb()) },
         config: {
           get: jest.fn(() => ''),
+        },
+        entityService: {
+          load,
         },
       } as any;
 
@@ -367,17 +364,17 @@ describe('Transfer Token', () => {
 
       global.strapi = {
         ...getActionProvider(['push'] as any),
-        db: {
-          query() {
-            return {
-              create,
-              load,
-            };
-          },
-          transaction: jest.fn((cb) => cb()),
+        query() {
+          return {
+            create,
+          };
         },
+        db: { transaction: jest.fn((cb) => cb()) },
         config: {
           get: jest.fn(() => ''),
+        },
+        entityService: {
+          load,
         },
       } as any;
 
@@ -401,6 +398,7 @@ describe('Transfer Token', () => {
             transfer: {
               utils: {
                 hasValidTokenSalt: jest.fn(() => true),
+                isDisabledFromEnv: jest.fn(() => false),
               },
             },
           },
@@ -440,10 +438,8 @@ describe('Transfer Token', () => {
       const findMany = jest.fn().mockResolvedValue(tokens);
 
       global.strapi = {
-        db: {
-          query() {
-            return { findMany };
-          },
+        query() {
+          return { findMany };
         },
       } as any;
 
@@ -476,12 +472,10 @@ describe('Transfer Token', () => {
       const mockedDelete = jest.fn().mockResolvedValue(token);
 
       global.strapi = {
-        db: {
-          query() {
-            return { delete: mockedDelete };
-          },
-          transaction: jest.fn((cb) => cb()),
+        query() {
+          return { delete: mockedDelete };
         },
+        db: { transaction: jest.fn((cb) => cb()) },
       } as any;
 
       const res = await revoke(token.id);
@@ -498,12 +492,10 @@ describe('Transfer Token', () => {
       const mockedDelete = jest.fn().mockResolvedValue(null);
 
       global.strapi = {
-        db: {
-          query() {
-            return { delete: mockedDelete };
-          },
-          transaction: jest.fn((cb) => cb()),
+        query() {
+          return { delete: mockedDelete };
         },
+        db: { transaction: jest.fn((cb) => cb()) },
       } as any;
 
       const res = await revoke(42);
@@ -529,10 +521,8 @@ describe('Transfer Token', () => {
       const findOne = jest.fn().mockResolvedValue(token);
 
       global.strapi = {
-        db: {
-          query() {
-            return { findOne };
-          },
+        query() {
+          return { findOne };
         },
       } as any;
 
@@ -554,10 +544,8 @@ describe('Transfer Token', () => {
       const findOne = jest.fn().mockResolvedValue(null);
 
       global.strapi = {
-        db: {
-          query() {
-            return { findOne };
-          },
+        query() {
+          return { findOne };
         },
       } as any;
 
@@ -586,12 +574,10 @@ describe('Transfer Token', () => {
             },
           },
         },
-        db: {
-          query() {
-            return { update };
-          },
-          transaction: jest.fn((cb) => cb()),
+        query() {
+          return { update };
         },
+        db: { transaction: jest.fn((cb) => cb()) },
         config: {
           get: jest.fn(() => ''),
         },
@@ -623,12 +609,10 @@ describe('Transfer Token', () => {
             },
           },
         },
-        db: {
-          query() {
-            return { update };
-          },
-          transaction: jest.fn((cb) => cb()),
+        query() {
+          return { update };
         },
+        db: { transaction: jest.fn((cb) => cb()) },
         config: {
           get: jest.fn(() => ''),
         },
@@ -698,20 +682,20 @@ describe('Transfer Token', () => {
 
       global.strapi = {
         ...getActionProvider(['push'] as any),
-        db: {
-          query() {
-            return {
-              update,
-              findOne,
-              delete: deleteFn,
-              create,
-              load,
-            };
-          },
-          transaction: jest.fn((cb) => cb()),
+        query() {
+          return {
+            update,
+            findOne,
+            delete: deleteFn,
+            create,
+          };
         },
+        db: { transaction: jest.fn((cb) => cb()) },
         config: {
           get: jest.fn(() => ''),
+        },
+        entityService: {
+          load,
         },
       } as any;
 
@@ -771,20 +755,20 @@ describe('Transfer Token', () => {
 
       global.strapi = {
         ...getActionProvider(['push'] as any),
-        db: {
-          query() {
-            return {
-              update,
-              findOne,
-              delete: deleteFn,
-              create,
-              load,
-            };
-          },
-          transaction: jest.fn((cb) => cb()),
+        query() {
+          return {
+            update,
+            findOne,
+            delete: deleteFn,
+            create,
+          };
         },
+        db: { transaction: jest.fn((cb) => cb()) },
         config: {
           get: jest.fn(() => ''),
+        },
+        entityService: {
+          load,
         },
       } as any;
 
@@ -824,19 +808,19 @@ describe('Transfer Token', () => {
 
       global.strapi = {
         ...getActionProvider(['push'] as any),
-        db: {
-          query() {
-            return {
-              update,
-              findOne,
-              delete: deleteFn,
-              create,
-              load,
-            };
-          },
+        query() {
+          return {
+            update,
+            findOne,
+            delete: deleteFn,
+            create,
+          };
         },
         config: {
           get: jest.fn(() => ''),
+        },
+        entityService: {
+          load,
         },
       } as any;
 
@@ -863,10 +847,8 @@ describe('Transfer Token', () => {
       const findOne = jest.fn().mockResolvedValue(token);
 
       global.strapi = {
-        db: {
-          query() {
-            return { findOne };
-          },
+        query() {
+          return { findOne };
         },
       } as any;
 
@@ -887,10 +869,8 @@ describe('Transfer Token', () => {
       const findOne = jest.fn().mockResolvedValue(null);
 
       global.strapi = {
-        db: {
-          query() {
-            return { findOne };
-          },
+        query() {
+          return { findOne };
         },
       } as any;
 

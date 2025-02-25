@@ -27,12 +27,9 @@ jest.mock('react-router', () => {
 
 const toggleNotification = jest.fn();
 
-jest.mock('../../../../../admin/src/features/Notifications', () => {
+jest.mock('@strapi/helper-plugin', () => {
   return {
-    ...jest.requireActual('../../../../../admin/src/features/Notifications'),
-    useNotification: jest.fn(() => ({
-      toggleNotification,
-    })),
+    useNotification: jest.fn(() => toggleNotification),
   };
 });
 
@@ -100,7 +97,7 @@ describe('useLicenseLimitNotification', () => {
     setup();
 
     expect(toggleNotification).toHaveBeenCalledWith({
-      type: 'warning',
+      type: 'softWarning',
       message:
         "Add seats to re-enable Users. If you already did it but it's not reflected in Strapi yet, make sure to restart your app.",
       title: 'At seat limit (5/5)',
@@ -125,7 +122,7 @@ describe('useLicenseLimitNotification', () => {
     setup();
 
     expect(toggleNotification).toHaveBeenCalledWith({
-      type: 'danger',
+      type: 'warning',
       message:
         "Add seats to invite Users. If you already did it but it's not reflected in Strapi yet, make sure to restart your app.",
       title: 'Over seat limit (5/5)',
@@ -150,7 +147,7 @@ describe('useLicenseLimitNotification', () => {
     setup();
 
     expect(toggleNotification).toHaveBeenCalledWith({
-      type: 'warning',
+      type: 'softWarning',
       message:
         "Add seats to re-enable Users. If you already did it but it's not reflected in Strapi yet, make sure to restart your app.",
       title: 'At seat limit (5/5)',

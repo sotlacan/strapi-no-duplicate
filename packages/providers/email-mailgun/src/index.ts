@@ -1,6 +1,6 @@
-import assert from 'node:assert';
 import formData from 'form-data';
-import Mailgun, { type MailgunClientOptions } from 'mailgun.js';
+import Mailgun from 'mailgun.js';
+import Options from 'mailgun.js/interfaces/Options';
 
 interface Settings {
   defaultFrom: string;
@@ -19,24 +19,43 @@ interface SendOptions {
   [key: string]: unknown;
 }
 
-type ProviderOptions = MailgunClientOptions & {
-  domain: string;
-};
+interface LegacyOptionMapper {
+  field: string;
+  fn(value: unknown): string;
+}
 
-const DEFAULT_OPTIONS = {
-  username: 'api',
+type ProviderOptions = Record<string, unknown>;
+
+const optionsMap: Record<string, LegacyOptionMapper> = {
+  apiKey: { field: 'key', fn: (value) => `${value}` },
+  host: { field: 'url', fn: (value) => `https://${value || 'api.mailgun.net'}` },
 };
 
 export default {
+  convertProviderOptions(providerOptions: ProviderOptions): Record<string, unknown> {
+    const newOptions: Record<string, unknown> = {};
+    if (typeof providerOptions === 'object') {
+      Object.keys(providerOptions).forEach((key) => {
+        if (Object.keys(optionsMap).includes(key)) {
+          newOptions[optionsMap[key].field] = optionsMap[key].fn(providerOptions[key]);
+        } else {
+          newOptions[key] = providerOptions[key];
+        }
+      });
+    }
+    return newOptions;
+  },
+
   init(providerOptions: ProviderOptions, settings: Settings) {
-    assert(providerOptions.key, 'Mailgun API key is required');
-    assert(providerOptions.domain, 'Mailgun domain is required');
+    const defaults = {
+      username: 'api',
+    };
 
     const mailgun = new Mailgun(formData);
     const mg = mailgun.client({
-      ...DEFAULT_OPTIONS,
-      ...providerOptions,
-    });
+      ...defaults,
+      ...this.convertProviderOptions(providerOptions),
+    } as Options);
 
     return {
       send(options: SendOptions) {

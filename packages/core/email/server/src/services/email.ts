@@ -1,5 +1,5 @@
 import * as _ from 'lodash';
-import { objects, template } from '@strapi/utils';
+import { keysDeep, template } from '@strapi/utils';
 
 import type {
   EmailConfig,
@@ -11,7 +11,7 @@ import type {
 
 const { createStrictInterpolationRegExp } = template;
 
-const getProviderSettings = (): EmailConfig => strapi.config.get('plugin::email');
+const getProviderSettings = (): EmailConfig => strapi.config.get('plugin.email');
 
 const send = async (options: SendOptions) => strapi.plugin('email').provider.send(options);
 
@@ -36,7 +36,7 @@ const sendTemplatedEmail = (
     );
   }
 
-  const allowedInterpolationVariables = objects.keysDeep(data);
+  const allowedInterpolationVariables = keysDeep(data);
   const interpolate = createStrictInterpolationRegExp(allowedInterpolationVariables, 'g');
 
   const templatedAttributes = attributes.reduce(

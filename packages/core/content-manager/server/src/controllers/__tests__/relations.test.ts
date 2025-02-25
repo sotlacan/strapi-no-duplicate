@@ -28,22 +28,14 @@ const contentTypes = {
   },
 } as any;
 
-// TODO fix for new relations logic
-describe.skip('Relations', () => {
-  const findOne: jest.MockedFunction<() => Record<string, any>> = jest.fn(() => ({ id: 1 }));
-  const dbFindOne: jest.MockedFunction<() => Record<string, any>> = jest.fn(() => ({ id: 1 }));
-  const dbFindPage: jest.MockedFunction<() => Record<string, any[]>> = jest.fn(() => ({
-    results: [],
-  }));
-
+describe('Relations', () => {
   beforeAll(() => {
     global.strapi = {
       getModel: jest.fn((uid) => {
         return contentTypes[uid];
       }),
       entityService: {
-        findOne,
-        findPage: jest.fn(() => ({ results: [] })),
+        findPage: jest.fn(),
         load: jest.fn(),
       },
       plugins: {
@@ -51,9 +43,6 @@ describe.skip('Relations', () => {
           services: {
             'permission-checker': {
               create: jest.fn().mockReturnValue({
-                can: {
-                  read: jest.fn().mockReturnValue(true),
-                },
                 cannot: {
                   read: jest.fn().mockReturnValue(false),
                 },
@@ -77,17 +66,11 @@ describe.skip('Relations', () => {
                 },
               }),
             },
-            'collection-types': {
+            'entity-manager': {
               findOne: jest.fn(() => ({})),
             },
           },
         },
-      },
-      db: {
-        query: jest.fn().mockReturnValue({
-          findOne: dbFindOne,
-          findPage: dbFindPage,
-        }),
       },
     } as any;
   });
@@ -123,10 +106,9 @@ describe.skip('Relations', () => {
         'target',
         expect.objectContaining({
           sort: 'myField',
-          fields: ['myField', 'publishedAt', 'documentId'],
+          fields: ['id', 'myField'],
           filters: {
             $and: [
-              { publishedAt: null },
               {
                 myField: {
                   $containsi: 'foobar',
@@ -139,20 +121,6 @@ describe.skip('Relations', () => {
     });
 
     test('Replace mainField by id when mainField is not listable', async () => {
-      global.strapi.plugins['content-manager'].services[
-        'permission-checker'
-      ].create.mockReturnValue({
-        can: {
-          read: jest.fn().mockReturnValue(true),
-        },
-        cannot: {
-          read: jest.fn().mockReturnValue(false),
-        },
-        sanitizedQuery: {
-          read: jest.fn((queryParams) => queryParams),
-        },
-      });
-
       const ctx = createContext(
         {
           params: {
@@ -178,10 +146,9 @@ describe.skip('Relations', () => {
         'targetWithHidden',
         expect.objectContaining({
           sort: 'id',
-          fields: ['id', 'publishedAt', 'documentId'],
+          fields: ['id'],
           filters: {
             $and: [
-              { publishedAt: null },
               {
                 id: {
                   $containsi: 'foobar',
@@ -199,9 +166,6 @@ describe.skip('Relations', () => {
       global.strapi.plugins['content-manager'].services[
         'permission-checker'
       ].create.mockReturnValue({
-        can: {
-          read: jest.fn().mockReturnValue(true),
-        },
         cannot: {
           read: jest.fn().mockReturnValue(false),
         },
@@ -230,26 +194,19 @@ describe.skip('Relations', () => {
         }
       );
 
-      dbFindOne.mockReturnValue({
-        id: 1,
-        relation: {
-          id: 1,
-        },
-      });
-
       await relations.findExisting(ctx);
 
-      expect(dbFindPage).toHaveBeenCalledWith(
+      expect(strapi.entityService.load).toHaveBeenCalledWith(
+        'main',
+        { id: 1 },
+        'relation',
         expect.objectContaining({
-          filters: { id: { $in: [1] } },
-          orderBy: ['myField', 'documentId'],
-          select: ['myField', 'publishedAt', 'documentId'],
+          fields: ['id', 'myField'],
         })
       );
     });
 
-    // TODO hidden fields?
-    test.skip('Replace mainField by id when mainField is not listable', async () => {
+    test('Replace mainField by id when mainField is not listable', async () => {
       const ctx = createContext(
         {
           params: {
@@ -267,80 +224,14 @@ describe.skip('Relations', () => {
         }
       );
 
-      findOne.mockReturnValueOnce({
-        id: 1,
-        targetField: {
-          id: 1,
-        },
-      });
-
       await relations.findExisting(ctx);
 
-      expect(strapi.entityService.findPage).toHaveBeenCalledWith(
-        'targetWithHidden',
+      expect(strapi.entityService.load).toHaveBeenCalledWith(
+        'main',
+        { id: 1 },
+        'relationWithHidden',
         expect.objectContaining({
-          fields: ['id', 'publishedAt', 'documentId'],
-          filters: { id: { $in: [1] } },
-          sort: ['documentId:ASC'],
-        })
-      );
-    });
-
-    test.skip('Replace mainField by id when mainField is not accessible with RBAC', async () => {
-      global.strapi.plugins['content-manager'].services['permission-checker'].create
-        .mockReturnValueOnce({
-          cannot: {
-            read: jest.fn().mockReturnValue(false),
-          },
-          sanitizedQuery: {
-            read: jest.fn().mockReturnValue({}),
-          },
-        })
-        .mockReturnValueOnce({
-          cannot: {
-            read: jest.fn().mockReturnValue(true),
-          },
-        });
-
-      const ctx = createContext(
-        {
-          params: {
-            model: 'main',
-            targetField: 'relationWithHidden',
-            id: 1,
-          },
-        },
-        {
-          state: {
-            userAbility: {
-              can: jest.fn().mockReturnValue(true),
-            },
-          },
-        }
-      );
-
-      await relations.findExisting(ctx);
-
-      expect(strapi.entityService.findPage).toHaveBeenCalledWith(
-        'targetWithHidden',
-        expect.objectContaining({
-          fields: ['id', 'publishedAt', 'documentId'],
-          filters: {
-            targetWithHidden: {
-              $and: [
-                {
-                  id: 1,
-                },
-                {
-                  locale: null,
-                },
-                {
-                  publishedAt: null,
-                },
-              ],
-            },
-          },
-          sort: ['documentId:ASC'],
+          fields: ['id'],
         })
       );
     });
@@ -349,9 +240,6 @@ describe.skip('Relations', () => {
   test('Replace mainField by id when mainField is not accessible with RBAC', async () => {
     global.strapi.plugins['content-manager'].services['permission-checker'].create
       .mockReturnValueOnce({
-        can: {
-          read: jest.fn().mockReturnValue(true),
-        },
         cannot: {
           read: jest.fn().mockReturnValue(false),
         },
@@ -360,9 +248,6 @@ describe.skip('Relations', () => {
         },
       })
       .mockReturnValueOnce({
-        can: {
-          read: jest.fn().mockReturnValue(false),
-        },
         cannot: {
           read: jest.fn().mockReturnValue(true),
         },

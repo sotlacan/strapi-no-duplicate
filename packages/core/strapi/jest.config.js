@@ -6,5 +6,5 @@ module.exports = {
     '^.+\\.ts$': ['@swc/jest'],
   },
   testMatch: ['<rootDir>/**/*.test.ts'],
-  displayName: 'Strapi',
+  displayName: 'Core Strapi',
 };

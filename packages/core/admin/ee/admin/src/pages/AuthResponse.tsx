@@ -1,30 +1,29 @@
 import * as React from 'react';
 
+import { LoadingIndicatorPage } from '@strapi/helper-plugin';
+import Cookies from 'js-cookie';
 import { useIntl } from 'react-intl';
-import { useNavigate, useMatch } from 'react-router-dom';
+import { useHistory, useRouteMatch } from 'react-router-dom';
 
-import { Page } from '../../../../admin/src/components/PageHelpers';
-import { useTypedDispatch } from '../../../../admin/src/core/store/hooks';
-import { login } from '../../../../admin/src/reducer';
-import { getCookieValue, deleteCookie } from '../utils/cookies';
+import { useAuth } from '../../../../admin/src/features/Auth';
 
 const AuthResponse = () => {
-  const match = useMatch('/auth/login/:authResponse');
+  const match = useRouteMatch<{ authResponse: string }>('/auth/login/:authResponse');
   const { formatMessage } = useIntl();
-  const navigate = useNavigate();
-  const dispatch = useTypedDispatch();
+  const { push } = useHistory();
 
   const redirectToOops = React.useCallback(() => {
-    navigate({
-      pathname: '/auth/oops',
-      search: `?info=${encodeURIComponent(
+    push(
+      `/auth/oops?info=${encodeURIComponent(
         formatMessage({
           id: 'Auth.form.button.login.providers.error',
           defaultMessage: 'We cannot connect you through the selected provider.',
         })
-      )}`,
-    });
-  }, [navigate, formatMessage]);
+      )}`
+    );
+  }, [push, formatMessage]);
+
+  const { setToken } = useAuth('AuthResponse');
 
   React.useEffect(() => {
     if (match?.params.authResponse === 'error') {
@@ -32,25 +31,21 @@ const AuthResponse = () => {
     }
 
     if (match?.params.authResponse === 'success') {
-      const jwtToken = getCookieValue('jwtToken');
+      const jwtToken = Cookies.get('jwtToken');
 
       if (jwtToken) {
-        dispatch(
-          login({
-            token: jwtToken,
-          })
-        );
+        setToken(jwtToken);
 
-        deleteCookie('jwtToken');
+        Cookies.remove('jwtToken');
 
-        navigate('/auth/login');
+        push('/auth/login');
       } else {
         redirectToOops();
       }
     }
-  }, [dispatch, match, redirectToOops, navigate]);
+  }, [match, redirectToOops, setToken, push]);
 
-  return <Page.Loading />;
+  return <LoadingIndicatorPage />;
 };
 
 export { AuthResponse };

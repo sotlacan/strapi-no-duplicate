@@ -3,7 +3,10 @@ import { useEffect, useRef, useState } from 'react';
 import {
   Box,
   Field,
+  FieldInput,
+  FieldLabel,
   Flex,
+  Icon,
   IconButton,
   inputFocusStyle,
   Searchbar,
@@ -13,7 +16,7 @@ import {
 } from '@strapi/design-system';
 import { Search, Trash } from '@strapi/icons';
 import { useIntl } from 'react-intl';
-import { styled } from 'styled-components';
+import styled from 'styled-components';
 
 import { getTrad } from '../../utils';
 
@@ -40,20 +43,21 @@ interface IconPickProps {
 }
 
 const IconPick = ({ iconKey, name, onChange, isSelected, ariaLabel }: IconPickProps) => {
-  const Icon = COMPONENT_ICONS[iconKey];
-
   return (
-    <Field.Root name={name} required={false}>
-      <Field.Label>
+    <Field name={name} required={false}>
+      <FieldLabel htmlFor={iconKey} id={`${iconKey}-label`}>
         <VisuallyHidden>
-          {ariaLabel}
-          <Field.Input
+          <FieldInput
             type="radio"
+            id={iconKey}
+            name={name}
             checked={isSelected}
             onChange={onChange}
             value={iconKey}
             aria-checked={isSelected}
+            aria-labelledby={`${iconKey}-label`}
           />
+          {ariaLabel}
         </VisuallyHidden>
         <Flex
           padding={2}
@@ -61,10 +65,10 @@ const IconPick = ({ iconKey, name, onChange, isSelected, ariaLabel }: IconPickPr
           hasRadius
           background={isSelected ? 'primary200' : undefined}
         >
-          <Icon fill={isSelected ? 'primary600' : 'neutral300'} />
+          <Icon as={COMPONENT_ICONS[iconKey]} color={isSelected ? 'primary600' : 'neutral300'} />
         </Flex>
-      </Field.Label>
-    </Field.Root>
+      </FieldLabel>
+    </Field>
   );
 };
 
@@ -112,7 +116,7 @@ export const IconPicker = ({ intlLabel, name, onChange, value = '' }: IconPicker
   return (
     <>
       <Flex justifyContent="space-between" paddingBottom={2}>
-        <Typography variant="pi" fontWeight="bold" textColor="neutral800" tag="label">
+        <Typography variant="pi" fontWeight="bold" textColor="neutral800" as="label">
           {formatMessage(intlLabel)}
         </Typography>
         <Flex gap={1}>
@@ -120,6 +124,7 @@ export const IconPicker = ({ intlLabel, name, onChange, value = '' }: IconPicker
             <Searchbar
               ref={searchBarRef}
               name="searchbar"
+              size="S"
               placeholder={formatMessage({
                 id: getTrad('ComponentIconPicker.search.placeholder'),
                 defaultMessage: 'Search for an icon',
@@ -146,34 +151,30 @@ export const IconPicker = ({ intlLabel, name, onChange, value = '' }: IconPicker
             <IconButton
               ref={searchIconRef}
               onClick={toggleSearch}
-              withTooltip={false}
-              label={formatMessage({
+              aria-label={formatMessage({
                 id: getTrad('IconPicker.search.button.label'),
                 defaultMessage: 'Search icon button',
               })}
-              variant="ghost"
-            >
-              <Search />
-            </IconButton>
+              icon={<Search />}
+              noBorder
+            />
           )}
           {value && (
             <Tooltip
-              label={formatMessage({
+              description={formatMessage({
                 id: getTrad('IconPicker.remove.tooltip'),
                 defaultMessage: 'Remove the selected icon',
               })}
             >
               <IconButton
                 onClick={removeIconSelected}
-                withTooltip={false}
-                label={formatMessage({
+                aria-label={formatMessage({
                   id: getTrad('IconPicker.remove.button'),
-                  defaultMessage: 'Remove the selected icon',
+                  defaultMessage: 'Remove the selected icon button',
                 })}
-                variant="ghost"
-              >
-                <Trash />
-              </IconButton>
+                icon={<Trash />}
+                noBorder
+              />
             </Tooltip>
           )}
         </Flex>

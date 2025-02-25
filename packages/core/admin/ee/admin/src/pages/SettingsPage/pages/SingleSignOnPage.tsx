@@ -1,39 +1,46 @@
 import {
   Button,
+  ContentLayout,
   Flex,
   Grid,
+  GridItem,
+  HeaderLayout,
+  Layout,
+  Main,
   MultiSelect,
   MultiSelectOption,
+  Option,
+  Select,
+  ToggleInput,
   Typography,
-  Field,
 } from '@strapi/design-system';
+import {
+  CheckPagePermissions,
+  Form,
+  LoadingIndicatorPage,
+  SettingsPageTitle,
+  translatedErrors,
+  useAPIErrorHandler,
+  useFocusWhenNavigate,
+  useNotification,
+  useOverlayBlocker,
+  useRBAC,
+} from '@strapi/helper-plugin';
 import { Check } from '@strapi/icons';
+import { Formik, FormikHelpers } from 'formik';
 import { useIntl } from 'react-intl';
 import * as yup from 'yup';
 
-import {
-  Form,
-  FormHelpers,
-  InputProps,
-  useField,
-} from '../../../../../../admin/src/components/Form';
-import { InputRenderer } from '../../../../../../admin/src/components/FormInputs/Renderer';
-import { Layouts } from '../../../../../../admin/src/components/Layouts/Layout';
-import { Page } from '../../../../../../admin/src/components/PageHelpers';
 import { useTypedSelector } from '../../../../../../admin/src/core/store/hooks';
-import { useNotification } from '../../../../../../admin/src/features/Notifications';
 import { useAdminRoles } from '../../../../../../admin/src/hooks/useAdminRoles';
-import { useAPIErrorHandler } from '../../../../../../admin/src/hooks/useAPIErrorHandler';
-import { useRBAC } from '../../../../../../admin/src/hooks/useRBAC';
 import {
   useGetProviderOptionsQuery,
   useUpdateProviderOptionsMutation,
 } from '../../../../../../admin/src/services/auth';
 import { isBaseQueryError } from '../../../../../../admin/src/utils/baseQuery';
-import { translatedErrors } from '../../../../../../admin/src/utils/translatedErrors';
 import { ProvidersOptions } from '../../../../../../shared/contracts/admin';
 
-const SCHEMA = yup.object().shape({
+const schema = yup.object().shape({
   autoRegister: yup.bool().required(translatedErrors.required),
   defaultRole: yup.mixed().when('autoRegister', (value, initSchema) => {
     return value ? initSchema.required(translatedErrors.required) : initSchema.nullable();
@@ -49,9 +56,12 @@ const SCHEMA = yup.object().shape({
 });
 
 export const SingleSignOnPage = () => {
+  useFocusWhenNavigate();
+
   const { formatMessage } = useIntl();
   const permissions = useTypedSelector((state) => state.admin_app.permissions);
-  const { toggleNotification } = useNotification();
+  const { lockApp, unlockApp } = useOverlayBlocker();
+  const toggleNotification = useNotification();
   const {
     _unstableFormatAPIError: formatAPIError,
     _unstableFormatValidationErrors: formatValidationErrors,
@@ -64,7 +74,7 @@ export const SingleSignOnPage = () => {
 
   const {
     isLoading: isLoadingPermissions,
-    allowedActions: { canUpdate, canRead: canReadRoles },
+    allowedActions: { canUpdate, canReadRoles },
   } = useRBAC({
     ...permissions.settings?.sso,
     readRoles: permissions.settings?.roles.read ?? [],
@@ -76,17 +86,20 @@ export const SingleSignOnPage = () => {
 
   const handleSubmit = async (
     body: ProvidersOptions.Request['body'],
-    helpers: FormHelpers<ProvidersOptions.Request['body']>
+    formik: FormikHelpers<ProvidersOptions.Request['body']>
   ) => {
+    // @ts-expect-error - context assertation
+    lockApp();
+
     try {
       const res = await updateProviderOptions(body);
 
       if ('error' in res) {
         if (isBaseQueryError(res.error) && res.error.name === 'ValidationError') {
-          helpers.setErrors(formatValidationErrors(res.error));
+          formik.setErrors(formatValidationErrors(res.error));
         } else {
           toggleNotification({
-            type: 'danger',
+            type: 'warning',
             message: formatAPIError(res.error),
           });
         }
@@ -96,37 +109,30 @@ export const SingleSignOnPage = () => {
 
       toggleNotification({
         type: 'success',
-        message: formatMessage({ id: 'notification.success.saved' }),
+        message: { id: 'notification.success.saved' },
       });
     } catch (err) {
       toggleNotification({
-        type: 'danger',
-        message: formatMessage({
+        type: 'warning',
+        message: {
           id: 'notification.error',
           defaultMessage: 'An error occurred, please try again.',
-        }),
+        },
       });
+    } finally {
+      // @ts-expect-error - context assertation
+      unlockApp();
     }
   };
 
   const isLoadingData = isLoadingRoles || isLoadingPermissions || isLoadingProviderOptions;
 
   return (
-    <Layouts.Root>
-      <Page.Title>
-        {formatMessage(
-          { id: 'Settings.PageTitle', defaultMessage: 'Settings - {name}' },
-          {
-            name: 'SSO',
-          }
-        )}
-      </Page.Title>
-      <Page.Main aria-busy={isSubmittingForm || isLoadingData} tabIndex={-1}>
-        <Form
-          method="PUT"
+    <Layout>
+      <SettingsPageTitle name="SSO" />
+      <Main aria-busy={isSubmittingForm || isLoadingData} tabIndex={-1}>
+        <Formik
           onSubmit={handleSubmit}
-          validationSchema={SCHEMA}
-          disabled={!canUpdate}
           initialValues={
             data || {
               autoRegister: false,
@@ -134,16 +140,20 @@ export const SingleSignOnPage = () => {
               ssoLockedRoles: null,
             }
           }
+          validationSchema={schema}
+          validateOnChange={false}
+          enableReinitialize
         >
-          {({ modified, isSubmitting }) => (
-            <>
-              <Layouts.Header
+          {({ handleChange, isSubmitting, values, setFieldValue, dirty, errors }) => (
+            <Form>
+              <HeaderLayout
                 primaryAction={
                   <Button
-                    disabled={!modified}
+                    disabled={!dirty}
                     loading={isSubmitting}
                     startIcon={<Check />}
                     type="submit"
+                    size="L"
                   >
                     {formatMessage({
                       id: 'global.save',
@@ -160,9 +170,9 @@ export const SingleSignOnPage = () => {
                   defaultMessage: 'Configure the settings for the Single Sign-On feature.',
                 })}
               />
-              <Layouts.Content>
+              <ContentLayout>
                 {isSubmitting || isLoadingData ? (
-                  <Page.Loading />
+                  <LoadingIndicatorPage />
                 ) : (
                   <Flex
                     direction="column"
@@ -173,130 +183,127 @@ export const SingleSignOnPage = () => {
                     shadow="filterShadow"
                     hasRadius
                   >
-                    <Typography variant="delta" tag="h2">
+                    <Typography variant="delta" as="h2">
                       {formatMessage({
                         id: 'global.settings',
                         defaultMessage: 'Settings',
                       })}
                     </Typography>
-                    <Grid.Root gap={4}>
-                      {[
-                        {
-                          hint: formatMessage({
+                    <Grid gap={4}>
+                      <GridItem col={6} s={12}>
+                        <ToggleInput
+                          disabled={!canUpdate}
+                          checked={values.autoRegister}
+                          hint={formatMessage({
                             id: 'Settings.sso.form.registration.description',
                             defaultMessage: 'Create new user on SSO login if no account exists',
-                          }),
-                          label: formatMessage({
+                          })}
+                          label={formatMessage({
                             id: 'Settings.sso.form.registration.label',
                             defaultMessage: 'Auto-registration',
-                          }),
-                          name: 'autoRegister',
-                          size: 6,
-                          type: 'boolean' as const,
-                        },
-                        {
-                          hint: formatMessage({
+                          })}
+                          name="autoRegister"
+                          offLabel={formatMessage({
+                            id: 'app.components.ToggleCheckbox.off-label',
+                            defaultMessage: 'Off',
+                          })}
+                          onLabel={formatMessage({
+                            id: 'app.components.ToggleCheckbox.on-label',
+                            defaultMessage: 'On',
+                          })}
+                          onChange={handleChange}
+                        />
+                      </GridItem>
+                      <GridItem col={6} s={12}>
+                        <Select
+                          disabled={!canUpdate}
+                          hint={formatMessage({
                             id: 'Settings.sso.form.defaultRole.description',
                             defaultMessage:
                               'It will attach the new authenticated user to the selected role',
-                          }),
-                          label: formatMessage({
+                          })}
+                          error={
+                            errors.defaultRole
+                              ? formatMessage({
+                                  id: errors.defaultRole,
+                                  defaultMessage: errors.defaultRole,
+                                })
+                              : ''
+                          }
+                          label={formatMessage({
                             id: 'Settings.sso.form.defaultRole.label',
                             defaultMessage: 'Default role',
-                          }),
-                          name: 'defaultRole',
-                          options: roles.map(({ id, name }) => ({
-                            label: name,
-                            value: id.toString(),
-                          })),
-                          placeholder: formatMessage({
+                          })}
+                          name="defaultRole"
+                          onChange={(value) =>
+                            handleChange({ target: { name: 'defaultRole', value } })
+                          }
+                          placeholder={formatMessage({
                             id: 'components.InputSelect.option.placeholder',
                             defaultMessage: 'Choose here',
-                          }),
-                          size: 6,
-                          type: 'enumeration' as const,
-                        },
-                        {
-                          hint: formatMessage({
+                          })}
+                          value={values.defaultRole}
+                        >
+                          {roles.map(({ id, name }) => (
+                            <Option key={id} value={id.toString()}>
+                              {name}
+                            </Option>
+                          ))}
+                        </Select>
+                      </GridItem>
+                      <GridItem col={6} s={12}>
+                        <MultiSelect
+                          disabled={!canUpdate}
+                          hint={formatMessage({
                             id: 'Settings.sso.form.localAuthenticationLock.description',
                             defaultMessage:
                               'Select the roles for which you want to disable the local authentication',
-                          }),
-                          label: formatMessage({
+                          })}
+                          error={
+                            errors.ssoLockedRoles
+                              ? formatMessage({
+                                  id: errors.ssoLockedRoles,
+                                  defaultMessage: errors.ssoLockedRoles,
+                                })
+                              : ''
+                          }
+                          label={formatMessage({
                             id: 'Settings.sso.form.localAuthenticationLock.label',
                             defaultMessage: 'Local authentication lock-out',
-                          }),
-                          name: 'ssoLockedRoles',
-                          options: roles.map(({ id, name }) => ({
-                            label: name,
-                            value: id.toString(),
-                          })),
-                          placeholder: formatMessage({
+                          })}
+                          name="ssoLockedRoles"
+                          onChange={(value) =>
+                            handleChange({
+                              target: {
+                                value,
+                                name: 'ssoLockedRoles',
+                              },
+                            })
+                          }
+                          placeholder={formatMessage({
                             id: 'components.InputSelect.option.placeholder',
                             defaultMessage: 'Choose here',
-                          }),
-                          size: 6,
-                          type: 'multi' as const,
-                        },
-                      ].map(({ size, ...field }) => (
-                        <Grid.Item
-                          key={field.name}
-                          col={size}
-                          direction="column"
-                          alignItems="stretch"
+                          })}
+                          onClear={() => setFieldValue('ssoLockedRoles', [])}
+                          value={values.ssoLockedRoles || []}
+                          withTags
                         >
-                          <FormInputRenderer {...field} />
-                        </Grid.Item>
-                      ))}
-                    </Grid.Root>
+                          {roles.map(({ id, name }) => (
+                            <MultiSelectOption key={id} value={id.toString()}>
+                              {name}
+                            </MultiSelectOption>
+                          ))}
+                        </MultiSelect>
+                      </GridItem>
+                    </Grid>
                   </Flex>
                 )}
-              </Layouts.Content>
-            </>
+              </ContentLayout>
+            </Form>
           )}
-        </Form>
-      </Page.Main>
-    </Layouts.Root>
-  );
-};
-
-type FormInputProps = InputProps | MultiSelectInputProps;
-
-const FormInputRenderer = (props: FormInputProps) => {
-  switch (props.type) {
-    case 'multi':
-      return <MultiSelectInput {...props} />;
-    default:
-      return <InputRenderer {...props} />;
-  }
-};
-
-type MultiSelectInputProps = Omit<Extract<InputProps, { type: 'enumeration' }>, 'type'> & {
-  type: 'multi';
-};
-
-const MultiSelectInput = ({ hint, label, name, options, ...props }: MultiSelectInputProps) => {
-  const field = useField(name);
-
-  return (
-    <Field.Root name={name} hint={hint} error={field.error}>
-      <Field.Label>{label}</Field.Label>
-      <MultiSelect
-        onChange={(value) => field.onChange('ssoLockedRoles', value)}
-        onClear={() => field.onChange('ssoLockedRoles', [])}
-        value={field.value ?? []}
-        withTags
-        {...props}
-      >
-        {options.map(({ label, value }) => (
-          <MultiSelectOption key={value} value={value}>
-            {label}
-          </MultiSelectOption>
-        ))}
-      </MultiSelect>
-      <Field.Hint />
-      <Field.Error />
-    </Field.Root>
+        </Formik>
+      </Main>
+    </Layout>
   );
 };
 
@@ -304,8 +311,8 @@ export const ProtectedSSO = () => {
   const permissions = useTypedSelector((state) => state.admin_app.permissions.settings?.sso?.main);
 
   return (
-    <Page.Protect permissions={permissions}>
+    <CheckPagePermissions permissions={permissions}>
       <SingleSignOnPage />
-    </Page.Protect>
+    </CheckPagePermissions>
   );
 };

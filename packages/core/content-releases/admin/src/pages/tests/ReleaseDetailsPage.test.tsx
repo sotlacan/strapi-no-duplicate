@@ -1,30 +1,66 @@
-import { useRBAC } from '@strapi/admin/strapi-admin';
+import { ReactNode } from 'react';
+
+import { useRBAC } from '@strapi/helper-plugin';
 import { within } from '@testing-library/react';
 import { render, server, screen } from '@tests/utils';
 import { rest } from 'msw';
-import { Route, Routes } from 'react-router-dom';
 
 import { ReleaseDetailsPage } from '../ReleaseDetailsPage';
 
 import { mockReleaseDetailsPageData } from './mockReleaseDetailsPageData';
 
+jest.mock('@strapi/helper-plugin', () => ({
+  ...jest.requireActual('@strapi/helper-plugin'),
+  CheckPermissions: jest.fn(({ children }: { children: ReactNode }) => children),
+  useRBAC: jest.fn(() => ({
+    isLoading: false,
+    allowedActions: { canUpdate: true, canDelete: true },
+  })),
+  useStrapiApp: jest.fn(() => ({
+    runHookWaterfall: jest.fn().mockReturnValue({
+      displayedHeaders: [
+        {
+          key: '__name__',
+          fieldSchema: { type: 'string' },
+          metadatas: {
+            label: {
+              id: 'content-releases.page.ReleaseDetails.table.header.label.name',
+              defaultMessage: 'name',
+            },
+            searchable: false,
+            sortable: false,
+          },
+          name: 'name',
+        },
+        {
+          key: '__locale__',
+          fieldSchema: { type: 'string' },
+          metadatas: {
+            label: {
+              id: 'content-releases.page.ReleaseDetails.table.header.label.locale',
+              defaultMessage: 'locale',
+            },
+            searchable: false,
+            sortable: false,
+          },
+          name: 'locale',
+        },
+      ],
+      hasI18nEnabled: true,
+    }),
+  })),
+}));
+
 /**
  * Mocking the useDocument hook to avoid validation errors for testing
  */
 jest.mock('@strapi/admin/strapi-admin', () => ({
-  ...jest.requireActual('@strapi/admin/strapi-admin'),
-  useRBAC: jest.fn(() => ({
-    isLoading: false,
-    allowedActions: { canUpdate: true, canDelete: true, canPublish: true },
-  })),
+  unstable_useDocument: jest
+    .fn()
+    .mockReturnValue({ validate: jest.fn().mockReturnValue({ errors: {} }) }),
 }));
 
-jest.mock('@strapi/content-manager/strapi-admin', () => ({
-  ...jest.requireActual('@strapi/content-manager/strapi-admin'),
-  unstable_useDocument: jest.fn().mockReturnValue({ validate: jest.fn().mockReturnValue({}) }),
-}));
-
-describe.skip('Releases details page', () => {
+describe('Releases details page', () => {
   it('renders the details page with no release-actions', async () => {
     server.use(
       rest.get('/content-releases/:releaseId', (req, res, ctx) =>
@@ -38,14 +74,9 @@ describe.skip('Releases details page', () => {
       )
     );
 
-    const { user } = render(
-      <Routes>
-        <Route path="/content-releases/:releaseId" element={<ReleaseDetailsPage />} />
-      </Routes>,
-      {
-        initialEntries: [{ pathname: `/content-releases/1` }],
-      }
-    );
+    const { user } = render(<ReleaseDetailsPage />, {
+      initialEntries: [{ pathname: `/content-releases/1` }],
+    });
 
     const releaseTitle = await screen.findByText(
       mockReleaseDetailsPageData.noActionsHeaderData.data.name
@@ -61,7 +92,7 @@ describe.skip('Releases details page', () => {
     const moreButton = screen.getByRole('button', { name: 'Release edit and delete menu' });
     expect(moreButton).toBeInTheDocument();
 
-    const publishButton = await screen.findByRole('button', { name: 'Publish' });
+    const publishButton = screen.getByRole('button', { name: 'Publish' });
     expect(publishButton).toBeInTheDocument();
     expect(publishButton).toBeDisabled();
 
@@ -103,17 +134,12 @@ describe.skip('Releases details page', () => {
       )
     );
 
-    const { user } = render(
-      <Routes>
-        <Route path="/content-releases/:releaseId" element={<ReleaseDetailsPage />} />
-      </Routes>,
-      {
-        initialEntries: [{ pathname: `/content-releases/1` }],
-        userEventOptions: {
-          skipHover: true,
-        },
-      }
-    );
+    const { user } = render(<ReleaseDetailsPage />, {
+      initialEntries: [{ pathname: `/content-releases/1` }],
+      userEventOptions: {
+        skipHover: true,
+      },
+    });
 
     await screen.findByText(mockReleaseDetailsPageData.noActionsHeaderData.data.name);
 
@@ -143,14 +169,9 @@ describe.skip('Releases details page', () => {
       )
     );
 
-    render(
-      <Routes>
-        <Route path="/content-releases/:releaseId" element={<ReleaseDetailsPage />} />
-      </Routes>,
-      {
-        initialEntries: [{ pathname: `/content-releases/1` }],
-      }
-    );
+    render(<ReleaseDetailsPage />, {
+      initialEntries: [{ pathname: `/content-releases/1` }],
+    });
 
     const releaseTitle = await screen.findByText(
       mockReleaseDetailsPageData.withActionsHeaderData.data.name
@@ -175,14 +196,9 @@ describe.skip('Releases details page', () => {
       )
     );
 
-    render(
-      <Routes>
-        <Route path="/content-releases/:releaseId" element={<ReleaseDetailsPage />} />
-      </Routes>,
-      {
-        initialEntries: [{ pathname: `/content-releases/1` }],
-      }
-    );
+    render(<ReleaseDetailsPage />, {
+      initialEntries: [{ pathname: `/content-releases/2` }],
+    });
 
     const releaseTitle = await screen.findByText(
       mockReleaseDetailsPageData.withActionsHeaderData.data.name
@@ -220,14 +236,9 @@ describe.skip('Releases details page', () => {
       )
     );
 
-    render(
-      <Routes>
-        <Route path="/content-releases/:releaseId" element={<ReleaseDetailsPage />} />
-      </Routes>,
-      {
-        initialEntries: [{ pathname: `/content-releases/3` }],
-      }
-    );
+    render(<ReleaseDetailsPage />, {
+      initialEntries: [{ pathname: `/content-releases/3` }],
+    });
 
     const releaseTitle = await screen.findByText(
       mockReleaseDetailsPageData.withActionsAndPublishedHeaderData.data.name

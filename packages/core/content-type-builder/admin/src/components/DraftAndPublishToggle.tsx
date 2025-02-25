@@ -6,8 +6,8 @@
 
 import { useState } from 'react';
 
-import { ConfirmDialog } from '@strapi/admin/strapi-admin';
-import { Button, Checkbox, CheckboxProps, Dialog, Field } from '@strapi/design-system';
+import { Checkbox } from '@strapi/design-system';
+import { ConfirmDialog } from '@strapi/helper-plugin';
 import { useIntl } from 'react-intl';
 
 import { getTrad } from '../utils';
@@ -55,48 +55,47 @@ export const DraftAndPublishToggle = ({
       )
     : '';
 
+  const handleToggle = () => setShowWarning((prev) => !prev);
+
   const handleConfirm = () => {
     onChange({ target: { name, value: false } });
 
-    setShowWarning(false);
+    handleToggle();
   };
 
-  const handleChange: CheckboxProps['onCheckedChange'] = (checked) => {
+  const handleChange = ({ target: { checked } }: { target: { checked: boolean } }) => {
     if (!checked && !isCreating) {
-      setShowWarning(true);
+      handleToggle();
 
       return;
     }
 
-    onChange({ target: { name, value: !!checked } });
+    onChange({ target: { name, value: checked } });
   };
 
   return (
     <>
-      <Field.Root hint={hint} name={name}>
-        <Checkbox checked={value} disabled={disabled} onCheckedChange={handleChange}>
-          {label}
-        </Checkbox>
-        <Field.Hint />
-      </Field.Root>
+      <Checkbox checked={value} disabled={disabled} hint={hint} name={name} onChange={handleChange}>
+        {label}
+      </Checkbox>
 
-      <Dialog.Root open={showWarning} onOpenChange={(isOpen) => setShowWarning(isOpen)}>
-        <ConfirmDialog
-          endAction={
-            <Button onClick={handleConfirm} variant="danger" width="100%" justifyContent="center">
-              {formatMessage({
-                id: getTrad('popUpWarning.draft-publish.button.confirm'),
-                defaultMessage: 'Yes, disable',
-              })}
-            </Button>
-          }
-        >
-          {formatMessage({
-            id: getTrad('popUpWarning.draft-publish.message'),
-            defaultMessage: 'If you disable the draft & publish, your drafts will be deleted.',
-          })}
-        </ConfirmDialog>
-      </Dialog.Root>
+      <ConfirmDialog
+        isOpen={showWarning}
+        onToggleDialog={handleToggle}
+        onConfirm={handleConfirm}
+        bodyText={{
+          id: getTrad('popUpWarning.draft-publish.message'),
+          defaultMessage: 'If you disable the draft & publish, your drafts will be deleted.',
+        }}
+        leftButtonText={{
+          id: 'components.popUpWarning.button.cancel',
+          defaultMessage: 'No, cancel',
+        }}
+        rightButtonText={{
+          id: getTrad('popUpWarning.draft-publish.button.confirm'),
+          defaultMessage: 'Yes, disable',
+        }}
+      />
     </>
   );
 };

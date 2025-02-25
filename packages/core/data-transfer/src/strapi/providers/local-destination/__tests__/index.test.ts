@@ -4,7 +4,6 @@ import {
   getStrapiFactory,
   getContentTypes,
   setGlobalStrapi,
-  getStrapiModels,
 } from '../../../../__tests__/test-utils';
 
 afterEach(() => {
@@ -21,7 +20,7 @@ jest.mock('../strategies/restore', () => {
 const strapiCommonProperties = {
   config: {
     get(service) {
-      if (service === 'plugin::upload') {
+      if (service === 'plugin.upload') {
         return { provider: 'local' };
       }
     },
@@ -45,13 +44,7 @@ describe('Local Strapi Source Destination', () => {
     test('Should not have a defined Strapi instance if bootstrap has not been called', () => {
       const provider = createLocalStrapiDestinationProvider({
         getStrapi: getStrapiFactory({
-          db: {
-            transaction,
-            lifecycles: {
-              enable: jest.fn(),
-              disable: jest.fn(),
-            },
-          },
+          db: { transaction },
           ...strapiCommonProperties,
         }),
         strategy: 'restore',
@@ -68,13 +61,7 @@ describe('Local Strapi Source Destination', () => {
     test('Should have a defined Strapi instance if bootstrap has been called', async () => {
       const provider = createLocalStrapiDestinationProvider({
         getStrapi: getStrapiFactory({
-          db: {
-            transaction,
-            lifecycles: {
-              enable: jest.fn(),
-              disable: jest.fn(),
-            },
-          },
+          db: { transaction },
           ...strapiCommonProperties,
         }),
         strategy: 'restore',
@@ -94,13 +81,7 @@ describe('Local Strapi Source Destination', () => {
     test('requires strategy to be restore', async () => {
       const restoreProvider = createLocalStrapiDestinationProvider({
         getStrapi: getStrapiFactory({
-          db: {
-            transaction,
-            lifecycles: {
-              enable: jest.fn(),
-              disable: jest.fn(),
-            },
-          },
+          db: { transaction },
           ...strapiCommonProperties,
         }),
         strategy: 'restore',
@@ -117,13 +98,7 @@ describe('Local Strapi Source Destination', () => {
         (async () => {
           const invalidProvider = createLocalStrapiDestinationProvider({
             getStrapi: getStrapiFactory({
-              db: {
-                transaction,
-                lifecycles: {
-                  enable: jest.fn(),
-                  disable: jest.fn(),
-                },
-              },
+              db: { transaction },
             }),
             /* @ts-ignore: disable-next-line */
             strategy: 'foo',
@@ -165,37 +140,15 @@ describe('Local Strapi Source Destination', () => {
           entity: { id: 9, age: 0 },
           contentType: { uid: 'bar' },
         },
-        {
-          entity: { id: 10, age: 0 },
-          model: { uid: 'model::foo' },
-        },
-        {
-          entity: { id: 11, age: 0 },
-          model: { uid: 'model::bar' },
-        },
       ];
 
       const deleteMany = (uid: string) =>
         jest.fn(async () => ({
-          count: entities.filter((entity) => {
-            if (entity.model) {
-              return entity.model.uid === uid;
-            }
-
-            return entity.contentType.uid === uid;
-          }).length,
+          count: entities.filter((entity) => entity.contentType.uid === uid).length,
         }));
 
       const findMany = (uid: string) => {
-        return jest.fn(async () =>
-          entities.filter((entity) => {
-            if (entity.model) {
-              return entity.model.uid === uid;
-            }
-
-            return entity.contentType.uid === uid;
-          })
-        );
+        return jest.fn(async () => entities.filter((entity) => entity.contentType.uid === uid));
       };
 
       const query = jest.fn((uid) => {
@@ -211,13 +164,6 @@ describe('Local Strapi Source Destination', () => {
         contentTypes: getContentTypes(),
         query,
         getModel,
-        get() {
-          return {
-            get() {
-              return getStrapiModels();
-            },
-          };
-        },
         db: {
           query,
           transaction,
@@ -227,10 +173,6 @@ describe('Local Strapi Source Destination', () => {
               transacting: jest.fn().mockReturnThis(),
             }),
           }),
-          lifecycles: {
-            enable: jest.fn(),
-            disable: jest.fn(),
-          },
         },
         ...strapiCommonProperties,
       })();

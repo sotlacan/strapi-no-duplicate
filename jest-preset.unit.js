@@ -3,14 +3,7 @@
 module.exports = {
   setupFilesAfterEnv: [__dirname + '/tests/setup/unit.setup.js'],
   modulePathIgnorePatterns: ['.cache', 'dist'],
-  testPathIgnorePatterns: [
-    '.testdata.{js,ts}',
-    '.test.utils.{js,ts}',
-    '.d.ts',
-    '__tests__/resources',
-    'tests/resources',
-  ],
-  prettierPath: require.resolve('prettier-2'),
+  testPathIgnorePatterns: ['.testdata.js', '.test.utils.js', '.d.ts'],
   testMatch: ['**/__tests__/**/*.{js,ts,jsx,tsx}'],
   transform: {
     '^.+\\.(t|j)sx?$': ['@swc/jest'],

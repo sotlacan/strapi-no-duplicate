@@ -1,28 +1,28 @@
-import { Combobox, ComboboxOption } from '@strapi/design-system';
+import { Combobox, ComboboxOption, ComboboxProps } from '@strapi/design-system';
 import { useIntl } from 'react-intl';
 
-import { Filters } from '../../../../../../../../admin/src/components/Filters';
-import { useField } from '../../../../../../../../admin/src/components/Form';
+type ComboboxFilterProps = {
+  value?: string;
+  options?: { label: string; customValue: string }[];
+  onChange?: ComboboxProps['onChange'];
+};
 
-export const ComboboxFilter = (props: Filters.ValueInputProps) => {
+export const ComboboxFilter = (
+  { value, options, onChange }: ComboboxFilterProps = {
+    value: undefined,
+  }
+) => {
   const { formatMessage } = useIntl();
-  const field = useField(props.name);
   const ariaLabel = formatMessage({
     id: 'Settings.permissions.auditLogs.filter.aria-label',
     defaultMessage: 'Search and select an option to filter',
   });
 
-  const handleChange = (value?: string) => {
-    field.onChange(props.name, value);
-  };
-
   return (
-    <Combobox aria-label={ariaLabel} value={field.value} onChange={handleChange}>
-      {props.options?.map((opt) => {
-        const value = typeof opt === 'string' ? opt : opt.value;
-        const label = typeof opt === 'string' ? opt : opt.label;
+    <Combobox aria-label={ariaLabel} value={value} onChange={onChange}>
+      {options?.map(({ label, customValue }) => {
         return (
-          <ComboboxOption key={value} value={value}>
+          <ComboboxOption key={customValue} value={customValue}>
             {label}
           </ComboboxOption>
         );

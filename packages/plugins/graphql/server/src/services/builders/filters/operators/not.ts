@@ -1,9 +1,9 @@
 import type * as Nexus from 'nexus';
-import type { Core } from '@strapi/types';
+import type { Strapi } from '@strapi/types';
 
 const NOT_FIELD_NAME = 'not';
 
-export default ({ strapi }: { strapi: Core.Strapi }) => ({
+export default ({ strapi }: { strapi: Strapi }) => ({
   fieldName: NOT_FIELD_NAME,
 
   strapiOperator: '$not',

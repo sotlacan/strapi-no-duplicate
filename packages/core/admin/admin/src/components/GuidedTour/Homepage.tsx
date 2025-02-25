@@ -1,19 +1,15 @@
-import { Box, Button, Flex, Typography, LinkButton } from '@strapi/design-system';
+import { Box, Button, Flex, Typography } from '@strapi/design-system';
+import { LinkButton } from '@strapi/design-system/v2';
+import { GuidedTourContextValue, pxToRem, useGuidedTour, useTracking } from '@strapi/helper-plugin';
 import { ArrowRight } from '@strapi/icons';
 import { useIntl } from 'react-intl';
 import { NavLink } from 'react-router-dom';
 
-import { useTracking } from '../../features/Tracking';
-
 import { LAYOUT_DATA, States, STATES } from './constants';
 import { Number, VerticalDivider } from './Ornaments';
-import { GuidedTourContextValue, useGuidedTour } from './Provider';
-
-type SectionName = keyof GuidedTourContextValue['guidedTourState'];
 
 const GuidedTourHomepage = () => {
-  const guidedTourState = useGuidedTour('GuidedTourHomepage', (state) => state.guidedTourState);
-  const setSkipped = useGuidedTour('GuidedTourHomepage', (state) => state.setSkipped);
+  const { guidedTourState, setSkipped } = useGuidedTour();
   const { formatMessage } = useIntl();
   const { trackUsage } = useTracking();
 
@@ -23,14 +19,17 @@ const GuidedTourHomepage = () => {
     content: (
       <LinkButton
         onClick={() => trackUsage(val.home.trackingEvent)}
-        tag={NavLink}
+        as={NavLink}
+        // @ts-expect-error - types are not inferred correctly through the as prop.
         to={val.home.cta.target}
         endIcon={<ArrowRight />}
       >
         {formatMessage(val.home.cta.title)}
       </LinkButton>
     ),
-    isDone: Object.values(guidedTourState[key as SectionName]).every((value) => value === true),
+    isDone: Object.entries(
+      guidedTourState[key as keyof GuidedTourContextValue['guidedTourState']]
+    ).every(([, value]) => value),
   }));
 
   const activeSectionIndex = sections.findIndex((section) => !section.isDone);
@@ -51,7 +50,7 @@ const GuidedTourHomepage = () => {
       background="neutral0"
     >
       <Flex direction="column" alignItems="stretch" gap={6}>
-        <Typography variant="beta" tag="h2">
+        <Typography variant="beta" as="h2">
           {formatMessage({
             id: 'app.components.GuidedTour.title',
             defaultMessage: '3 steps to get started',
@@ -60,21 +59,20 @@ const GuidedTourHomepage = () => {
         <Box>
           {sections.map((section, index) => {
             const state = getState(activeSectionIndex, index);
-
             return (
               <Box key={section.key}>
                 <Flex>
-                  <Box minWidth={`3rem`} marginRight={5}>
+                  <Box minWidth={pxToRem(30)} marginRight={5}>
                     <Number state={state}>{index + 1}</Number>
                   </Box>
-                  <Typography variant="delta" tag="h3">
+                  <Typography variant="delta" as="h3">
                     {formatMessage(section.title)}
                   </Typography>
                 </Flex>
                 <Flex alignItems="flex-start">
                   <Flex
                     justifyContent="center"
-                    minWidth={`3rem`}
+                    minWidth={pxToRem(30)}
                     marginBottom={3}
                     marginTop={3}
                     marginRight={5}

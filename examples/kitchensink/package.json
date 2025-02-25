@@ -1,6 +1,6 @@
 {
   "name": "kitchensink",
-  "version": "0.0.0",
+  "version": "4.25.6",
   "private": true,
   "description": "A Strapi application.",
   "license": "SEE LICENSE IN LICENSE",
@@ -13,22 +13,23 @@
     "strapi": "strapi"
   },
   "dependencies": {
-    "@strapi/provider-email-mailgun": "workspace:*",
-    "@strapi/provider-upload-aws-s3": "workspace:*",
-    "@strapi/provider-upload-cloudinary": "workspace:*",
-    "@strapi/strapi": "workspace:*",
-    "better-sqlite3": "11.3.0",
+    "@strapi/provider-email-mailgun": "4.25.6",
+    "@strapi/provider-upload-aws-s3": "4.25.6",
+    "@strapi/provider-upload-cloudinary": "4.25.6",
+    "@strapi/strapi": "4.25.6",
     "lodash": "4.17.21",
-    "mysql2": "3.9.8",
+    "mysql": "2.18.1",
+    "mysql2": "3.9.4",
     "passport-google-oauth2": "0.2.0",
     "pg": "8.11.1",
-    "react": "18.3.1",
-    "react-dom": "18.3.1",
-    "react-router-dom": "6.22.3",
-    "styled-components": "6.1.8"
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-router-dom": "5.3.4",
+    "sqlite3": "5.1.2",
+    "styled-components": "5.3.3"
   },
   "engines": {
-    "node": ">=18.0.0 <=22.x.x",
+    "node": ">=18.0.0 <=20.x.x",
     "npm": ">=6.0.0"
   },
   "strapi": {

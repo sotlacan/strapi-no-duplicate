@@ -1,4 +1,4 @@
-import type { Struct } from '@strapi/types';
+import { Schema } from '@strapi/types';
 import { formatContentType } from '../content-types';
 
 describe('Content types service', () => {
@@ -15,7 +15,9 @@ describe('Content types service', () => {
         pluralName: 'my-names',
         description: 'My description',
       },
-      options: {},
+      options: {
+        draftAndPublish: false,
+      },
       pluginOptions: {
         'content-manager': {
           visible: true,
@@ -26,7 +28,7 @@ describe('Content types service', () => {
           type: 'string',
         },
       },
-    } as unknown as Struct.ContentTypeSchema;
+    } as unknown as Schema.ContentType;
 
     it('Returns consistent schemas', () => {
       expect(formatContentType(contentType)).toMatchSnapshot();

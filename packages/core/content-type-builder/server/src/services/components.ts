@@ -1,4 +1,4 @@
-import type { Internal, Struct } from '@strapi/types';
+import type { UID, Schema } from '@strapi/types';
 import { get, has } from 'lodash';
 
 import { formatAttributes, replaceTemporaryUIDs } from '../utils/attributes';
@@ -53,12 +53,12 @@ export const createComponent = async ({ component, components = [] }: any) => {
 };
 
 type ComponentToCreate = {
-  component: Struct.ComponentSchema;
-  components?: Struct.ComponentSchema[];
+  component: Schema.Component;
+  components?: Schema.Component[];
 };
 
 export const editComponent = async (
-  uid: Internal.UID.Component,
+  uid: UID.Component,
   { component, components = [] }: ComponentToCreate
 ) => {
   const builder = createBuilder();
@@ -86,7 +86,7 @@ export const editComponent = async (
   return updatedComponent;
 };
 
-export const deleteComponent = async (uid: Internal.UID.Component) => {
+export const deleteComponent = async (uid: UID.Component) => {
   const builder = createBuilder();
 
   const deletedComponent = builder.deleteComponent(uid);

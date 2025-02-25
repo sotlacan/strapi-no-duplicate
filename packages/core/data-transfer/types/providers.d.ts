@@ -1,4 +1,5 @@
 import type { Readable, Writable } from 'stream';
+import type { Schema, Utils } from '@strapi/types';
 import type {
   IDestinationProviderTransferResults,
   IProviderTransferResults,
@@ -6,7 +7,6 @@ import type {
   MaybePromise,
 } from './utils';
 import type { IMetadata } from './common-entities';
-import type { IDiagnosticReporter } from '../src/utils/diagnostic';
 
 export type ProviderType = 'source' | 'destination';
 
@@ -19,11 +19,11 @@ export interface IProvider {
    * bootstrap() is called during transfer engine bootstrap
    * It is used for initialization operations such as making a database connection, opening a file, checking authorization, etc
    */
-  bootstrap?(diagnostics?: IDiagnosticReporter): MaybePromise<void>;
+  bootstrap?(): MaybePromise<void>;
   close?(): MaybePromise<void>; // called during transfer engine close
 
   getMetadata(): MaybePromise<IMetadata | null>; // returns the transfer metadata to be used for version validation
-  getSchemas?(): MaybePromise<Record<string, Struct.Schema> | null>; // returns the schemas for the schema validation
+  getSchemas?(): MaybePromise<Utils.StringRecord<Schema.Schema> | null>; // returns the schemas for the schema validation
 
   beforeTransfer?(): MaybePromise<void>; // called immediately before transfer stages are run
 }

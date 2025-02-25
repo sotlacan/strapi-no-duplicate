@@ -1,11 +1,11 @@
-import type { Core } from '@strapi/types';
+import { Common } from '@strapi/types';
 import passport from 'koa-passport';
 import { getService } from '../../utils';
 import utils from './utils';
 
 const defaultConnectionError = () => new Error('Invalid connection payload');
 
-export const authenticate: Core.MiddlewareHandler = async (ctx, next) => {
+export const authenticate: Common.MiddlewareHandler = async (ctx, next) => {
   const {
     params: { provider },
   } = ctx;
@@ -33,7 +33,7 @@ export const authenticate: Core.MiddlewareHandler = async (ctx, next) => {
   })(ctx, next);
 };
 
-const existingUserScenario: Core.MiddlewareHandler =
+const existingUserScenario: Common.MiddlewareHandler =
   (ctx, next) => async (user: any, provider: any) => {
     const redirectUrls = utils.getPrefixedRedirectUrls();
 
@@ -49,7 +49,7 @@ const existingUserScenario: Core.MiddlewareHandler =
     return next();
   };
 
-const nonExistingUserScenario: Core.MiddlewareHandler =
+const nonExistingUserScenario: Common.MiddlewareHandler =
   (ctx, next) => async (profile: any, provider: any) => {
     const { email, firstname, lastname, username } = profile;
     const redirectUrls = utils.getPrefixedRedirectUrls();
@@ -91,7 +91,7 @@ const nonExistingUserScenario: Core.MiddlewareHandler =
     return next();
   };
 
-export const redirectWithAuth: Core.MiddlewareHandler = (ctx) => {
+export const redirectWithAuth: Common.MiddlewareHandler = (ctx) => {
   const {
     params: { provider },
   } = ctx;

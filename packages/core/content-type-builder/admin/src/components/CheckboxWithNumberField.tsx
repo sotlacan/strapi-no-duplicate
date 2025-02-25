@@ -1,4 +1,6 @@
-import { Box, Checkbox, Field, Flex, NumberInput, TextInput } from '@strapi/design-system';
+import { useState } from 'react';
+
+import { Box, Checkbox, Flex, NumberInput, TextInput } from '@strapi/design-system';
 import { useIntl } from 'react-intl';
 
 import { IntlLabel } from '../types';
@@ -21,6 +23,7 @@ export const CheckboxWithNumberField = ({
   value = null,
 }: CheckboxWithNumberFieldProps) => {
   const { formatMessage } = useIntl();
+  const [showInput, setShowInput] = useState(!!value || value === 0);
   const label = intlLabel.id
     ? formatMessage(
         { id: intlLabel.id, defaultMessage: intlLabel.defaultMessage },
@@ -38,40 +41,42 @@ export const CheckboxWithNumberField = ({
       <Checkbox
         id={name}
         name={name}
-        onCheckedChange={(value) => {
+        onValueChange={(value: any) => {
           const initValue = type === 'text' ? '0' : 0;
           const nextValue = value ? initValue : null;
 
           onChange({ target: { name, value: nextValue } });
+          setShowInput((prev) => !prev);
         }}
-        checked={value !== null}
+        value={showInput}
       >
         {label}
       </Checkbox>
-      {value !== null && (
+      {showInput && (
         <Box paddingLeft={6} style={{ maxWidth: '200px' }}>
           {type === 'text' ? (
-            <Field.Root error={errorMessage} name={name}>
-              <TextInput
-                aria-label={label}
-                disabled={disabled}
-                onChange={onChange}
-                value={value === null ? '' : value}
-              />
-              <Field.Error />
-            </Field.Root>
+            <TextInput
+              label=""
+              aria-label={label}
+              disabled={disabled}
+              error={errorMessage}
+              id={name}
+              name={name}
+              onChange={onChange}
+              value={value === null ? '' : value}
+            />
           ) : (
-            <Field.Root error={errorMessage} name={name}>
-              <NumberInput
-                aria-label={label}
-                disabled={disabled}
-                onValueChange={(value: any) => {
-                  onChange({ target: { name, value: value ?? 0, type } });
-                }}
-                value={value || 0}
-              />
-              <Field.Error />
-            </Field.Root>
+            <NumberInput
+              aria-label={label}
+              disabled={disabled}
+              error={errorMessage}
+              id={name}
+              name={name}
+              onValueChange={(value: any) => {
+                onChange({ target: { name, value, type } });
+              }}
+              value={value || 0}
+            />
           )}
         </Box>
       )}

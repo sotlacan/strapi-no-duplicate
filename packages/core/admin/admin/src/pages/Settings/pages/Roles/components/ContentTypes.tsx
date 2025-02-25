@@ -1,4 +1,5 @@
 import { Box } from '@strapi/design-system';
+import styled from 'styled-components';
 
 import { ContentPermission } from '../../../../../../../shared/contracts/permissions';
 
@@ -18,7 +19,7 @@ const ContentTypes = ({
   const sortedSubjects = [...subjects].sort((a, b) => a.label.localeCompare(b.label));
 
   return (
-    <Box background="neutral0">
+    <StyledBox background="neutral0">
       <GlobalActions actions={actions} kind={kind} isFormDisabled={isFormDisabled} />
       <ContentTypeCollapses
         actions={actions}
@@ -26,8 +27,12 @@ const ContentTypes = ({
         pathToData={kind}
         subjects={sortedSubjects}
       />
-    </Box>
+    </StyledBox>
   );
 };
+
+const StyledBox = styled(Box)`
+  overflow-x: auto;
+`;
 
 export { ContentTypes };
