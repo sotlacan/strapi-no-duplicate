@@ -104,12 +104,12 @@ coverage
 # Builds
 ############################
 
-packages/generators/app/files/public/
-schema.graphql
-dist
-.nx
-.tsbuildinfo
-.eslintcache
+# packages/generators/app/files/public/
+# schema.graphql
+# dist
+# .nx
+# .tsbuildinfo
+# .eslintcache
 
 ############################
 # Example app
